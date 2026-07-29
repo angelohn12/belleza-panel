@@ -313,7 +313,16 @@
           <button onclick="alternar('formVenta')">+ Registrar venta</button>
         </div>
         <div class="formulario oculto" id="formVenta">
-          <div><label>Cliente</label><select id="vCliente"></select></div>
+          <div><label>Cliente</label><select id="vCliente" onchange="alternarClienteNuevo()"></select></div>
+          <div id="vClienteNuevoNombre" class="oculto"><label>Nombre del cliente nuevo</label><input id="vNuevoNombre" placeholder="María Pérez" /></div>
+          <div id="vClienteNuevoTel" class="oculto"><label>Teléfono (opcional)</label><input id="vNuevoTelefono" placeholder="8888-8888" /></div>
+          <div id="vClienteNuevoUbic" class="oculto"><label>Ubicación</label>
+            <select id="vNuevoUbicacion">
+              <option>San Carlos</option>
+              <option>San José</option>
+              <option>Otro</option>
+            </select>
+          </div>
           <div><label>Producto</label><select id="vProducto" onchange="autocompletarPrecioVenta()"></select></div>
           <div><label>Cantidad</label><input id="vCantidad" type="number" value="1" min="1" oninput="autocompletarPrecioVenta()" /></div>
           <div><label>Precio de venta (₡, total)</label><input id="vPrecio" type="number" step="1" /></div>
@@ -707,8 +716,17 @@ async function guardarCliente() {
 function llenarSelectoresVenta() {
   const selCliente = document.getElementById('vCliente');
   const selProducto = document.getElementById('vProducto');
-  selCliente.innerHTML = estado.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option>' + opcionesClientes;
   selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${p.nombre} (stock: ${p.stock})</option>`).join('');
+  alternarClienteNuevo();
+}
+
+function alternarClienteNuevo() {
+  const esNuevo = document.getElementById('vCliente').value === '__nuevo__';
+  ['vClienteNuevoNombre', 'vClienteNuevoTel', 'vClienteNuevoUbic'].forEach(id => {
+    document.getElementById(id).classList.toggle('oculto', !esNuevo);
+  });
 }
 
 function autocompletarPrecioVenta() {
@@ -749,8 +767,23 @@ function renderVentas() {
 
 async function guardarVenta() {
   const productoId = document.getElementById('vProducto').value;
-  const clienteId = document.getElementById('vCliente').value;
-  if (!productoId || !clienteId) { mostrarToast('Elegí cliente y producto.'); return; }
+  if (!productoId) { mostrarToast('Elegí un producto.'); return; }
+
+  // Cliente: existente o nuevo (creado en el mismo paso)
+  let clienteId = document.getElementById('vCliente').value;
+  if (clienteId === '__nuevo__') {
+    const nombre = document.getElementById('vNuevoNombre').value.trim();
+    if (!nombre) { mostrarToast('Poné el nombre del cliente nuevo.'); return; }
+    const filaCliente = [
+      '', nombre,
+      document.getElementById('vNuevoTelefono').value,
+      document.getElementById('vNuevoUbicacion').value,
+      'WhatsApp', ''
+    ];
+    const resCliente = await apiPost({ accion: 'agregar_fila', hoja: 'Clientes', fila: filaCliente });
+    if (!resCliente.ok) { mostrarToast('Error creando cliente: ' + resCliente.error); return; }
+    clienteId = resCliente.id;
+  }
 
   const cantidad = Number(document.getElementById('vCantidad').value) || 1;
   const producto = estado.productos.find(p => String(p.id) === String(productoId));
