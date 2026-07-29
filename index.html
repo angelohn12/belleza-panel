@@ -295,8 +295,14 @@
               <option>Otro</option>
             </select>
           </div>
-          <div><label>Costo de compra ($)</label><input id="pCosto" type="number" step="0.01" placeholder="12.50" /></div>
-          <div><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
+          <div><label>Moneda de compra</label>
+            <select id="pMoneda" onchange="alternarMonedaProducto()">
+              <option value="USD">Dólares ($)</option>
+              <option value="CRC">Colones (₡)</option>
+            </select>
+          </div>
+          <div><label>Costo de compra</label><input id="pCosto" type="number" step="0.01" placeholder="12.50" /></div>
+          <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
           <div><label>Precio de venta (₡)</label><input id="pPrecioVenta" type="number" step="1" placeholder="8000" /></div>
           <div><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
           <div class="campoAncho"><button onclick="guardarProducto()">Guardar producto</button></div>
@@ -669,9 +675,16 @@ function renderProductos() {
   );
 }
 
+function alternarMonedaProducto() {
+  const esDolares = document.getElementById('pMoneda').value === 'USD';
+  document.getElementById('pCampoTipoCambio').classList.toggle('oculto', !esDolares);
+}
+
 async function guardarProducto() {
+  const moneda = document.getElementById('pMoneda').value;
   const costo = Number(document.getElementById('pCosto').value) || 0;
   const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
+  const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
   const fila = [
     '', // id (lo asigna el backend)
     document.getElementById('pNombre').value,
@@ -679,11 +692,12 @@ async function guardarProducto() {
     document.getElementById('pMarca').value,
     document.getElementById('pOrigen').value,
     costo,
-    tipoCambio,
-    Math.round(costo * tipoCambio),
+    moneda === 'USD' ? tipoCambio : '',
+    costoTotalCRC,
     Number(document.getElementById('pPrecioVenta').value) || 0,
     Number(document.getElementById('pStock').value) || 0,
-    'Disponible'
+    'Disponible',
+    moneda
   ];
   if (!fila[1]) { mostrarToast('Poné el nombre del producto.'); return; }
   const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Productos', fila });
@@ -822,7 +836,7 @@ async function guardarVenta() {
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: [producto.id, producto.nombre, producto.categoria, producto.marca, producto.origen,
              producto.costoCompra, producto.tipoCambio, producto.costoTotalCRC, producto.precioVenta,
-             nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado']
+             nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado', producto.moneda]
     });
   }
 
