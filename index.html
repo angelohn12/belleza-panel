@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Avellana Studio</title>
+<style>
+  :root{
+    --brown:#5D300E;
+    --brown-soft:#8a5a3a;
+    --coral:#D24558;
+    --coral-dark:#A5323F;
+    --pink:#FDA6AB;
+    --peach:#FAC977;
+    --mint:#C6E9C8;
+    --sage:#61A07D;
+    --bg:#FFF9F3;
+    --surface:#FFFFFF;
+    --border:#F0DDD0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--brown);
+  }
+  input, select, button, textarea{
+    font-family:inherit;
+    font-size:14px;
+  }
+  input, select, textarea{
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fff;
+    color:var(--brown);
+    width:100%;
+  }
+  label{
+    font-size:12px;
+    color:var(--brown-soft);
+    display:block;
+    margin-bottom:4px;
+  }
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    background:var(--coral);
+    color:#fff;
+    font-weight:600;
+  }
+  button:hover{background:var(--coral-dark);}
+  button.secundario{
+    background:#fff;
+    color:var(--coral);
+    border:1px solid var(--coral);
+  }
+  button.secundario:hover{background:#fff4f4;}
+
+  /* ---------- Login ---------- */
+  #pantallaLogin{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--pink);
+  }
+  .cajaLogin{
+    background:#fff;
+    padding:40px 32px;
+    border-radius:16px;
+    width:320px;
+    text-align:center;
+    box-shadow:0 4px 24px rgba(93,48,14,0.15);
+  }
+  .cajaLogin h1{
+    font-size:26px;
+    margin:0 0 2px;
+    color:var(--brown);
+  }
+  .cajaLogin p.sub{
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--brown-soft);
+    margin:0 0 24px;
+    text-transform:uppercase;
+  }
+  .cajaLogin .campo{margin-bottom:14px;text-align:left;}
+  .errorLogin{color:var(--coral-dark);font-size:13px;margin-top:10px;display:none;}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  header.topbar{
+    background:var(--pink);
+    padding:16px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header.topbar h1{
+    font-size:20px;
+    margin:0;
+    color:var(--brown);
+  }
+  header.topbar .usuarioInfo{
+    font-size:13px;
+    color:var(--brown-soft);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  nav.tabs{
+    display:flex;
+    gap:4px;
+    padding:10px 24px;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  nav.tabs button.tab{
+    background:transparent;
+    color:var(--brown-soft);
+    font-weight:600;
+    padding:8px 14px;
+    border-radius:8px;
+  }
+  nav.tabs button.tab:hover{background:var(--bg);}
+  nav.tabs button.tab.activo{
+    background:var(--coral);
+    color:#fff;
+  }
+  main{padding:24px;max-width:1100px;margin:0 auto;}
+  .oculto{display:none !important;}
+
+  .tarjetas{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:14px;
+    margin-bottom:24px;
+  }
+  .tarjeta{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+  }
+  .tarjeta .etiqueta{font-size:12px;color:var(--brown-soft);margin:0 0 6px;}
+  .tarjeta .valor{font-size:24px;font-weight:700;margin:0;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .panel h2{font-size:16px;margin:0 0 14px;}
+  .filaBotones{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th, td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+  th{color:var(--brown-soft);font-weight:600;background:var(--bg);}
+  tr:hover td{background:#fffaf5;}
+  .vacio{padding:24px;text-align:center;color:var(--brown-soft);font-size:13px;}
+
+  .formulario{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:12px;
+    margin-bottom:16px;
+    padding:16px;
+    background:var(--bg);
+    border-radius:10px;
+  }
+  .formulario .campoAncho{grid-column:1/-1;}
+  .badge{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:600;
+  }
+  .badge.mint{background:var(--mint);color:#1f4a30;}
+  .badge.peach{background:var(--peach);color:#7a4a0a;}
+  .badge.pink{background:var(--pink);color:var(--coral-dark);}
+  .toast{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:var(--brown);
+    color:#fff;
+    padding:12px 18px;
+    border-radius:8px;
+    font-size:13px;
+    display:none;
+    z-index:99;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="pantallaLogin">
+  <div class="cajaLogin">
+    <h1>Avellana Studio</h1>
+    <p class="sub">Maquillaje · Belleza</p>
+    <div class="campo">
+      <label>Usuario</label>
+      <input type="text" id="loginUsuario" placeholder="anyelo" />
+    </div>
+    <div class="campo">
+      <label>Contraseña</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" />
+    </div>
+    <button style="width:100%" onclick="iniciarSesion()">Entrar</button>
+    <p class="errorLogin" id="errorLogin">Usuario o contraseña incorrectos.</p>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <header class="topbar">
+    <h1>Avellana Studio</h1>
+    <div class="usuarioInfo">
+      <span id="nombreUsuarioActual"></span>
+      <button class="secundario" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab" data-tab="resumen" onclick="mostrarTab('resumen')">Resumen</button>
+    <button class="tab" data-tab="inventario" onclick="mostrarTab('inventario')">Inventario</button>
+    <button class="tab" data-tab="ventas" onclick="mostrarTab('ventas')">Ventas</button>
+    <button class="tab" data-tab="clientes" onclick="mostrarTab('clientes')">Clientes</button>
+    <button class="tab" data-tab="finanzas" onclick="mostrarTab('finanzas')">Finanzas</button>
+    <button class="tab" data-tab="config" onclick="mostrarTab('config')">Configuración</button>
+  </nav>
+
+  <main>
+
+    <!-- ---------- RESUMEN ---------- -->
+    <section id="tab-resumen">
+      <div class="tarjetas">
+        <div class="tarjeta"><p class="etiqueta">Saldo actual</p><p class="valor" id="rSaldo">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Productos en stock</p><p class="valor" id="rStock">0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Ventas del mes</p><p class="valor" id="rVentasMes">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Clientes</p><p class="valor" id="rClientes">0</p></div>
+      </div>
+      <div class="panel">
+        <h2>Punto de equilibrio</h2>
+        <p style="font-size:13px;color:var(--brown-soft);margin:0 0 10px;" id="peTexto"></p>
+        <div style="background:var(--bg);border-radius:20px;height:20px;overflow:hidden;">
+          <div id="peBarra" style="height:100%;background:var(--coral);width:0%;border-radius:20px;transition:width .3s;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Stock bajo (5 unidades o menos)</h2>
+        <div id="rStockBajo"></div>
+      </div>
+      <div class="panel">
+        <h2>Ventas recientes</h2>
+        <div id="rVentasRecientes"></div>
+      </div>
+    </section>
+
+    <!-- ---------- INVENTARIO ---------- -->
+    <section id="tab-inventario" class="oculto">
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Productos</h2>
+          <button onclick="alternar('formProducto')">+ Nuevo producto</button>
+        </div>
+        <div class="formulario oculto" id="formProducto">
+          <div><label>Nombre</label><input id="pNombre" placeholder="Labial mate rojo" /></div>
+          <div><label>Categoría</label>
+            <select id="pCategoria">
+              <option>Maquillaje</option>
+              <option>Cuidado personal</option>
+              <option>Bienestar</option>
+            </select>
+          </div>
+          <div><label>Marca</label><input id="pMarca" placeholder="Maybelline" /></div>
+          <div><label>Origen</label>
+            <select id="pOrigen">
+              <option>Amazon</option>
+              <option>Sephora</option>
+              <option>Target</option>
+              <option>Marshalls</option>
+              <option>Revendedor CR</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div><label>Costo de compra ($)</label><input id="pCosto" type="number" step="0.01" placeholder="12.50" /></div>
+          <div><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
+          <div><label>Precio de venta (₡)</label><input id="pPrecioVenta" type="number" step="1" placeholder="8000" /></div>
+          <div><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
+          <div class="campoAncho"><button onclick="guardarProducto()">Guardar producto</button></div>
+        </div>
+        <div id="listaProductos"></div>
+      </div>
+    </section>
+
+    <!-- ---------- VENTAS ---------- -->
+    <section id="tab-ventas" class="oculto">
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Ventas</h2>
+          <button onclick="alternar('formVenta')">+ Registrar venta</button>
+        </div>
+        <div class="formulario oculto" id="formVenta">
+          <div><label>Cliente</label><select id="vCliente"></select></div>
+          <div><label>Producto</label><select id="vProducto" onchange="autocompletarPrecioVenta()"></select></div>
+          <div><label>Cantidad</label><input id="vCantidad" type="number" value="1" min="1" oninput="autocompletarPrecioVenta()" /></div>
+          <div><label>Precio de venta (₡, total)</label><input id="vPrecio" type="number" step="1" /></div>
+          <div><label>Canal</label>
+            <select id="vCanal">
+              <option>Instagram</option>
+              <option>Facebook Marketplace</option>
+              <option>WhatsApp</option>
+              <option>Entrega personal</option>
+              <option>Envío</option>
+            </select>
+          </div>
+          <div><label>Estado de entrega</label>
+            <select id="vEstado">
+              <option>Pendiente</option>
+              <option>Entregado</option>
+            </select>
+          </div>
+          <div class="campoAncho"><button onclick="guardarVenta()">Guardar venta</button></div>
+        </div>
+        <div id="listaVentas"></div>
+      </div>
+    </section>
+
+    <!-- ---------- CLIENTES ---------- -->
+    <section id="tab-clientes" class="oculto">
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Clientes</h2>
+          <button onclick="alternar('formCliente')">+ Nuevo cliente</button>
+        </div>
+        <div class="formulario oculto" id="formCliente">
+          <div><label>Nombre</label><input id="cNombre" placeholder="María Pérez" /></div>
+          <div><label>Teléfono</label><input id="cTelefono" placeholder="8888-8888" /></div>
+          <div><label>Ubicación</label>
+            <select id="cUbicacion">
+              <option>San Carlos</option>
+              <option>San José</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div><label>Canal preferido</label>
+            <select id="cCanal">
+              <option>WhatsApp</option>
+              <option>Instagram</option>
+              <option>Facebook</option>
+            </select>
+          </div>
+          <div class="campoAncho"><label>Notas</label><input id="cNotas" placeholder="Opcional" /></div>
+          <div class="campoAncho"><button onclick="guardarCliente()">Guardar cliente</button></div>
+        </div>
+        <div id="listaClientes"></div>
+      </div>
+    </section>
+
+    <!-- ---------- FINANZAS ---------- -->
+    <section id="tab-finanzas" class="oculto">
+      <div class="tarjetas">
+        <div class="tarjeta"><p class="etiqueta">Ingresos totales</p><p class="valor" id="fIngresos">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Gastos totales</p><p class="valor" id="fGastos">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Aportes de capital</p><p class="valor" id="fAportes">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Saldo</p><p class="valor" id="fSaldo">₡0</p></div>
+      </div>
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Movimientos</h2>
+          <button onclick="alternar('formMovimiento')">+ Nuevo movimiento</button>
+        </div>
+        <div class="formulario oculto" id="formMovimiento">
+          <div><label>Tipo</label>
+            <select id="mTipo">
+              <option value="ingreso">Ingreso</option>
+              <option value="gasto">Gasto</option>
+              <option value="aporte">Aporte de capital</option>
+            </select>
+          </div>
+          <div><label>Monto (₡)</label><input id="mMonto" type="number" step="1" /></div>
+          <div><label>Categoría</label><input id="mCategoria" placeholder="Compra inventario, envío, etc." /></div>
+          <div class="campoAncho"><label>Descripción</label><input id="mDescripcion" placeholder="Opcional" /></div>
+          <div class="campoAncho"><button onclick="guardarMovimiento()">Guardar movimiento</button></div>
+        </div>
+        <div id="listaMovimientos"></div>
+      </div>
+    </section>
+
+    <!-- ---------- CONFIGURACIÓN ---------- -->
+    <section id="tab-config" class="oculto">
+      <div class="panel">
+        <h2>Configuración general</h2>
+        <div class="formulario">
+          <div><label>Tipo de cambio actual (₡ por $)</label><input id="cfgTipoCambio" type="number" step="1" /></div>
+          <div class="campoAncho"><button onclick="guardarConfig()">Guardar configuración</button></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIGURACIÓN — completar API_URL cuando Anyelo despliegue
+// el Apps Script (ver instrucciones aparte).
+// ============================================================
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbxQVdDsH_Qgg9MnRgb0rDyzYPkvRESEi2FGD-ENHeT9L7CMbZl_xTaVxDs0wfNe3tflMg/exec',
+  KEY: 'Belleza2026!'
+};
+
+let estado = {
+  usuario: null,
+  productos: [],
+  ventas: [],
+  clientes: [],
+  movimientos: [],
+  config: []
+};
+
+// ---------- API ----------
+
+async function apiLeer() {
+  const url = `${CONFIG.API_URL}?accion=leer&key=${encodeURIComponent(CONFIG.KEY)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(cuerpo) {
+  const res = await fetch(CONFIG.API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ...cuerpo, key: CONFIG.KEY })
+  });
+  return res.json();
+}
+
+// ---------- Login ----------
+
+async function iniciarSesion() {
+  const usuario = document.getElementById('loginUsuario').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  document.getElementById('errorLogin').style.display = 'none';
+
+  if (!usuario || !password) return;
+
+  try {
+    const resultado = await apiPost({ accion: 'login', usuario, password });
+    if (resultado.ok) {
+      estado.usuario = { usuario: resultado.usuario, rol: resultado.rol };
+      localStorage.setItem('avellana_usuario', JSON.stringify(estado.usuario));
+      await entrarApp();
+    } else {
+      document.getElementById('errorLogin').style.display = 'block';
+    }
+  } catch (err) {
+    mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
+  }
+}
+
+function cerrarSesion() {
+  localStorage.removeItem('avellana_usuario');
+  estado.usuario = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pantallaLogin').style.display = 'flex';
+}
+
+async function entrarApp() {
+  document.getElementById('pantallaLogin').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('nombreUsuarioActual').textContent = estado.usuario.usuario;
+  await cargarDatos();
+  mostrarTab('resumen');
+}
+
+// ---------- Carga de datos ----------
+
+async function cargarDatos() {
+  try {
+    const datos = await apiLeer();
+    if (!datos.ok) { mostrarToast('Error leyendo datos.'); return; }
+    estado.productos = datos.productos || [];
+    estado.ventas = datos.ventas || [];
+    estado.clientes = datos.clientes || [];
+    estado.movimientos = datos.movimientos || [];
+    estado.config = datos.config || [];
+    renderTodo();
+  } catch (err) {
+    mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
+  }
+}
+
+function valorConfig(clave, porDefecto) {
+  const fila = estado.config.find(c => c.clave === clave);
+  return fila ? fila.valor : porDefecto;
+}
+
+// ---------- Navegación de tabs ----------
+
+function mostrarTab(nombre) {
+  document.querySelectorAll('main section').forEach(s => s.classList.add('oculto'));
+  document.getElementById('tab-' + nombre).classList.remove('oculto');
+  document.querySelectorAll('nav.tabs .tab').forEach(b => b.classList.remove('activo'));
+  document.querySelector(`nav.tabs .tab[data-tab="${nombre}"]`).classList.add('activo');
+}
+
+function alternar(idFormulario) {
+  document.getElementById(idFormulario).classList.toggle('oculto');
+}
+
+function mostrarToast(mensaje) {
+  const toast = document.getElementById('toast');
+  toast.textContent = mensaje;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 3500);
+}
+
+function formatoColones(monto) {
+  return '₡' + Math.round(Number(monto) || 0).toLocaleString('es-CR');
+}
+
+// ---------- Render general ----------
+
+function renderTodo() {
+  renderResumen();
+  renderProductos();
+  renderClientes();
+  renderVentas();
+  renderMovimientos();
+  llenarSelectoresVenta();
+  document.getElementById('cfgTipoCambio').value = valorConfig('tipoCambio', 520);
+}
+
+// ---------- Resumen ----------
+
+function renderResumen() {
+  const stockTotal = estado.productos.reduce((suma, p) => suma + (Number(p.stock) || 0), 0);
+  document.getElementById('rStock').textContent = stockTotal;
+  document.getElementById('rClientes').textContent = estado.clientes.length;
+
+  const hoy = new Date();
+  const ventasDelMes = estado.ventas.filter(v => {
+    const fecha = new Date(v.fecha);
+    return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
+  });
+  const totalVentasMes = ventasDelMes.reduce((suma, v) => suma + (Number(v.precioVenta) || 0), 0);
+  document.getElementById('rVentasMes').textContent = formatoColones(totalVentasMes);
+
+  document.getElementById('rSaldo').textContent = formatoColones(calcularSaldo());
+
+  renderPuntoEquilibrio();
+
+  const bajos = estado.productos.filter(p => (Number(p.stock) || 0) <= 5);
+  const cajaBajo = document.getElementById('rStockBajo');
+  cajaBajo.innerHTML = bajos.length
+    ? tablaSimple(['Producto', 'Stock'], bajos.map(p => [p.nombre, p.stock]))
+    : '<div class="vacio">No hay productos con stock bajo.</div>';
+
+  const recientes = [...estado.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 5);
+  const cajaVentas = document.getElementById('rVentasRecientes');
+  cajaVentas.innerHTML = recientes.length
+    ? tablaSimple(['Fecha', 'Producto', 'Monto'], recientes.map(v => [
+        v.fecha, nombreProducto(v.productoId), formatoColones(v.precioVenta)
+      ]))
+    : '<div class="vacio">Todavía no hay ventas registradas.</div>';
+}
+
+function calcularSaldo() {
+  let saldo = 0;
+  estado.movimientos.forEach(m => {
+    const monto = Number(m.monto) || 0;
+    if (m.tipo === 'gasto') saldo -= monto; else saldo += monto;
+  });
+  estado.ventas.forEach(v => { saldo += Number(v.precioVenta) || 0; });
+  return saldo;
+}
+
+function calcularInversionTotal() {
+  let total = 0;
+  estado.movimientos.forEach(m => {
+    if (m.tipo === 'aporte' || m.tipo === 'gasto') total += Number(m.monto) || 0;
+  });
+  return total;
+}
+
+function calcularGananciaAcumulada() {
+  return estado.ventas.reduce((suma, v) => {
+    const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
+    return suma + ((Number(v.precioVenta) || 0) - costo);
+  }, 0);
+}
+
+function renderPuntoEquilibrio() {
+  const inversion = calcularInversionTotal();
+  const ganancia = calcularGananciaAcumulada();
+  const texto = document.getElementById('peTexto');
+  const barra = document.getElementById('peBarra');
+
+  if (inversion <= 0) {
+    texto.textContent = 'Registrá el aporte de capital inicial en Finanzas para calcular el punto de equilibrio.';
+    barra.style.width = '0%';
+    return;
+  }
+
+  const porcentaje = Math.max(0, Math.min(100, (ganancia / inversion) * 100));
+  barra.style.width = porcentaje.toFixed(0) + '%';
+
+  if (ganancia >= inversion) {
+    texto.textContent = `Superaste el punto de equilibrio. Ganancia neta hasta ahora: ${formatoColones(ganancia - inversion)}.`;
+    barra.style.background = 'var(--sage)';
+  } else {
+    texto.textContent = `Llevás recuperado ${formatoColones(ganancia)} de ${formatoColones(inversion)} invertidos (${porcentaje.toFixed(0)}%). Te faltan ${formatoColones(inversion - ganancia)} para el punto de equilibrio.`;
+    barra.style.background = 'var(--coral)';
+  }
+}
+
+function tablaSimple(encabezados, filas) {
+  return `<table><thead><tr>${encabezados.map(e => `<th>${e}</th>`).join('')}</tr></thead>
+    <tbody>${filas.map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- Inventario ----------
+
+function renderProductos() {
+  const caja = document.getElementById('listaProductos');
+  if (!estado.productos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay productos cargados.</div>'; return; }
+  caja.innerHTML = tablaSimple(
+    ['Nombre', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado'],
+    estado.productos.map(p => {
+      const costo = Number(p.costoTotalCRC) || 0;
+      const margen = (Number(p.precioVenta) || 0) - costo;
+      return [
+        p.nombre, p.categoria, p.marca, formatoColones(costo), formatoColones(p.precioVenta),
+        `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
+        p.stock,
+        `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado')}</span>`
+      ];
+    })
+  );
+}
+
+async function guardarProducto() {
+  const costo = Number(document.getElementById('pCosto').value) || 0;
+  const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
+  const fila = [
+    '', // id (lo asigna el backend)
+    document.getElementById('pNombre').value,
+    document.getElementById('pCategoria').value,
+    document.getElementById('pMarca').value,
+    document.getElementById('pOrigen').value,
+    costo,
+    tipoCambio,
+    Math.round(costo * tipoCambio),
+    Number(document.getElementById('pPrecioVenta').value) || 0,
+    Number(document.getElementById('pStock').value) || 0,
+    'Disponible'
+  ];
+  if (!fila[1]) { mostrarToast('Poné el nombre del producto.'); return; }
+  const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Productos', fila });
+  if (resultado.ok) { mostrarToast('Producto guardado.'); document.getElementById('formProducto').classList.add('oculto'); await cargarDatos(); }
+  else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Clientes ----------
+
+function renderClientes() {
+  const caja = document.getElementById('listaClientes');
+  if (!estado.clientes.length) { caja.innerHTML = '<div class="vacio">Todavía no hay clientes.</div>'; return; }
+  caja.innerHTML = tablaSimple(
+    ['Nombre', 'Teléfono', 'Ubicación', 'Canal preferido'],
+    estado.clientes.map(c => [c.nombre, c.telefono, c.ubicacion, c.canalPreferido])
+  );
+}
+
+async function guardarCliente() {
+  const fila = [
+    '',
+    document.getElementById('cNombre').value,
+    document.getElementById('cTelefono').value,
+    document.getElementById('cUbicacion').value,
+    document.getElementById('cCanal').value,
+    document.getElementById('cNotas').value
+  ];
+  if (!fila[1]) { mostrarToast('Poné el nombre del cliente.'); return; }
+  const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Clientes', fila });
+  if (resultado.ok) { mostrarToast('Cliente guardado.'); document.getElementById('formCliente').classList.add('oculto'); await cargarDatos(); }
+  else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Ventas ----------
+
+function llenarSelectoresVenta() {
+  const selCliente = document.getElementById('vCliente');
+  const selProducto = document.getElementById('vProducto');
+  selCliente.innerHTML = estado.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${p.nombre} (stock: ${p.stock})</option>`).join('');
+}
+
+function autocompletarPrecioVenta() {
+  const opcion = document.getElementById('vProducto').selectedOptions[0];
+  const cantidad = Number(document.getElementById('vCantidad').value) || 1;
+  if (opcion) document.getElementById('vPrecio').value = Math.round(Number(opcion.dataset.precio) * cantidad);
+}
+
+function nombreProducto(id) {
+  const producto = estado.productos.find(p => String(p.id) === String(id));
+  return producto ? producto.nombre : '—';
+}
+
+function nombreCliente(id) {
+  const cliente = estado.clientes.find(c => String(c.id) === String(id));
+  return cliente ? cliente.nombre : '—';
+}
+
+function renderVentas() {
+  const caja = document.getElementById('listaVentas');
+  if (!estado.ventas.length) { caja.innerHTML = '<div class="vacio">Todavía no hay ventas.</div>'; return; }
+  const ordenadas = [...estado.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  caja.innerHTML = tablaSimple(
+    ['Fecha', 'Cliente', 'Producto', 'Cant.', 'Costo', 'Venta', 'Ganancia', 'Canal', 'Estado'],
+    ordenadas.map(v => {
+      const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
+      const ganancia = (Number(v.precioVenta) || 0) - costo;
+      return [
+        v.fecha, nombreCliente(v.clienteId), nombreProducto(v.productoId), v.cantidad,
+        formatoColones(costo), formatoColones(v.precioVenta),
+        `<span style="color:${ganancia >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(ganancia)}</span>`,
+        v.canal,
+        `<span class="badge ${v.estadoEntrega === 'Entregado' ? 'mint' : 'peach'}">${v.estadoEntrega}</span>`
+      ];
+    })
+  );
+}
+
+async function guardarVenta() {
+  const productoId = document.getElementById('vProducto').value;
+  const clienteId = document.getElementById('vCliente').value;
+  if (!productoId || !clienteId) { mostrarToast('Elegí cliente y producto.'); return; }
+
+  const cantidad = Number(document.getElementById('vCantidad').value) || 1;
+  const producto = estado.productos.find(p => String(p.id) === String(productoId));
+  const costoUnitarioCRC = producto ? (Number(producto.costoTotalCRC) || 0) : 0;
+
+  const fila = [
+    '',
+    new Date().toISOString().slice(0, 10),
+    clienteId,
+    productoId,
+    cantidad,
+    costoUnitarioCRC,
+    Number(document.getElementById('vPrecio').value) || 0,
+    document.getElementById('vCanal').value,
+    document.getElementById('vEstado').value,
+    estado.usuario.usuario
+  ];
+  const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Ventas', fila });
+  if (!resultado.ok) { mostrarToast('Error: ' + resultado.error); return; }
+
+  // descontar stock del producto
+  if (producto) {
+    const nuevoStock = Math.max((Number(producto.stock) || 0) - cantidad, 0);
+    await apiPost({
+      accion: 'editar_fila', hoja: 'Productos', id: producto.id,
+      fila: [producto.id, producto.nombre, producto.categoria, producto.marca, producto.origen,
+             producto.costoCompra, producto.tipoCambio, producto.costoTotalCRC, producto.precioVenta,
+             nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado']
+    });
+  }
+
+  mostrarToast('Venta guardada.');
+  document.getElementById('formVenta').classList.add('oculto');
+  await cargarDatos();
+}
+
+// ---------- Finanzas ----------
+
+function renderMovimientos() {
+  const ingresos = estado.movimientos.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + (Number(m.monto) || 0), 0)
+    + estado.ventas.reduce((s, v) => s + (Number(v.precioVenta) || 0), 0);
+  const gastos = estado.movimientos.filter(m => m.tipo === 'gasto').reduce((s, m) => s + (Number(m.monto) || 0), 0);
+  const aportes = estado.movimientos.filter(m => m.tipo === 'aporte').reduce((s, m) => s + (Number(m.monto) || 0), 0);
+
+  document.getElementById('fIngresos').textContent = formatoColones(ingresos);
+  document.getElementById('fGastos').textContent = formatoColones(gastos);
+  document.getElementById('fAportes').textContent = formatoColones(aportes);
+  document.getElementById('fSaldo').textContent = formatoColones(calcularSaldo());
+
+  const caja = document.getElementById('listaMovimientos');
+  if (!estado.movimientos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay movimientos.</div>'; return; }
+  const ordenados = [...estado.movimientos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  caja.innerHTML = tablaSimple(
+    ['Fecha', 'Tipo', 'Categoría', 'Monto', 'Descripción', 'Usuario'],
+    ordenados.map(m => [m.fecha, m.tipo, m.categoria, formatoColones(m.monto), m.descripcion, m.usuario])
+  );
+}
+
+async function guardarMovimiento() {
+  const fila = [
+    '',
+    new Date().toISOString().slice(0, 10),
+    document.getElementById('mTipo').value,
+    Number(document.getElementById('mMonto').value) || 0,
+    document.getElementById('mCategoria').value,
+    document.getElementById('mDescripcion').value,
+    estado.usuario.usuario
+  ];
+  const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Movimientos', fila });
+  if (resultado.ok) { mostrarToast('Movimiento guardado.'); document.getElementById('formMovimiento').classList.add('oculto'); await cargarDatos(); }
+  else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Configuración ----------
+
+async function guardarConfig() {
+  const filas = estado.config.filter(c => c.clave !== 'tipoCambio')
+    .map(c => [c.clave, c.valor]);
+  filas.push(['tipoCambio', Number(document.getElementById('cfgTipoCambio').value) || 520]);
+  const resultado = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
+  if (resultado.ok) { mostrarToast('Configuración guardada.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Arranque ----------
+
+(function iniciar() {
+  const guardado = localStorage.getItem('avellana_usuario');
+  if (guardado) {
+    estado.usuario = JSON.parse(guardado);
+    entrarApp();
+  }
+})();
+</script>
+</body>
+</html>
