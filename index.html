@@ -543,6 +543,12 @@ function formatoColones(monto) {
   return '₡' + Math.round(Number(monto) || 0).toLocaleString('es-CR');
 }
 
+function escaparHtml(texto) {
+  const div = document.createElement('div');
+  div.textContent = texto == null ? '' : String(texto);
+  return div.innerHTML;
+}
+
 // ---------- Render general ----------
 
 function renderTodo() {
@@ -577,14 +583,14 @@ function renderResumen() {
   const bajos = estado.productos.filter(p => (Number(p.stock) || 0) <= 5);
   const cajaBajo = document.getElementById('rStockBajo');
   cajaBajo.innerHTML = bajos.length
-    ? tablaSimple(['Producto', 'Stock'], bajos.map(p => [p.nombre, p.stock]))
+    ? tablaSimple(['Producto', 'Stock'], bajos.map(p => [escaparHtml(p.nombre), p.stock]))
     : '<div class="vacio">No hay productos con stock bajo.</div>';
 
   const recientes = [...estado.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 5);
   const cajaVentas = document.getElementById('rVentasRecientes');
   cajaVentas.innerHTML = recientes.length
     ? tablaSimple(['Fecha', 'Producto', 'Monto'], recientes.map(v => [
-        v.fecha, nombreProducto(v.productoId), formatoColones(v.precioVenta)
+        escaparHtml(v.fecha), escaparHtml(nombreProducto(v.productoId)), formatoColones(v.precioVenta)
       ]))
     : '<div class="vacio">Todavía no hay ventas registradas.</div>';
 }
@@ -654,10 +660,10 @@ function renderProductos() {
       const costo = Number(p.costoTotalCRC) || 0;
       const margen = (Number(p.precioVenta) || 0) - costo;
       return [
-        p.nombre, p.categoria, p.marca, formatoColones(costo), formatoColones(p.precioVenta),
+        escaparHtml(p.nombre), escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), formatoColones(p.precioVenta),
         `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
         p.stock,
-        `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado')}</span>`
+        `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`
       ];
     })
   );
@@ -692,7 +698,7 @@ function renderClientes() {
   if (!estado.clientes.length) { caja.innerHTML = '<div class="vacio">Todavía no hay clientes.</div>'; return; }
   caja.innerHTML = tablaSimple(
     ['Nombre', 'Teléfono', 'Ubicación', 'Canal preferido'],
-    estado.clientes.map(c => [c.nombre, c.telefono, c.ubicacion, c.canalPreferido])
+    estado.clientes.map(c => [escaparHtml(c.nombre), escaparHtml(c.telefono), escaparHtml(c.ubicacion), escaparHtml(c.canalPreferido)])
   );
 }
 
@@ -716,9 +722,9 @@ async function guardarCliente() {
 function llenarSelectoresVenta() {
   const selCliente = document.getElementById('vCliente');
   const selProducto = document.getElementById('vProducto');
-  const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
   selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option>' + opcionesClientes;
-  selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${p.nombre} (stock: ${p.stock})</option>`).join('');
+  selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)} (stock: ${p.stock})</option>`).join('');
   alternarClienteNuevo();
 }
 
@@ -755,11 +761,11 @@ function renderVentas() {
       const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
       const ganancia = (Number(v.precioVenta) || 0) - costo;
       return [
-        v.fecha, nombreCliente(v.clienteId), nombreProducto(v.productoId), v.cantidad,
+        escaparHtml(v.fecha), escaparHtml(nombreCliente(v.clienteId)), escaparHtml(nombreProducto(v.productoId)), v.cantidad,
         formatoColones(costo), formatoColones(v.precioVenta),
         `<span style="color:${ganancia >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(ganancia)}</span>`,
-        v.canal,
-        `<span class="badge ${v.estadoEntrega === 'Entregado' ? 'mint' : 'peach'}">${v.estadoEntrega}</span>`
+        escaparHtml(v.canal),
+        `<span class="badge ${v.estadoEntrega === 'Entregado' ? 'mint' : 'peach'}">${escaparHtml(v.estadoEntrega)}</span>`
       ];
     })
   );
@@ -788,6 +794,11 @@ async function guardarVenta() {
   const cantidad = Number(document.getElementById('vCantidad').value) || 1;
   const producto = estado.productos.find(p => String(p.id) === String(productoId));
   const costoUnitarioCRC = producto ? (Number(producto.costoTotalCRC) || 0) : 0;
+
+  if (producto && cantidad > Number(producto.stock)) {
+    mostrarToast(`Solo hay ${producto.stock} en stock de "${producto.nombre}".`);
+    return;
+  }
 
   const fila = [
     '',
