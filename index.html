@@ -234,6 +234,7 @@
 
   <nav class="tabs">
     <button class="tab" data-tab="resumen" onclick="mostrarTab('resumen')">Resumen</button>
+    <button class="tab" data-tab="tendencias" onclick="mostrarTab('tendencias')">Tendencias</button>
     <button class="tab" data-tab="inventario" onclick="mostrarTab('inventario')">Inventario</button>
     <button class="tab" data-tab="ventas" onclick="mostrarTab('ventas')">Ventas</button>
     <button class="tab" data-tab="clientes" onclick="mostrarTab('clientes')">Clientes</button>
@@ -268,6 +269,45 @@
       </div>
     </section>
 
+    <!-- ---------- TENDENCIAS ---------- -->
+    <section id="tab-tendencias" class="oculto">
+      <div class="filaBotones">
+        <h2 style="margin:0">Tendencias</h2>
+        <select id="tPeriodo" onchange="renderTendencias()" style="max-width:200px;">
+          <option value="historico">Histórico completo</option>
+          <option value="mes">Este mes</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+          <option value="anio">Este año</option>
+        </select>
+      </div>
+      <div class="tarjetas">
+        <div class="tarjeta"><p class="etiqueta">Ticket promedio</p><p class="valor" id="tTicketPromedio">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Producto más vendido</p><p class="valor" style="font-size:16px;" id="tProductoTop">—</p></div>
+        <div class="tarjeta"><p class="etiqueta">Categoría líder</p><p class="valor" style="font-size:16px;" id="tCategoriaTop">—</p></div>
+        <div class="tarjeta"><p class="etiqueta">Tono más vendido</p><p class="valor" style="font-size:16px;" id="tTonoTop">—</p></div>
+      </div>
+      <div class="panel">
+        <h2>Top 5 productos por unidades vendidas</h2>
+        <div id="tTopProductos"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+        <div class="panel">
+          <h2>Ventas por categoría</h2>
+          <div id="tCategorias"></div>
+        </div>
+        <div class="panel">
+          <h2>Ventas por tono / color</h2>
+          <div id="tTonos"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Productos de bajo movimiento</h2>
+        <p style="font-size:13px;color:var(--brown-soft);margin:0 0 12px;">Los que menos se venden en el periodo — candidatos a no volver a comprar o bajar de precio.</p>
+        <div id="tBajoMovimiento"></div>
+      </div>
+    </section>
+
     <!-- ---------- INVENTARIO ---------- -->
     <section id="tab-inventario" class="oculto">
       <div class="panel">
@@ -284,6 +324,7 @@
               <option>Bienestar</option>
             </select>
           </div>
+          <div><label>Tono / color (opcional)</label><input id="pTono" placeholder="Rojo, Nude, Coral…" /></div>
           <div><label>Marca</label><input id="pMarca" placeholder="Maybelline" /></div>
           <div><label>Origen</label>
             <select id="pOrigen">
@@ -564,6 +605,7 @@ function escaparHtml(texto) {
 
 function renderTodo() {
   renderResumen();
+  renderTendencias();
   renderProductos();
   renderClientes();
   renderVentas();
@@ -668,6 +710,91 @@ function botonesAccion(fnEditar, fnEliminar, id) {
   </div>`;
 }
 
+// ---------- Tendencias ----------
+
+const PALETA_TONOS = ['#D24558', '#61A07D', '#FAC977', '#8a5a3a', '#A5323F', '#5D300E', '#FDA6AB'];
+
+function ventasEnPeriodo(periodo) {
+  if (periodo === 'historico') return estado.ventas;
+  const hoy = new Date();
+  return estado.ventas.filter(v => {
+    const fecha = new Date(v.fecha);
+    if (isNaN(fecha)) return false;
+    if (periodo === 'mes') return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
+    if (periodo === 'anio') return fecha.getFullYear() === hoy.getFullYear();
+    const limite = new Date(hoy);
+    limite.setDate(limite.getDate() - Number(periodo));
+    return fecha >= limite;
+  });
+}
+
+function barraTendencia(etiqueta, valor, maximo, color) {
+  const porcentaje = maximo > 0 ? Math.round((valor / maximo) * 100) : 0;
+  return `<div style="margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
+      <span>${escaparHtml(etiqueta)}</span><span style="color:var(--brown-soft);">${valor}</span>
+    </div>
+    <div style="background:var(--bg);border-radius:6px;height:8px;">
+      <div style="background:${color};width:${porcentaje}%;height:100%;border-radius:6px;"></div>
+    </div>
+  </div>`;
+}
+
+function renderTendencias() {
+  const periodo = document.getElementById('tPeriodo').value;
+  const ventas = ventasEnPeriodo(periodo);
+
+  const unidadesPorProducto = {};
+  const unidadesPorCategoria = {};
+  const unidadesPorTono = {};
+
+  ventas.forEach(v => {
+    const cantidad = Number(v.cantidad) || 0;
+    const producto = estado.productos.find(p => String(p.id) === String(v.productoId));
+    unidadesPorProducto[v.productoId] = (unidadesPorProducto[v.productoId] || 0) + cantidad;
+    if (producto) {
+      const categoria = producto.categoria || 'Sin categoría';
+      unidadesPorCategoria[categoria] = (unidadesPorCategoria[categoria] || 0) + cantidad;
+      const tono = (producto.tono || '').trim();
+      if (tono) unidadesPorTono[tono] = (unidadesPorTono[tono] || 0) + cantidad;
+    }
+  });
+
+  const ticketPromedio = ventas.length ? ventas.reduce((s, v) => s + (Number(v.precioVenta) || 0), 0) / ventas.length : 0;
+  document.getElementById('tTicketPromedio').textContent = formatoColones(ticketPromedio);
+
+  const topProductos = Object.entries(unidadesPorProducto).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxProducto = topProductos.length ? topProductos[0][1] : 0;
+  document.getElementById('tProductoTop').textContent = topProductos.length ? nombreProducto(topProductos[0][0]) : '—';
+  document.getElementById('tTopProductos').innerHTML = topProductos.length
+    ? topProductos.map(([id, unidades]) => barraTendencia(nombreProducto(id), unidades, maxProducto, 'var(--coral)')).join('')
+    : '<div class="vacio">Todavía no hay ventas en este periodo.</div>';
+
+  const categorias = Object.entries(unidadesPorCategoria).sort((a, b) => b[1] - a[1]);
+  const maxCategoria = categorias.length ? categorias[0][1] : 0;
+  document.getElementById('tCategoriaTop').textContent = categorias.length ? categorias[0][0] : '—';
+  document.getElementById('tCategorias').innerHTML = categorias.length
+    ? categorias.map(([nombre, unidades]) => barraTendencia(nombre, unidades, maxCategoria, 'var(--sage)')).join('')
+    : '<div class="vacio">Sin datos en este periodo.</div>';
+
+  const tonos = Object.entries(unidadesPorTono).sort((a, b) => b[1] - a[1]);
+  const maxTono = tonos.length ? tonos[0][1] : 0;
+  document.getElementById('tTonoTop').textContent = tonos.length ? tonos[0][0] : '—';
+  document.getElementById('tTonos').innerHTML = tonos.length
+    ? tonos.map(([nombre, unidades], i) => barraTendencia(nombre, unidades, maxTono, PALETA_TONOS[i % PALETA_TONOS.length])).join('')
+    : '<div class="vacio">Todavía no hay productos con tono o color asignado.</div>';
+
+  const bajos = [...estado.productos]
+    .map(p => ({ ...p, unidadesVendidas: unidadesPorProducto[p.id] || 0 }))
+    .sort((a, b) => a.unidadesVendidas - b.unidadesVendidas)
+    .slice(0, 5);
+  document.getElementById('tBajoMovimiento').innerHTML = bajos.length
+    ? tablaSimple(['Producto', 'Categoría', 'Unidades vendidas', 'Stock'], bajos.map(p => [
+        escaparHtml(p.nombre), escaparHtml(p.categoria), p.unidadesVendidas, p.stock
+      ]))
+    : '<div class="vacio">Todavía no hay productos cargados.</div>';
+}
+
 // ---------- Inventario ----------
 
 function renderProductos() {
@@ -697,6 +824,7 @@ function alternarMonedaProducto() {
 function nuevoProducto() {
   productoEditando = null;
   document.getElementById('pNombre').value = '';
+  document.getElementById('pTono').value = '';
   document.getElementById('pMarca').value = '';
   document.getElementById('pMoneda').value = 'USD';
   alternarMonedaProducto();
@@ -714,6 +842,7 @@ function editarProducto(id) {
   productoEditando = id;
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
+  document.getElementById('pTono').value = p.tono || '';
   document.getElementById('pMarca').value = p.marca || '';
   document.getElementById('pOrigen').value = p.origen || 'Amazon';
   document.getElementById('pMoneda').value = p.moneda || 'USD';
@@ -755,7 +884,8 @@ async function guardarProducto() {
     Number(document.getElementById('pPrecioVenta').value) || 0,
     stock,
     stock > 0 ? 'Disponible' : 'Agotado',
-    moneda
+    moneda,
+    document.getElementById('pTono').value
   ];
 
   const accion = productoEditando ? 'editar_fila' : 'agregar_fila';
@@ -904,7 +1034,7 @@ async function eliminarVenta(id) {
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: [producto.id, producto.nombre, producto.categoria, producto.marca, producto.origen,
              producto.costoCompra, producto.tipoCambio, producto.costoTotalCRC, producto.precioVenta,
-             stockRestaurado, 'Disponible', producto.moneda]
+             stockRestaurado, 'Disponible', producto.moneda, producto.tono]
     });
   }
 
@@ -963,7 +1093,7 @@ async function guardarVenta() {
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: [producto.id, producto.nombre, producto.categoria, producto.marca, producto.origen,
              producto.costoCompra, producto.tipoCambio, producto.costoTotalCRC, producto.precioVenta,
-             nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado', producto.moneda]
+             nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado', producto.moneda, producto.tono]
     });
   }
 
