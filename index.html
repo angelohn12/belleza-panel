@@ -408,6 +408,14 @@
               <option>Entregado</option>
             </select>
           </div>
+          <div class="campoAncho" style="border-top:1px solid var(--border);padding-top:12px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="vTieneRegalo" onchange="alternarRegaloVenta()" style="width:auto;" />
+              Agregar un producto de regalo a esta venta
+            </label>
+          </div>
+          <div id="vRegaloProductoWrap" class="oculto"><label>Producto de regalo</label><select id="vProductoRegalo"></select></div>
+          <div id="vRegaloCantidadWrap" class="oculto"><label>Cantidad de regalo</label><input id="vCantidadRegalo" type="number" value="1" min="1" /></div>
           <div class="campoAncho"><button id="btnGuardarVenta" onclick="guardarVenta()">Guardar venta</button></div>
         </div>
         <div id="listaVentas"></div>
@@ -1052,10 +1060,19 @@ async function guardarCliente() {
 function llenarSelectoresVenta() {
   const selCliente = document.getElementById('vCliente');
   const selProducto = document.getElementById('vProducto');
+  const selProductoRegalo = document.getElementById('vProductoRegalo');
   const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
   selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option>' + opcionesClientes;
-  selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)}${p.marca ? ' — ' + escaparHtml(p.marca) : ''} (stock: ${p.stock})</option>`).join('');
+  const opcionesProductos = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)}${p.marca ? ' — ' + escaparHtml(p.marca) : ''} (stock: ${p.stock})</option>`).join('');
+  selProducto.innerHTML = opcionesProductos;
+  selProductoRegalo.innerHTML = opcionesProductos;
   alternarClienteNuevo();
+}
+
+function alternarRegaloVenta() {
+  const marcado = document.getElementById('vTieneRegalo').checked;
+  document.getElementById('vRegaloProductoWrap').classList.toggle('oculto', !marcado);
+  document.getElementById('vRegaloCantidadWrap').classList.toggle('oculto', !marcado);
 }
 
 function alternarClienteNuevo() {
@@ -1100,6 +1117,10 @@ function nuevaVenta() {
   alternarRegalia();
   autocompletarPrecioVenta();
   document.getElementById('vEstado').value = 'Pendiente';
+  document.getElementById('vTieneRegalo').checked = false;
+  if (document.getElementById('vProductoRegalo').options.length) document.getElementById('vProductoRegalo').selectedIndex = 0;
+  document.getElementById('vCantidadRegalo').value = 1;
+  alternarRegaloVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar venta';
   document.getElementById('formVenta').classList.remove('oculto');
 }
@@ -1117,6 +1138,8 @@ function editarVenta(id) {
   alternarRegalia();
   document.getElementById('vPrecio').value = v.precioVenta || 0;
   document.getElementById('vEstado').value = v.estadoEntrega || 'Pendiente';
+  document.getElementById('vTieneRegalo').checked = false;
+  alternarRegaloVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar cambios';
   document.getElementById('formVenta').classList.remove('oculto');
 }
@@ -1214,6 +1237,27 @@ async function guardarVenta() {
     return;
   }
 
+  // Regalo opcional dentro de la misma transacción: se valida ANTES de guardar nada,
+  // para no dejar la venta principal guardada si falla el regalo.
+  const hayRegalo = document.getElementById('vTieneRegalo').checked;
+  let productoRegalo = null;
+  let cantidadRegalo = 0;
+  let stockDisponibleRegalo = 0;
+  if (hayRegalo) {
+    const productoRegaloId = document.getElementById('vProductoRegalo').value;
+    if (!productoRegaloId) { mostrarToast('Elegí el producto de regalo, o desmarcá la casilla.'); return; }
+    cantidadRegalo = Number(document.getElementById('vCantidadRegalo').value) || 1;
+    productoRegalo = estado.productos.find(p => String(p.id) === String(productoRegaloId));
+    const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
+    stockDisponibleRegalo = esMismoProductoQueElRegalo
+      ? Math.max(stockDisponible - cantidad, 0)
+      : (productoRegalo ? Number(productoRegalo.stock) || 0 : 0);
+    if (productoRegalo && cantidadRegalo > stockDisponibleRegalo) {
+      mostrarToast(`Solo hay ${stockDisponibleRegalo} en stock de "${productoRegalo.nombre}" para el regalo.`);
+      return;
+    }
+  }
+
   const fila = [
     ventaEditando ? ventaEditando.id : '',
     ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
@@ -1243,16 +1287,44 @@ async function guardarVenta() {
     }
   }
 
-  // Descontar stock del producto actual de la venta
+  // Descontar stock del producto actual de la venta (restando también el regalo si es el mismo producto)
+  const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
   if (producto) {
-    const nuevoStock = Math.max(stockDisponible - cantidad, 0);
+    let nuevoStock = Math.max(stockDisponible - cantidad, 0);
+    if (esMismoProductoQueElRegalo) nuevoStock = Math.max(nuevoStock - cantidadRegalo, 0);
     await apiPost({
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: filaProductoConStock(producto, nuevoStock)
     });
   }
 
-  mostrarToast(ventaEditando ? 'Venta actualizada.' : 'Venta guardada.');
+  // Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
+  if (hayRegalo && productoRegalo) {
+    const filaRegalo = [
+      '',
+      ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
+      clienteId,
+      productoRegalo.id,
+      cantidadRegalo,
+      Number(productoRegalo.costoTotalCRC) || 0,
+      0,
+      document.getElementById('vCanal').value,
+      'Regalía',
+      document.getElementById('vEstado').value,
+      estado.usuario.usuario
+    ];
+    await apiPost({ accion: 'agregar_fila', hoja: 'Ventas', fila: filaRegalo });
+
+    if (!esMismoProductoQueElRegalo) {
+      const nuevoStockRegalo = Math.max(stockDisponibleRegalo - cantidadRegalo, 0);
+      await apiPost({
+        accion: 'editar_fila', hoja: 'Productos', id: productoRegalo.id,
+        fila: filaProductoConStock(productoRegalo, nuevoStockRegalo)
+      });
+    }
+  }
+
+  mostrarToast(ventaEditando ? 'Venta actualizada.' : (hayRegalo ? 'Venta y regalo guardados.' : 'Venta guardada.'));
   document.getElementById('formVenta').classList.add('oculto');
   ventaEditando = null;
   await cargarDatos();
