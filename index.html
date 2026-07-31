@@ -335,7 +335,8 @@
             </select>
           </div>
           <div><label>Tono / color (opcional)</label><input id="pTono" placeholder="Rojo, Nude, Coral…" /></div>
-          <div><label>Marca</label><input id="pMarca" placeholder="Maybelline" /></div>
+          <div><label>Marca</label><select id="pMarca" onchange="alternarMarcaNueva()"></select></div>
+          <div id="pMarcaNuevaWrap" class="oculto"><label>Nombre de la marca nueva</label><input id="pMarcaNueva" placeholder="Ej: Fenty Beauty" /></div>
           <div><label>Origen</label>
             <select id="pOrigen">
               <option>Amazon</option>
@@ -390,6 +391,13 @@
               <option>WhatsApp</option>
               <option>Entrega personal</option>
               <option>Envío</option>
+            </select>
+          </div>
+          <div><label>Forma de pago</label>
+            <select id="vFormaPago">
+              <option>Efectivo</option>
+              <option>SINPE Móvil</option>
+              <option>A pagos</option>
             </select>
           </div>
           <div><label>Estado de entrega</label>
@@ -635,6 +643,7 @@ function renderTodo() {
   renderVentas();
   renderMovimientos();
   llenarSelectoresVenta();
+  llenarSelectorMarcas();
   document.getElementById('cfgTipoCambio').value = valorConfig('tipoCambio', 520);
 }
 
@@ -868,11 +877,28 @@ function alternarMonedaProducto() {
   document.getElementById('pCampoTipoCambio').classList.toggle('oculto', !esDolares);
 }
 
+function llenarSelectorMarcas() {
+  const marcas = [...new Set(estado.productos.map(p => p.marca).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  const selMarca = document.getElementById('pMarca');
+  const seleccionActual = selMarca.value;
+  selMarca.innerHTML = marcas.map(m => `<option value="${escaparHtml(m)}">${escaparHtml(m)}</option>`).join('')
+    + '<option value="__nueva__">+ Marca nueva…</option>';
+  if (marcas.includes(seleccionActual) || seleccionActual === '__nueva__') selMarca.value = seleccionActual;
+  alternarMarcaNueva();
+}
+
+function alternarMarcaNueva() {
+  const esNueva = document.getElementById('pMarca').value === '__nueva__';
+  document.getElementById('pMarcaNuevaWrap').classList.toggle('oculto', !esNueva);
+}
+
 function nuevoProducto() {
   productoEditando = null;
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
-  document.getElementById('pMarca').value = '';
+  document.getElementById('pMarca').value = '__nueva__';
+  document.getElementById('pMarcaNueva').value = '';
+  alternarMarcaNueva();
   document.getElementById('pMoneda').value = 'USD';
   alternarMonedaProducto();
   document.getElementById('pCosto').value = '';
@@ -890,7 +916,9 @@ function editarProducto(id) {
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
-  document.getElementById('pMarca').value = p.marca || '';
+  document.getElementById('pMarca').value = p.marca || '__nueva__';
+  document.getElementById('pMarcaNueva').value = '';
+  alternarMarcaNueva();
   document.getElementById('pOrigen').value = p.origen || 'Amazon';
   document.getElementById('pMoneda').value = p.moneda || 'USD';
   alternarMonedaProducto();
@@ -919,11 +947,17 @@ async function guardarProducto() {
   if (!nombre) { mostrarToast('Poné el nombre del producto.'); return; }
   const stock = Number(document.getElementById('pStock').value) || 0;
 
+  let marca = document.getElementById('pMarca').value;
+  if (marca === '__nueva__') {
+    marca = document.getElementById('pMarcaNueva').value.trim();
+    if (!marca) { mostrarToast('Escribí el nombre de la marca nueva.'); return; }
+  }
+
   const fila = [
     productoEditando || '',
     nombre,
     document.getElementById('pCategoria').value,
-    document.getElementById('pMarca').value,
+    marca,
     document.getElementById('pOrigen').value,
     costo,
     moneda === 'USD' ? tipoCambio : '',
@@ -1048,8 +1082,9 @@ function renderVentas() {
   const caja = document.getElementById('listaVentas');
   if (!estado.ventas.length) { caja.innerHTML = '<div class="vacio">Todavía no hay ventas.</div>'; return; }
   const ordenadas = [...estado.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const badgePago = { 'Efectivo': 'mint', 'SINPE Móvil': 'peach', 'A pagos': 'pink' };
   caja.innerHTML = tablaSimple(
-    ['Fecha', 'Cliente', 'Producto', 'Cant.', 'Costo', 'Venta', 'Ganancia', 'Canal', 'Estado', 'Acciones'],
+    ['Fecha', 'Cliente', 'Producto', 'Cant.', 'Costo', 'Venta', 'Ganancia', 'Canal', 'Pago', 'Estado', 'Acciones'],
     ordenadas.map(v => {
       const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
       const ganancia = (Number(v.precioVenta) || 0) - costo;
@@ -1058,6 +1093,7 @@ function renderVentas() {
         formatoColones(costo), formatoColones(v.precioVenta),
         `<span style="color:${ganancia >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(ganancia)}</span>`,
         escaparHtml(v.canal),
+        `<span class="badge ${badgePago[v.formaPago] || 'peach'}">${escaparHtml(v.formaPago || '—')}</span>`,
         `<span class="badge ${v.estadoEntrega === 'Entregado' ? 'mint' : 'peach'}">${escaparHtml(v.estadoEntrega)}</span>`,
         botonesAccion(null, 'eliminarVenta', v.id)
       ];
@@ -1127,6 +1163,7 @@ async function guardarVenta() {
     costoUnitarioCRC,
     parseMonto(document.getElementById('vPrecio').value),
     document.getElementById('vCanal').value,
+    document.getElementById('vFormaPago').value,
     document.getElementById('vEstado').value,
     estado.usuario.usuario
   ];
