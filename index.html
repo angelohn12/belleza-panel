@@ -281,6 +281,16 @@
           <option value="anio">Este año</option>
         </select>
       </div>
+      <div class="panel">
+        <h2 style="margin:0 0 2px;">Estimación de ingresos por inventario disponible</h2>
+        <p style="font-size:12px;color:var(--brown-soft);margin:0 0 14px;">Si vendés todo el stock actual, al precio de lista de cada producto</p>
+        <div class="tarjetas" style="margin-bottom:16px;">
+          <div class="tarjeta"><p class="etiqueta">Ingreso potencial</p><p class="valor" id="eIngresoPotencial">₡0</p></div>
+          <div class="tarjeta"><p class="etiqueta">Costo del inventario</p><p class="valor" id="eCostoInventario">₡0</p></div>
+          <div class="tarjeta"><p class="etiqueta">Ganancia potencial</p><p class="valor" style="color:var(--sage);" id="eGananciaPotencial">₡0</p></div>
+        </div>
+        <div id="eTablaInventario"></div>
+      </div>
       <div class="tarjetas">
         <div class="tarjeta"><p class="etiqueta">Ticket promedio</p><p class="valor" id="tTicketPromedio">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Producto más vendido</p><p class="valor" style="font-size:16px;" id="tProductoTop">—</p></div>
@@ -754,7 +764,30 @@ function barraTendencia(etiqueta, valor, maximo, color) {
   </div>`;
 }
 
+function renderEstimacionInventario() {
+  const conStock = estado.productos.filter(p => (Number(p.stock) || 0) > 0);
+
+  const ingresoPotencial = conStock.reduce((s, p) => s + (Number(p.stock) || 0) * (Number(p.precioVenta) || 0), 0);
+  const costoInventario = conStock.reduce((s, p) => s + (Number(p.stock) || 0) * (Number(p.costoTotalCRC) || 0), 0);
+  const gananciaPotencial = ingresoPotencial - costoInventario;
+
+  document.getElementById('eIngresoPotencial').textContent = formatoColones(ingresoPotencial);
+  document.getElementById('eCostoInventario').textContent = formatoColones(costoInventario);
+  document.getElementById('eGananciaPotencial').textContent = formatoColones(gananciaPotencial);
+
+  const filas = [...conStock]
+    .map(p => ({ ...p, subtotal: (Number(p.stock) || 0) * (Number(p.precioVenta) || 0) }))
+    .sort((a, b) => b.subtotal - a.subtotal);
+
+  document.getElementById('eTablaInventario').innerHTML = filas.length
+    ? tablaSimple(['Producto', 'Stock', 'Precio venta', 'Subtotal'], filas.map(p => [
+        escaparHtml(p.nombre), p.stock, formatoColones(p.precioVenta), formatoColones(p.subtotal)
+      ]))
+    : '<div class="vacio">Todavía no hay productos con stock disponible.</div>';
+}
+
 function renderTendencias() {
+  renderEstimacionInventario();
   const periodo = document.getElementById('tPeriodo').value;
   const ventas = ventasEnPeriodo(periodo);
 
