@@ -188,6 +188,7 @@
   .badge.mint{background:var(--mint);color:#1f4a30;}
   .badge.peach{background:var(--peach);color:#7a4a0a;}
   .badge.pink{background:var(--pink);color:var(--coral-dark);}
+  .badge.gift{background:var(--brown);color:#fff;}
   .toast{
     position:fixed;
     bottom:20px;
@@ -368,7 +369,7 @@
       <div class="panel">
         <div class="filaBotones">
           <h2 style="margin:0">Ventas</h2>
-          <button onclick="alternar('formVenta')">+ Registrar venta</button>
+          <button onclick="nuevaVenta()">+ Registrar venta</button>
         </div>
         <div class="formulario oculto" id="formVenta">
           <div><label>Cliente</label><select id="vCliente" onchange="alternarClienteNuevo()"></select></div>
@@ -394,10 +395,11 @@
             </select>
           </div>
           <div><label>Forma de pago</label>
-            <select id="vFormaPago">
+            <select id="vFormaPago" onchange="alternarRegalia()">
               <option>Efectivo</option>
               <option>SINPE Móvil</option>
               <option>A pagos</option>
+              <option>Regalía</option>
             </select>
           </div>
           <div><label>Estado de entrega</label>
@@ -406,7 +408,7 @@
               <option>Entregado</option>
             </select>
           </div>
-          <div class="campoAncho"><button onclick="guardarVenta()">Guardar venta</button></div>
+          <div class="campoAncho"><button id="btnGuardarVenta" onclick="guardarVenta()">Guardar venta</button></div>
         </div>
         <div id="listaVentas"></div>
       </div>
@@ -512,6 +514,7 @@ let estado = {
 let productoEditando = null;
 let clienteEditando = null;
 let movimientoEditando = null;
+let ventaEditando = null; // guarda la venta original completa (no solo el id) para reconciliar stock al editar
 
 // ---------- API ----------
 
@@ -1063,9 +1066,59 @@ function alternarClienteNuevo() {
 }
 
 function autocompletarPrecioVenta() {
+  if (document.getElementById('vFormaPago').value === 'Regalía') { document.getElementById('vPrecio').value = 0; return; }
   const opcion = document.getElementById('vProducto').selectedOptions[0];
   const cantidad = Number(document.getElementById('vCantidad').value) || 1;
   if (opcion) document.getElementById('vPrecio').value = Math.round(Number(opcion.dataset.precio) * cantidad);
+}
+
+function alternarRegalia() {
+  const esRegalia = document.getElementById('vFormaPago').value === 'Regalía';
+  const campoPrecio = document.getElementById('vPrecio');
+  campoPrecio.disabled = esRegalia;
+  if (esRegalia) campoPrecio.value = 0;
+  else autocompletarPrecioVenta();
+}
+
+// Reconstruye la fila completa de un producto, cambiando solo el stock. Centraliza el orden
+// de columnas de Productos para no desincronizarlo entre guardarVenta/eliminarVenta/editarVenta.
+function filaProductoConStock(p, nuevoStock) {
+  return [p.id, p.nombre, p.categoria, p.marca, p.origen, p.costoCompra, p.tipoCambio, p.costoTotalCRC, p.precioVenta,
+          nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado', p.moneda, p.tono];
+}
+
+function nuevaVenta() {
+  ventaEditando = null;
+  document.getElementById('vCliente').value = '__nuevo__';
+  alternarClienteNuevo();
+  document.getElementById('vNuevoNombre').value = '';
+  document.getElementById('vNuevoTelefono').value = '';
+  if (document.getElementById('vProducto').options.length) document.getElementById('vProducto').selectedIndex = 0;
+  document.getElementById('vCantidad').value = 1;
+  document.getElementById('vCanal').value = 'Instagram';
+  document.getElementById('vFormaPago').value = 'Efectivo';
+  alternarRegalia();
+  autocompletarPrecioVenta();
+  document.getElementById('vEstado').value = 'Pendiente';
+  document.getElementById('btnGuardarVenta').textContent = 'Guardar venta';
+  document.getElementById('formVenta').classList.remove('oculto');
+}
+
+function editarVenta(id) {
+  const v = estado.ventas.find(x => String(x.id) === String(id));
+  if (!v) return;
+  ventaEditando = v;
+  document.getElementById('vCliente').value = String(v.clienteId);
+  alternarClienteNuevo();
+  document.getElementById('vProducto').value = String(v.productoId);
+  document.getElementById('vCantidad').value = v.cantidad || 1;
+  document.getElementById('vCanal').value = v.canal || 'Instagram';
+  document.getElementById('vFormaPago').value = v.formaPago || 'Efectivo';
+  alternarRegalia();
+  document.getElementById('vPrecio').value = v.precioVenta || 0;
+  document.getElementById('vEstado').value = v.estadoEntrega || 'Pendiente';
+  document.getElementById('btnGuardarVenta').textContent = 'Guardar cambios';
+  document.getElementById('formVenta').classList.remove('oculto');
 }
 
 function nombreProducto(id) {
@@ -1082,7 +1135,7 @@ function renderVentas() {
   const caja = document.getElementById('listaVentas');
   if (!estado.ventas.length) { caja.innerHTML = '<div class="vacio">Todavía no hay ventas.</div>'; return; }
   const ordenadas = [...estado.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  const badgePago = { 'Efectivo': 'mint', 'SINPE Móvil': 'peach', 'A pagos': 'pink' };
+  const badgePago = { 'Efectivo': 'mint', 'SINPE Móvil': 'peach', 'A pagos': 'pink', 'Regalía': 'gift' };
   caja.innerHTML = tablaSimple(
     ['Fecha', 'Cliente', 'Producto', 'Cant.', 'Costo', 'Venta', 'Ganancia', 'Canal', 'Pago', 'Estado', 'Acciones'],
     ordenadas.map(v => {
@@ -1095,7 +1148,7 @@ function renderVentas() {
         escaparHtml(v.canal),
         `<span class="badge ${badgePago[v.formaPago] || 'peach'}">${escaparHtml(v.formaPago || '—')}</span>`,
         `<span class="badge ${v.estadoEntrega === 'Entregado' ? 'mint' : 'peach'}">${escaparHtml(v.estadoEntrega)}</span>`,
-        botonesAccion(null, 'eliminarVenta', v.id)
+        botonesAccion('editarVenta', 'eliminarVenta', v.id)
       ];
     })
   );
@@ -1115,9 +1168,7 @@ async function eliminarVenta(id) {
     const stockRestaurado = (Number(producto.stock) || 0) + (Number(v.cantidad) || 0);
     await apiPost({
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
-      fila: [producto.id, producto.nombre, producto.categoria, producto.marca, producto.origen,
-             producto.costoCompra, producto.tipoCambio, producto.costoTotalCRC, producto.precioVenta,
-             stockRestaurado, 'Disponible', producto.moneda, producto.tono]
+      fila: filaProductoConStock(producto, stockRestaurado)
     });
   }
 
@@ -1148,41 +1199,62 @@ async function guardarVenta() {
   const cantidad = Number(document.getElementById('vCantidad').value) || 1;
   const producto = estado.productos.find(p => String(p.id) === String(productoId));
   const costoUnitarioCRC = producto ? (Number(producto.costoTotalCRC) || 0) : 0;
+  const formaPago = document.getElementById('vFormaPago').value;
+  const precioVenta = formaPago === 'Regalía' ? 0 : parseMonto(document.getElementById('vPrecio').value);
 
-  if (producto && cantidad > Number(producto.stock)) {
-    mostrarToast(`Solo hay ${producto.stock} en stock de "${producto.nombre}".`);
+  // Si estamos editando y el producto no cambió, la cantidad anterior de esta venta
+  // todavía cuenta como "disponible" para el nuevo cálculo (se va a re-descontar).
+  const mismoProductoQueAntes = ventaEditando && String(ventaEditando.productoId) === String(productoId);
+  const stockDisponible = producto
+    ? (Number(producto.stock) || 0) + (mismoProductoQueAntes ? Number(ventaEditando.cantidad) || 0 : 0)
+    : 0;
+
+  if (producto && cantidad > stockDisponible) {
+    mostrarToast(`Solo hay ${stockDisponible} en stock de "${producto.nombre}".`);
     return;
   }
 
   const fila = [
-    '',
-    new Date().toISOString().slice(0, 10),
+    ventaEditando ? ventaEditando.id : '',
+    ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
     clienteId,
     productoId,
     cantidad,
     costoUnitarioCRC,
-    parseMonto(document.getElementById('vPrecio').value),
+    precioVenta,
     document.getElementById('vCanal').value,
-    document.getElementById('vFormaPago').value,
+    formaPago,
     document.getElementById('vEstado').value,
-    estado.usuario.usuario
+    ventaEditando ? ventaEditando.usuario : estado.usuario.usuario
   ];
-  const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Ventas', fila });
+  const accion = ventaEditando ? 'editar_fila' : 'agregar_fila';
+  const resultado = await apiPost({ accion, hoja: 'Ventas', id: ventaEditando ? ventaEditando.id : undefined, fila });
   if (!resultado.ok) { mostrarToast('Error: ' + resultado.error); return; }
 
-  // descontar stock del producto
+  // Si el producto cambió respecto a la venta original, devolver el stock al producto viejo
+  if (ventaEditando && !mismoProductoQueAntes) {
+    const productoViejo = estado.productos.find(p => String(p.id) === String(ventaEditando.productoId));
+    if (productoViejo) {
+      const stockRestaurado = (Number(productoViejo.stock) || 0) + (Number(ventaEditando.cantidad) || 0);
+      await apiPost({
+        accion: 'editar_fila', hoja: 'Productos', id: productoViejo.id,
+        fila: filaProductoConStock(productoViejo, stockRestaurado)
+      });
+    }
+  }
+
+  // Descontar stock del producto actual de la venta
   if (producto) {
-    const nuevoStock = Math.max((Number(producto.stock) || 0) - cantidad, 0);
+    const nuevoStock = Math.max(stockDisponible - cantidad, 0);
     await apiPost({
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
-      fila: [producto.id, producto.nombre, producto.categoria, producto.marca, producto.origen,
-             producto.costoCompra, producto.tipoCambio, producto.costoTotalCRC, producto.precioVenta,
-             nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado', producto.moneda, producto.tono]
+      fila: filaProductoConStock(producto, nuevoStock)
     });
   }
 
-  mostrarToast('Venta guardada.');
+  mostrarToast(ventaEditando ? 'Venta actualizada.' : 'Venta guardada.');
   document.getElementById('formVenta').classList.add('oculto');
+  ventaEditando = null;
   await cargarDatos();
 }
 
