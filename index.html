@@ -342,9 +342,9 @@
               <option value="CRC">Colones (₡)</option>
             </select>
           </div>
-          <div><label>Costo de compra</label><input id="pCosto" type="number" step="0.01" placeholder="12.50" /></div>
+          <div><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" /></div>
           <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
-          <div><label>Precio de venta (₡)</label><input id="pPrecioVenta" type="number" step="1" placeholder="8000" /></div>
+          <div><label>Precio de venta (₡)</label><input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" /></div>
           <div><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
           <div class="campoAncho"><button id="btnGuardarProducto" onclick="guardarProducto()">Guardar producto</button></div>
         </div>
@@ -372,7 +372,7 @@
           </div>
           <div><label>Producto</label><select id="vProducto" onchange="autocompletarPrecioVenta()"></select></div>
           <div><label>Cantidad</label><input id="vCantidad" type="number" value="1" min="1" oninput="autocompletarPrecioVenta()" /></div>
-          <div><label>Precio de venta (₡, total)</label><input id="vPrecio" type="number" step="1" /></div>
+          <div><label>Precio de venta (₡, total)</label><input id="vPrecio" type="text" inputmode="decimal" /></div>
           <div><label>Canal</label>
             <select id="vCanal">
               <option>Instagram</option>
@@ -446,7 +446,7 @@
               <option value="aporte">Aporte de capital</option>
             </select>
           </div>
-          <div><label>Monto (₡)</label><input id="mMonto" type="number" step="1" /></div>
+          <div><label>Monto (₡)</label><input id="mMonto" type="text" inputmode="decimal" /></div>
           <div><label>Categoría</label><input id="mCategoria" placeholder="Compra inventario, envío, etc." /></div>
           <div class="campoAncho"><label>Descripción</label><input id="mDescripcion" placeholder="Opcional" /></div>
           <div class="campoAncho"><button id="btnGuardarMovimiento" onclick="guardarMovimiento()">Guardar movimiento</button></div>
@@ -599,6 +599,20 @@ function escaparHtml(texto) {
   const div = document.createElement('div');
   div.textContent = texto == null ? '' : String(texto);
   return div.innerHTML;
+}
+
+// Interpreta montos escritos como los tipeamos en Costa Rica: "1500" o "1.500" -> 1500,
+// "1.500,50" o "1500,50" -> 1500.5, "12.50" (con solo 2 decimales) -> 12.5 (formato USD).
+function parseMonto(valor) {
+  let texto = String(valor == null ? '' : valor).trim();
+  if (!texto) return 0;
+  if (texto.includes(',')) {
+    texto = texto.replace(/\./g, '').replace(',', '.');
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(texto)) {
+    texto = texto.replace(/\./g, '');
+  }
+  const numero = Number(texto);
+  return isNaN(numero) ? 0 : numero;
 }
 
 // ---------- Render general ----------
@@ -865,7 +879,7 @@ async function eliminarProducto(id) {
 
 async function guardarProducto() {
   const moneda = document.getElementById('pMoneda').value;
-  const costo = Number(document.getElementById('pCosto').value) || 0;
+  const costo = parseMonto(document.getElementById('pCosto').value);
   const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
   const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
   const nombre = document.getElementById('pNombre').value;
@@ -881,7 +895,7 @@ async function guardarProducto() {
     costo,
     moneda === 'USD' ? tipoCambio : '',
     costoTotalCRC,
-    Number(document.getElementById('pPrecioVenta').value) || 0,
+    parseMonto(document.getElementById('pPrecioVenta').value),
     stock,
     stock > 0 ? 'Disponible' : 'Agotado',
     moneda,
@@ -1078,7 +1092,7 @@ async function guardarVenta() {
     productoId,
     cantidad,
     costoUnitarioCRC,
-    Number(document.getElementById('vPrecio').value) || 0,
+    parseMonto(document.getElementById('vPrecio').value),
     document.getElementById('vCanal').value,
     document.getElementById('vEstado').value,
     estado.usuario.usuario
@@ -1162,7 +1176,7 @@ async function guardarMovimiento() {
     movimientoEditando || '',
     new Date().toISOString().slice(0, 10),
     document.getElementById('mTipo').value,
-    Number(document.getElementById('mMonto').value) || 0,
+    parseMonto(document.getElementById('mMonto').value),
     document.getElementById('mCategoria').value,
     document.getElementById('mDescripcion').value,
     estado.usuario.usuario
