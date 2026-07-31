@@ -1051,7 +1051,7 @@ function llenarSelectoresVenta() {
   const selProducto = document.getElementById('vProducto');
   const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
   selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option>' + opcionesClientes;
-  selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)} (stock: ${p.stock})</option>`).join('');
+  selProducto.innerHTML = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)}${p.marca ? ' — ' + escaparHtml(p.marca) : ''} (stock: ${p.stock})</option>`).join('');
   alternarClienteNuevo();
 }
 
