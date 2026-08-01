@@ -1267,9 +1267,9 @@ async function guardarVenta() {
     costoUnitarioCRC,
     precioVenta,
     document.getElementById('vCanal').value,
-    formaPago,
     document.getElementById('vEstado').value,
-    ventaEditando ? ventaEditando.usuario : estado.usuario.usuario
+    ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
+    formaPago
   ];
   const accion = ventaEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Ventas', id: ventaEditando ? ventaEditando.id : undefined, fila });
@@ -1309,9 +1309,9 @@ async function guardarVenta() {
       Number(productoRegalo.costoTotalCRC) || 0,
       0,
       document.getElementById('vCanal').value,
-      'Regalía',
       document.getElementById('vEstado').value,
-      estado.usuario.usuario
+      estado.usuario.usuario,
+      'Regalía'
     ];
     await apiPost({ accion: 'agregar_fila', hoja: 'Ventas', fila: filaRegalo });
 
