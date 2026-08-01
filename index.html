@@ -51,8 +51,11 @@
     background:var(--coral);
     color:#fff;
     font-weight:600;
+    transition:transform .08s;
   }
   button:hover{background:var(--coral-dark);}
+  button:active{transform:scale(0.96);}
+  button:disabled{opacity:0.6;cursor:default;transform:none;}
   button.secundario{
     background:#fff;
     color:var(--coral);
@@ -368,7 +371,7 @@
           <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
           <div><label>Precio de venta (₡)</label><input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" /></div>
           <div><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
-          <div class="campoAncho"><button id="btnGuardarProducto" onclick="guardarProducto()">Guardar producto</button></div>
+          <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
         </div>
         <div id="listaProductos"></div>
       </div>
@@ -426,7 +429,7 @@
           </div>
           <div id="vRegaloProductoWrap" class="oculto"><label>Producto de regalo</label><select id="vProductoRegalo"></select></div>
           <div id="vRegaloCantidadWrap" class="oculto"><label>Cantidad de regalo</label><input id="vCantidadRegalo" type="number" value="1" min="1" /></div>
-          <div class="campoAncho"><button id="btnGuardarVenta" onclick="guardarVenta()">Guardar venta</button></div>
+          <div class="campoAncho"><button id="btnGuardarVenta" onclick="ejecutarConBoton('btnGuardarVenta', guardarVenta)">Guardar venta</button></div>
         </div>
         <div id="listaVentas"></div>
       </div>
@@ -457,7 +460,7 @@
             </select>
           </div>
           <div class="campoAncho"><label>Notas</label><input id="cNotas" placeholder="Opcional" /></div>
-          <div class="campoAncho"><button id="btnGuardarCliente" onclick="guardarCliente()">Guardar cliente</button></div>
+          <div class="campoAncho"><button id="btnGuardarCliente" onclick="ejecutarConBoton('btnGuardarCliente', guardarCliente)">Guardar cliente</button></div>
         </div>
         <div id="listaClientes"></div>
       </div>
@@ -487,7 +490,7 @@
           <div><label>Monto (₡)</label><input id="mMonto" type="text" inputmode="decimal" /></div>
           <div><label>Categoría</label><input id="mCategoria" placeholder="Compra inventario, envío, etc." /></div>
           <div class="campoAncho"><label>Descripción</label><input id="mDescripcion" placeholder="Opcional" /></div>
-          <div class="campoAncho"><button id="btnGuardarMovimiento" onclick="guardarMovimiento()">Guardar movimiento</button></div>
+          <div class="campoAncho"><button id="btnGuardarMovimiento" onclick="ejecutarConBoton('btnGuardarMovimiento', guardarMovimiento)">Guardar movimiento</button></div>
         </div>
         <div id="listaMovimientos"></div>
       </div>
@@ -634,6 +637,21 @@ function mostrarToast(mensaje) {
   toast.textContent = mensaje;
   toast.style.display = 'block';
   setTimeout(() => { toast.style.display = 'none'; }, 3500);
+}
+
+// Deja el botón visualmente "presionado" (deshabilitado + texto "Guardando...")
+// mientras la función async corre, para confirmar que el toque sí se registró.
+async function ejecutarConBoton(idBoton, fn) {
+  const boton = document.getElementById(idBoton);
+  const textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = 'Guardando...';
+  try {
+    await fn();
+  } finally {
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
 }
 
 function formatoColones(monto) {
