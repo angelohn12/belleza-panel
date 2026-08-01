@@ -283,6 +283,15 @@
         </select>
       </div>
       <div class="panel">
+        <h2 style="margin:0 0 2px;">Totales del periodo seleccionado</h2>
+        <div class="tarjetas">
+          <div class="tarjeta"><p class="etiqueta">Total de ventas</p><p class="valor" id="tTotalVentas">0</p></div>
+          <div class="tarjeta"><p class="etiqueta">Ingreso total</p><p class="valor" id="tIngresoTotal">₡0</p></div>
+          <div class="tarjeta"><p class="etiqueta">Costo total</p><p class="valor" id="tCostoTotal">₡0</p></div>
+          <div class="tarjeta"><p class="etiqueta">Ganancia total</p><p class="valor" style="color:var(--sage);" id="tGananciaTotal">₡0</p></div>
+        </div>
+      </div>
+      <div class="panel">
         <h2 style="margin:0 0 2px;">Estimación de ingresos por inventario disponible</h2>
         <p style="font-size:12px;color:var(--brown-soft);margin:0 0 14px;">Si vendés todo el stock actual, al precio de lista de cada producto</p>
         <div class="tarjetas" style="margin-bottom:16px;">
@@ -829,6 +838,13 @@ function renderTendencias() {
 
   const ticketPromedio = ventas.length ? ventas.reduce((s, v) => s + (Number(v.precioVenta) || 0), 0) / ventas.length : 0;
   document.getElementById('tTicketPromedio').textContent = formatoColones(ticketPromedio);
+
+  const ingresoTotal = ventas.reduce((s, v) => s + (Number(v.precioVenta) || 0), 0);
+  const costoTotal = ventas.reduce((s, v) => s + (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1), 0);
+  document.getElementById('tTotalVentas').textContent = ventas.length;
+  document.getElementById('tIngresoTotal').textContent = formatoColones(ingresoTotal);
+  document.getElementById('tCostoTotal').textContent = formatoColones(costoTotal);
+  document.getElementById('tGananciaTotal').textContent = formatoColones(ingresoTotal - costoTotal);
 
   const topProductos = Object.entries(unidadesPorProducto).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxProducto = topProductos.length ? topProductos[0][1] : 0;
