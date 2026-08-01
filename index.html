@@ -221,7 +221,7 @@
       <label>Contraseña</label>
       <input type="password" id="loginPassword" placeholder="••••••••" />
     </div>
-    <button style="width:100%" onclick="iniciarSesion()">Entrar</button>
+    <button id="btnEntrar" style="width:100%" onclick="ejecutarConBoton('btnEntrar', iniciarSesion, 'Entrando...')">Entrar</button>
     <p class="errorLogin" id="errorLogin">Usuario o contraseña incorrectos.</p>
   </div>
 </div>
@@ -232,7 +232,7 @@
     <h1>Avellana Studio</h1>
     <div class="usuarioInfo">
       <span id="nombreUsuarioActual"></span>
-      <button class="secundario" onclick="actualizarDatos()">Actualizar</button>
+      <button id="btnActualizar" class="secundario" onclick="ejecutarConBoton('btnActualizar', actualizarDatos, 'Actualizando...')">Actualizar</button>
       <button class="secundario" onclick="cerrarSesion()">Salir</button>
     </div>
   </header>
@@ -502,7 +502,7 @@
         <h2>Configuración general</h2>
         <div class="formulario">
           <div><label>Tipo de cambio actual (₡ por $)</label><input id="cfgTipoCambio" type="number" step="1" /></div>
-          <div class="campoAncho"><button onclick="guardarConfig()">Guardar configuración</button></div>
+          <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
         </div>
       </div>
     </section>
@@ -641,16 +641,23 @@ function mostrarToast(mensaje) {
 
 // Deja el botón visualmente "presionado" (deshabilitado + texto "Guardando...")
 // mientras la función async corre, para confirmar que el toque sí se registró.
-async function ejecutarConBoton(idBoton, fn) {
-  const boton = document.getElementById(idBoton);
+async function ejecutarConBoton(idBoton, fn, textoCargando) {
+  await ejecutarConBotonElemento(document.getElementById(idBoton), fn, textoCargando || 'Guardando...');
+}
+
+// Igual que ejecutarConBoton, pero recibe el elemento directamente — para botones
+// generados dinámicamente (Editar/Eliminar por fila) que no tienen un id fijo.
+// Si ya está deshabilitado (un toque anterior sigue en curso), ignora el toque nuevo.
+async function ejecutarConBotonElemento(boton, fn, textoCargando) {
+  if (!boton || boton.disabled) return;
   const textoOriginal = boton.textContent;
   boton.disabled = true;
-  boton.textContent = 'Guardando...';
+  if (textoCargando) boton.textContent = textoCargando;
   try {
     await fn();
   } finally {
     boton.disabled = false;
-    boton.textContent = textoOriginal;
+    if (textoCargando) boton.textContent = textoOriginal;
   }
 }
 
@@ -784,7 +791,7 @@ function botonesAccion(fnEditar, fnEliminar, id) {
   const editar = fnEditar ? `<button class="secundario" style="padding:4px 10px;font-size:12px;" onclick="${fnEditar}(${id})">Editar</button>` : '';
   return `<div style="display:flex;gap:6px;">
     ${editar}
-    <button class="secundario" style="padding:4px 10px;font-size:12px;color:#A5323F;border-color:#A5323F;" onclick="${fnEliminar}(${id})">Eliminar</button>
+    <button class="secundario" style="padding:4px 10px;font-size:12px;color:#A5323F;border-color:#A5323F;" onclick="ejecutarConBotonElemento(this, () => ${fnEliminar}(${id}))">Eliminar</button>
   </div>`;
 }
 
