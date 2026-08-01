@@ -229,6 +229,7 @@
     <h1>Avellana Studio</h1>
     <div class="usuarioInfo">
       <span id="nombreUsuarioActual"></span>
+      <button class="secundario" onclick="actualizarDatos()">Actualizar</button>
       <button class="secundario" onclick="cerrarSesion()">Salir</button>
     </div>
   </header>
@@ -589,16 +590,22 @@ async function entrarApp() {
 
 // ---------- Carga de datos ----------
 
+async function actualizarDatos() {
+  const ok = await cargarDatos();
+  if (ok) mostrarToast('Datos actualizados.');
+}
+
 async function cargarDatos() {
   try {
     const datos = await apiLeer();
-    if (!datos.ok) { mostrarToast('Error leyendo datos.'); return; }
+    if (!datos.ok) { mostrarToast('Error leyendo datos.'); return false; }
     estado.productos = datos.productos || [];
     estado.ventas = datos.ventas || [];
     estado.clientes = datos.clientes || [];
     estado.movimientos = datos.movimientos || [];
     estado.config = datos.config || [];
     renderTodo();
+    return true;
   } catch (err) {
     mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
   }
@@ -831,7 +838,7 @@ function renderTendencias() {
     if (producto) {
       const categoria = producto.categoria || 'Sin categoría';
       unidadesPorCategoria[categoria] = (unidadesPorCategoria[categoria] || 0) + cantidad;
-      const tono = (producto.tono || '').trim();
+      const tono = String(producto.tono == null ? '' : producto.tono).trim();
       if (tono) unidadesPorTono[tono] = (unidadesPorTono[tono] || 0) + cantidad;
     }
   });
