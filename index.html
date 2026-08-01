@@ -1015,13 +1015,20 @@ async function guardarProducto() {
 
 // ---------- Clientes ----------
 
+function totalCompradoCliente(clienteId) {
+  return estado.ventas
+    .filter(v => String(v.clienteId) === String(clienteId))
+    .reduce((s, v) => s + (Number(v.precioVenta) || 0), 0);
+}
+
 function renderClientes() {
   const caja = document.getElementById('listaClientes');
   if (!estado.clientes.length) { caja.innerHTML = '<div class="vacio">Todavía no hay clientes.</div>'; return; }
   caja.innerHTML = tablaSimple(
-    ['Nombre', 'Teléfono', 'Ubicación', 'Canal preferido', 'Acciones'],
+    ['Nombre', 'Teléfono', 'Ubicación', 'Canal preferido', 'Total comprado', 'Acciones'],
     estado.clientes.map(c => [
       escaparHtml(c.nombre), escaparHtml(c.telefono), escaparHtml(c.ubicacion), escaparHtml(c.canalPreferido),
+      `<span style="font-weight:600">${formatoColones(totalCompradoCliente(c.id))}</span>`,
       botonesAccion('editarCliente', 'eliminarCliente', c.id)
     ])
   );
