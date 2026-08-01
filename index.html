@@ -467,6 +467,19 @@
         </div>
         <div id="listaClientes"></div>
       </div>
+      <div class="panel">
+        <h2>Registrar abono</h2>
+        <div class="formulario" id="formAbono">
+          <div><label>Cliente</label><select id="aCliente"></select></div>
+          <div><label>Monto del abono (₡)</label><input id="aMonto" type="text" inputmode="decimal" placeholder="3000" /></div>
+          <div class="campoAncho"><label>Notas (opcional)</label><input id="aNotas" placeholder="Pago SINPE" /></div>
+          <div class="campoAncho"><button id="btnGuardarAbono" onclick="ejecutarConBoton('btnGuardarAbono', guardarAbono)">Guardar abono</button></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Historial de abonos</h2>
+        <div id="listaAbonos"></div>
+      </div>
     </section>
 
     <!-- ---------- FINANZAS ---------- -->
@@ -531,7 +544,8 @@ let estado = {
   ventas: [],
   clientes: [],
   movimientos: [],
-  config: []
+  config: [],
+  abonos: []
 };
 
 // ids en edición (null = el formulario está en modo "crear nuevo")
@@ -610,6 +624,7 @@ async function cargarDatos() {
     estado.clientes = datos.clientes || [];
     estado.movimientos = datos.movimientos || [];
     estado.config = datos.config || [];
+    estado.abonos = datos.abonos || [];
     renderTodo();
     return true;
   } catch (err) {
@@ -697,8 +712,10 @@ function renderTodo() {
   renderClientes();
   renderVentas();
   renderMovimientos();
+  renderAbonos();
   llenarSelectoresVenta();
   llenarSelectorMarcas();
+  llenarSelectorClientesAbono();
   document.getElementById('cfgTipoCambio').value = valorConfig('tipoCambio', 520);
 }
 
@@ -1049,16 +1066,39 @@ function totalCompradoCliente(clienteId) {
     .reduce((s, v) => s + (Number(v.precioVenta) || 0), 0);
 }
 
+function totalDebeCliente(clienteId) {
+  return estado.ventas
+    .filter(v => String(v.clienteId) === String(clienteId) && v.formaPago === 'A pagos')
+    .reduce((s, v) => s + (Number(v.precioVenta) || 0), 0);
+}
+
+function totalAbonadoCliente(clienteId) {
+  return estado.abonos
+    .filter(a => String(a.clienteId) === String(clienteId))
+    .reduce((s, a) => s + (Number(a.monto) || 0), 0);
+}
+
 function renderClientes() {
   const caja = document.getElementById('listaClientes');
   if (!estado.clientes.length) { caja.innerHTML = '<div class="vacio">Todavía no hay clientes.</div>'; return; }
   caja.innerHTML = tablaSimple(
-    ['Nombre', 'Teléfono', 'Ubicación', 'Canal preferido', 'Total comprado', 'Acciones'],
-    estado.clientes.map(c => [
-      escaparHtml(c.nombre), escaparHtml(c.telefono), escaparHtml(c.ubicacion), escaparHtml(c.canalPreferido),
-      `<span style="font-weight:600">${formatoColones(totalCompradoCliente(c.id))}</span>`,
-      botonesAccion('editarCliente', 'eliminarCliente', c.id)
-    ])
+    ['Nombre', 'Teléfono', 'Ubicación', 'Canal preferido', 'Total comprado', 'Debe (a pagos)', 'Abonado', 'Saldo pendiente', 'Acciones'],
+    estado.clientes.map(c => {
+      const debe = totalDebeCliente(c.id);
+      const abonado = totalAbonadoCliente(c.id);
+      const saldo = Math.max(debe - abonado, 0);
+      return [
+        escaparHtml(c.nombre), escaparHtml(c.telefono), escaparHtml(c.ubicacion), escaparHtml(c.canalPreferido),
+        `<span style="font-weight:600">${formatoColones(totalCompradoCliente(c.id))}</span>`,
+        formatoColones(debe),
+        formatoColones(abonado),
+        `<span style="font-weight:600;color:${saldo > 0 ? '#A5323F' : '#1f4a30'}">${formatoColones(saldo)}</span>`,
+        `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="secundario" style="padding:4px 10px;font-size:12px;" onclick="nuevoAbono(${c.id})">+ Abono</button>
+          ${botonesAccion('editarCliente', 'eliminarCliente', c.id)}
+        </div>`
+      ];
+    })
   );
 }
 
@@ -1111,6 +1151,66 @@ async function guardarCliente() {
     clienteEditando = null;
     await cargarDatos();
   } else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Abonos ----------
+
+function llenarSelectorClientesAbono() {
+  const sel = document.getElementById('aCliente');
+  const seleccionActual = sel.value;
+  sel.innerHTML = estado.clientes.map(c => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === seleccionActual)) sel.value = seleccionActual;
+}
+
+function nuevoAbono(clienteId) {
+  document.getElementById('aMonto').value = '';
+  document.getElementById('aNotas').value = '';
+  if (clienteId != null) document.getElementById('aCliente').value = String(clienteId);
+  document.getElementById('formAbono').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('aMonto').focus();
+}
+
+async function guardarAbono() {
+  const clienteId = document.getElementById('aCliente').value;
+  if (!clienteId) { mostrarToast('Elegí un cliente.'); return; }
+  const monto = parseMonto(document.getElementById('aMonto').value);
+  if (monto <= 0) { mostrarToast('Poné un monto de abono mayor a cero.'); return; }
+
+  const fila = [
+    '',
+    new Date().toISOString().slice(0, 10),
+    clienteId,
+    monto,
+    document.getElementById('aNotas').value,
+    estado.usuario.usuario
+  ];
+  const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Abonos', fila });
+  if (resultado.ok) {
+    mostrarToast('Abono guardado.');
+    document.getElementById('aMonto').value = '';
+    document.getElementById('aNotas').value = '';
+    await cargarDatos();
+  } else mostrarToast('Error: ' + resultado.error);
+}
+
+async function eliminarAbono(id) {
+  if (!confirm('¿Eliminar este abono? No se puede deshacer.')) return;
+  const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Abonos', id });
+  if (resultado.ok) { mostrarToast('Abono eliminado.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + resultado.error);
+}
+
+function renderAbonos() {
+  const caja = document.getElementById('listaAbonos');
+  if (!estado.abonos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay abonos registrados.</div>'; return; }
+  const ordenados = [...estado.abonos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  caja.innerHTML = tablaSimple(
+    ['Fecha', 'Cliente', 'Monto', 'Notas', 'Acciones'],
+    ordenados.map(a => [
+      escaparHtml(a.fecha), escaparHtml(nombreCliente(a.clienteId)), formatoColones(a.monto), escaparHtml(a.notas),
+      botonesAccion(null, 'eliminarAbono', a.id)
+    ])
+  );
 }
 
 // ---------- Ventas ----------
