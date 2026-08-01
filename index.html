@@ -382,7 +382,10 @@
       <div class="panel">
         <div class="filaBotones">
           <h2 style="margin:0">Ventas</h2>
-          <button onclick="nuevaVenta()">+ Registrar venta</button>
+          <div style="display:flex;gap:8px;">
+            <button class="secundario" onclick="nuevaRegalia()">+ Registrar regalía</button>
+            <button onclick="nuevaVenta()">+ Registrar venta</button>
+          </div>
         </div>
         <div class="formulario oculto" id="formVenta">
           <div><label>Cliente</label><select id="vCliente" onchange="alternarClienteNuevo()"></select></div>
@@ -1117,7 +1120,7 @@ function llenarSelectoresVenta() {
   const selProducto = document.getElementById('vProducto');
   const selProductoRegalo = document.getElementById('vProductoRegalo');
   const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
-  selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option>' + opcionesClientes;
+  selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option><option value="__ninguno__">— Sin cliente (regalo general) —</option>' + opcionesClientes;
   const opcionesProductos = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)}${p.marca ? ' — ' + escaparHtml(p.marca) : ''} (stock: ${p.stock})</option>`).join('');
   selProducto.innerHTML = opcionesProductos;
   selProductoRegalo.innerHTML = opcionesProductos;
@@ -1180,11 +1183,22 @@ function nuevaVenta() {
   document.getElementById('formVenta').classList.remove('oculto');
 }
 
+// Regalía suelta: mismo formulario que una venta, pero sin cliente obligatorio
+// y con Forma de pago ya en "Regalía" (precio en cero).
+function nuevaRegalia() {
+  nuevaVenta();
+  document.getElementById('vCliente').value = '__ninguno__';
+  alternarClienteNuevo();
+  document.getElementById('vFormaPago').value = 'Regalía';
+  alternarRegalia();
+  document.getElementById('btnGuardarVenta').textContent = 'Guardar regalía';
+}
+
 function editarVenta(id) {
   const v = estado.ventas.find(x => String(x.id) === String(id));
   if (!v) return;
   ventaEditando = v;
-  document.getElementById('vCliente').value = String(v.clienteId);
+  document.getElementById('vCliente').value = v.clienteId ? String(v.clienteId) : '__ninguno__';
   alternarClienteNuevo();
   document.getElementById('vProducto').value = String(v.productoId);
   document.getElementById('vCantidad').value = v.cantidad || 1;
@@ -1258,9 +1272,11 @@ async function guardarVenta() {
   const productoId = document.getElementById('vProducto').value;
   if (!productoId) { mostrarToast('Elegí un producto.'); return; }
 
-  // Cliente: existente o nuevo (creado en el mismo paso)
+  // Cliente: existente, nuevo (creado en el mismo paso), o ninguno (regalo general)
   let clienteId = document.getElementById('vCliente').value;
-  if (clienteId === '__nuevo__') {
+  if (clienteId === '__ninguno__') {
+    clienteId = '';
+  } else if (clienteId === '__nuevo__') {
     const nombre = document.getElementById('vNuevoNombre').value.trim();
     if (!nombre) { mostrarToast('Poné el nombre del cliente nuevo.'); return; }
     const filaCliente = [
@@ -1379,7 +1395,10 @@ async function guardarVenta() {
     }
   }
 
-  mostrarToast(ventaEditando ? 'Venta actualizada.' : (hayRegalo ? 'Venta y regalo guardados.' : 'Venta guardada.'));
+  const mensajeGuardado = ventaEditando
+    ? 'Venta actualizada.'
+    : (hayRegalo ? 'Venta y regalo guardados.' : (formaPago === 'Regalía' ? 'Regalía guardada.' : 'Venta guardada.'));
+  mostrarToast(mensajeGuardado);
   document.getElementById('formVenta').classList.add('oculto');
   ventaEditando = null;
   await cargarDatos();
