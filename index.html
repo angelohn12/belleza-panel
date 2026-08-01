@@ -1032,21 +1032,21 @@ async function guardarProducto() {
     if (!marca) { mostrarToast('Escribí el nombre de la marca nueva.'); return; }
   }
 
-  const fila = [
-    productoEditando || '',
+  const fila = {
+    id: productoEditando || '',
     nombre,
-    document.getElementById('pCategoria').value,
+    categoria: document.getElementById('pCategoria').value,
     marca,
-    document.getElementById('pOrigen').value,
-    costo,
-    moneda === 'USD' ? tipoCambio : '',
+    origen: document.getElementById('pOrigen').value,
+    costoCompra: costo,
+    tipoCambio: moneda === 'USD' ? tipoCambio : '',
     costoTotalCRC,
-    parseMonto(document.getElementById('pPrecioVenta').value),
+    precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
     stock,
-    stock > 0 ? 'Disponible' : 'Agotado',
+    estado: stock > 0 ? 'Disponible' : 'Agotado',
     moneda,
-    document.getElementById('pTono').value
-  ];
+    tono: document.getElementById('pTono').value
+  };
 
   const accion = productoEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Productos', id: productoEditando, fila });
@@ -1135,14 +1135,14 @@ async function eliminarCliente(id) {
 async function guardarCliente() {
   const nombre = document.getElementById('cNombre').value;
   if (!nombre) { mostrarToast('Poné el nombre del cliente.'); return; }
-  const fila = [
-    clienteEditando || '',
+  const fila = {
+    id: clienteEditando || '',
     nombre,
-    document.getElementById('cTelefono').value,
-    document.getElementById('cUbicacion').value,
-    document.getElementById('cCanal').value,
-    document.getElementById('cNotas').value
-  ];
+    telefono: document.getElementById('cTelefono').value,
+    ubicacion: document.getElementById('cUbicacion').value,
+    canalPreferido: document.getElementById('cCanal').value,
+    notas: document.getElementById('cNotas').value
+  };
   const accion = clienteEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Clientes', id: clienteEditando, fila });
   if (resultado.ok) {
@@ -1176,14 +1176,14 @@ async function guardarAbono() {
   const monto = parseMonto(document.getElementById('aMonto').value);
   if (monto <= 0) { mostrarToast('Poné un monto de abono mayor a cero.'); return; }
 
-  const fila = [
-    '',
-    new Date().toISOString().slice(0, 10),
+  const fila = {
+    id: '',
+    fecha: new Date().toISOString().slice(0, 10),
     clienteId,
     monto,
-    document.getElementById('aNotas').value,
-    estado.usuario.usuario
-  ];
+    notas: document.getElementById('aNotas').value,
+    usuario: estado.usuario.usuario
+  };
   const resultado = await apiPost({ accion: 'agregar_fila', hoja: 'Abonos', fila });
   if (resultado.ok) {
     mostrarToast('Abono guardado.');
@@ -1255,11 +1255,13 @@ function alternarRegalia() {
   else autocompletarPrecioVenta();
 }
 
-// Reconstruye la fila completa de un producto, cambiando solo el stock. Centraliza el orden
-// de columnas de Productos para no desincronizarlo entre guardarVenta/eliminarVenta/editarVenta.
+// Reconstruye la fila completa de un producto, cambiando solo el stock.
 function filaProductoConStock(p, nuevoStock) {
-  return [p.id, p.nombre, p.categoria, p.marca, p.origen, p.costoCompra, p.tipoCambio, p.costoTotalCRC, p.precioVenta,
-          nuevoStock, nuevoStock > 0 ? 'Disponible' : 'Agotado', p.moneda, p.tono];
+  return {
+    id: p.id, nombre: p.nombre, categoria: p.categoria, marca: p.marca, origen: p.origen,
+    costoCompra: p.costoCompra, tipoCambio: p.tipoCambio, costoTotalCRC: p.costoTotalCRC, precioVenta: p.precioVenta,
+    stock: nuevoStock, estado: nuevoStock > 0 ? 'Disponible' : 'Agotado', moneda: p.moneda, tono: p.tono
+  };
 }
 
 function nuevaVenta() {
@@ -1379,12 +1381,12 @@ async function guardarVenta() {
   } else if (clienteId === '__nuevo__') {
     const nombre = document.getElementById('vNuevoNombre').value.trim();
     if (!nombre) { mostrarToast('Poné el nombre del cliente nuevo.'); return; }
-    const filaCliente = [
-      '', nombre,
-      document.getElementById('vNuevoTelefono').value,
-      document.getElementById('vNuevoUbicacion').value,
-      'WhatsApp', ''
-    ];
+    const filaCliente = {
+      id: '', nombre,
+      telefono: document.getElementById('vNuevoTelefono').value,
+      ubicacion: document.getElementById('vNuevoUbicacion').value,
+      canalPreferido: 'WhatsApp', notas: ''
+    };
     const resCliente = await apiPost({ accion: 'agregar_fila', hoja: 'Clientes', fila: filaCliente });
     if (!resCliente.ok) { mostrarToast('Error creando cliente: ' + resCliente.error); return; }
     clienteId = resCliente.id;
@@ -1429,19 +1431,19 @@ async function guardarVenta() {
     }
   }
 
-  const fila = [
-    ventaEditando ? ventaEditando.id : '',
-    ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
+  const fila = {
+    id: ventaEditando ? ventaEditando.id : '',
+    fecha: ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
     clienteId,
     productoId,
     cantidad,
     costoUnitarioCRC,
     precioVenta,
-    document.getElementById('vCanal').value,
-    document.getElementById('vEstado').value,
-    ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
+    canal: document.getElementById('vCanal').value,
+    estadoEntrega: document.getElementById('vEstado').value,
+    usuario: ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
     formaPago
-  ];
+  };
   const accion = ventaEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Ventas', id: ventaEditando ? ventaEditando.id : undefined, fila });
   if (!resultado.ok) { mostrarToast('Error: ' + resultado.error); return; }
@@ -1471,19 +1473,19 @@ async function guardarVenta() {
 
   // Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
   if (hayRegalo && productoRegalo) {
-    const filaRegalo = [
-      '',
-      ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
+    const filaRegalo = {
+      id: '',
+      fecha: ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
       clienteId,
-      productoRegalo.id,
-      cantidadRegalo,
-      Number(productoRegalo.costoTotalCRC) || 0,
-      0,
-      document.getElementById('vCanal').value,
-      document.getElementById('vEstado').value,
-      estado.usuario.usuario,
-      'Regalía'
-    ];
+      productoId: productoRegalo.id,
+      cantidad: cantidadRegalo,
+      costoUnitarioCRC: Number(productoRegalo.costoTotalCRC) || 0,
+      precioVenta: 0,
+      canal: document.getElementById('vCanal').value,
+      estadoEntrega: document.getElementById('vEstado').value,
+      usuario: estado.usuario.usuario,
+      formaPago: 'Regalía'
+    };
     await apiPost({ accion: 'agregar_fila', hoja: 'Ventas', fila: filaRegalo });
 
     if (!esMismoProductoQueElRegalo) {
@@ -1560,15 +1562,15 @@ async function eliminarMovimiento(id) {
 }
 
 async function guardarMovimiento() {
-  const fila = [
-    movimientoEditando || '',
-    new Date().toISOString().slice(0, 10),
-    document.getElementById('mTipo').value,
-    parseMonto(document.getElementById('mMonto').value),
-    document.getElementById('mCategoria').value,
-    document.getElementById('mDescripcion').value,
-    estado.usuario.usuario
-  ];
+  const fila = {
+    id: movimientoEditando || '',
+    fecha: new Date().toISOString().slice(0, 10),
+    tipo: document.getElementById('mTipo').value,
+    monto: parseMonto(document.getElementById('mMonto').value),
+    categoria: document.getElementById('mCategoria').value,
+    descripcion: document.getElementById('mDescripcion').value,
+    usuario: estado.usuario.usuario
+  };
   const accion = movimientoEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Movimientos', id: movimientoEditando, fila });
   if (resultado.ok) {
