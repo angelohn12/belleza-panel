@@ -1,0 +1,13 @@
+{
+  "name": "Avellana Studio",
+  "short_name": "Avellana",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#D24558",
+  "theme_color": "#D24558",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
