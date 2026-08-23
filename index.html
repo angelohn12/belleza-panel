@@ -566,6 +566,15 @@
         </p>
         <div id="listaSolicitudes"></div>
       </div>
+
+      <div class="panel">
+        <h2 style="margin:0 0 6px">Pedidos por encargo</h2>
+        <p class="ayudaTienda">
+          Piden algo que no tenemos en stock. Escribiles para confirmar precio y tiempo antes de cobrar el
+          adelanto — el mensaje ya trae el 50%/50% y el plazo armado.
+        </p>
+        <div id="listaEncargos"></div>
+      </div>
     </section>
 
     <!-- ---------- TIENDA (qué ve el público) ---------- -->
@@ -1314,19 +1323,23 @@ function fechaCorta(v) {
 function renderAvisoPedidos() {
   const nuevos = pedidosPendientes().length;
   const activos = pedidosActivos().length;
+  const encargos = encargosPendientes().length;
 
   const chivo = document.getElementById('chivoTab');
   if (chivo) {
-    chivo.textContent = activos;
-    chivo.classList.toggle('oculto', activos === 0);
+    chivo.textContent = activos + encargos;
+    chivo.classList.toggle('oculto', activos + encargos === 0);
   }
 
   const aviso = document.getElementById('avisoPedidos');
   if (!aviso) return;
-  if (nuevos === 0) { aviso.classList.add('oculto'); return; }
+  if (nuevos === 0 && encargos === 0) { aviso.classList.add('oculto'); return; }
   aviso.classList.remove('oculto');
-  document.getElementById('avisoPedidosTexto').textContent =
-    nuevos === 1 ? 'Tenés 1 pedido sin atender' : `Tenés ${nuevos} pedidos sin atender`;
+
+  const partes = [];
+  if (nuevos)   partes.push(nuevos === 1 ? '1 pedido sin atender' : `${nuevos} pedidos sin atender`);
+  if (encargos) partes.push(encargos === 1 ? '1 encargo por confirmar' : `${encargos} encargos por confirmar`);
+  document.getElementById('avisoPedidosTexto').textContent = 'Tenés ' + partes.join(' y ');
 }
 
 function filtrarPedidos(cual) {
@@ -1489,10 +1502,21 @@ async function eliminarPedido(id) {
   else mostrarToast('Error: ' + res.error);
 }
 
+// Filas viejas sin columna "tipo" son avisos de reposición (como siempre fue).
+function tipoSolicitud(s) {
+  return s.tipo === 'encargo' ? 'encargo' : 'restock';
+}
+
 function renderSolicitudes() {
+  renderAvisosStock();
+  renderEncargos();
+}
+
+function renderAvisosStock() {
   const caja = document.getElementById('listaSolicitudes');
   if (!caja) return;
-  const pendientes = estado.solicitudes.filter(s => String(s.estado || '').toLowerCase() !== 'avisado');
+  const pendientes = estado.solicitudes.filter(s =>
+    tipoSolicitud(s) === 'restock' && String(s.estado || '').toLowerCase() !== 'avisado');
   if (!pendientes.length) {
     caja.innerHTML = '<div class="vacio">Nadie ha pedido aviso de un producto agotado.</div>';
     return;
@@ -1510,6 +1534,45 @@ function renderSolicitudes() {
            href="https://wa.me/506${tel}?text=${encodeURIComponent('¡Hola ' + String(s.nombre).split(' ')[0] + '! Ya tenemos disponible ' + s.producto + ' 💛')}">Avisar</a>`,
         fechaCorta(s.fecha),
         `<button class="btnCancelar" style="margin:0" onclick="marcarAvisada('${escaparHtml(s.id)}')">Ya avisé</button>`
+      ];
+    })
+  );
+}
+
+// Términos del encargo — si se cambian, cambiarlos igual en Code.gs (TIENDA.encargo*).
+const ENCARGO_DIAS_MIN = 20, ENCARGO_DIAS_MAX = 25, ENCARGO_ADELANTO_PCT = 50;
+
+function mensajeEncargo(s) {
+  return 'Hola ' + String(s.nombre).split(' ')[0] + ', vimos que querés que te consigamos ' + s.producto + '. ' +
+    'Nos toma entre ' + ENCARGO_DIAS_MIN + ' y ' + ENCARGO_DIAS_MAX + ' días hábiles en llegar y pedimos el ' +
+    ENCARGO_ADELANTO_PCT + '% del valor por adelantado; el otro ' + (100 - ENCARGO_ADELANTO_PCT) +
+    '% se paga cuando te lo entregamos. ¿Seguimos con el pedido?';
+}
+
+function encargosPendientes() {
+  return estado.solicitudes.filter(s =>
+    tipoSolicitud(s) === 'encargo' && String(s.estado || '').toLowerCase() !== 'avisado');
+}
+
+function renderEncargos() {
+  const caja = document.getElementById('listaEncargos');
+  if (!caja) return;
+  const pendientes = encargosPendientes();
+  if (!pendientes.length) {
+    caja.innerHTML = '<div class="vacio">No hay solicitudes de encargo pendientes.</div>';
+    return;
+  }
+  caja.innerHTML = tablaSimple(
+    ['Qué piden', 'Quién', 'WhatsApp', 'Cuándo', ''],
+    pendientes.slice().reverse().map(s => {
+      const tel = String(s.telefono || '').replace(/\D/g, '');
+      return [
+        escaparHtml(s.producto),
+        escaparHtml(s.nombre),
+        `<a class="wa" style="padding:5px 11px;font-size:12.5px" target="_blank" rel="noopener"
+           href="https://wa.me/506${tel}?text=${encodeURIComponent(mensajeEncargo(s))}">Confirmar</a>`,
+        fechaCorta(s.fecha),
+        `<button class="btnCancelar" style="margin:0" onclick="marcarAvisada('${escaparHtml(s.id)}')">Ya contacté</button>`
       ];
     })
   );
