@@ -1375,8 +1375,12 @@ function renderPedidos() {
       : [p.provincia, p.canton, p.distrito].filter(Boolean).join(' · ') +
         (p.direccion ? '<br>' + escaparHtml(p.direccion) : '');
 
+    // El mensaje cambia según cómo se paga: en retiro se puede efectivo o SINPE,
+    // en envío (correos/exprés) es solo SINPE. Debe quedar igual al de Code.gs.
     const saludo = encodeURIComponent(
-      `¡Hola ${String(p.nombre || '').split(' ')[0]}! Te escribimos de Avellana Studio por tu pedido ${p.numero} 💛`);
+      p.entrega === 'retiro'
+        ? 'Hola, somos Avellana Studio 💛 Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido y el método de entrega y pago (podés cancelar en efectivo o SINPE al retirar). Gracias.'
+        : 'Hola, somos Avellana Studio 💛 Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido, la dirección de envío y el pago por SINPE. Gracias.');
 
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
