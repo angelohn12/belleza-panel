@@ -543,9 +543,20 @@
               <option value="CRC">Colones (₡)</option>
             </select>
           </div>
-          <div id="pCampoCosto"><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" /></div>
-          <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
-          <div><label id="pLabelPrecio">Precio de venta (₡)</label><input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" /></div>
+          <div id="pCampoCosto"><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" oninput="recalcularPrecioPorMargen()" /></div>
+          <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" oninput="recalcularPrecioPorMargen()" /></div>
+          <div class="campoAncho">
+            <label id="pLabelPrecio">Precio de venta (₡)</label>
+            <div class="filtrosTienda" style="margin:4px 0 0">
+              <button type="button" class="chipT activo" id="modoPrecioManual" onclick="elegirModoPrecio('manual')">Precio manual</button>
+              <button type="button" class="chipT" id="modoPrecioMargen" onclick="elegirModoPrecio('margen')">Elegir % de ganancia</button>
+            </div>
+            <div id="pCampoMargen" class="oculto" style="margin-top:8px">
+              <select id="pMargenPct" onchange="recalcularPrecioPorMargen()"></select>
+              <p class="ayudaTienda" id="pAyudaMargen" style="margin:6px 0 0"></p>
+            </div>
+            <input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" style="margin-top:8px" />
+          </div>
           <div id="pCampoStock"><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
           <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
         </div>
@@ -1801,6 +1812,48 @@ async function ocultarSinStock() {
 function alternarMonedaProducto() {
   const esDolares = document.getElementById('pMoneda').value === 'USD';
   document.getElementById('pCampoTipoCambio').classList.toggle('oculto', !esDolares);
+  recalcularPrecioPorMargen();
+}
+
+// ---------- Precio de venta: manual o por % de ganancia ----------
+let modoPrecio = 'manual';
+
+function llenarSelectorMargenes() {
+  const sel = document.getElementById('pMargenPct');
+  if (!sel || sel.options.length) return; // ya está lleno, no repetir
+  let html = '';
+  for (let pct = 5; pct <= 100; pct += 5) html += `<option value="${pct}">${pct}%</option>`;
+  sel.innerHTML = html;
+  sel.value = '30';
+}
+
+function elegirModoPrecio(m) {
+  llenarSelectorMargenes();
+  modoPrecio = m === 'margen' ? 'margen' : 'manual';
+  document.getElementById('modoPrecioManual').classList.toggle('activo', modoPrecio === 'manual');
+  document.getElementById('modoPrecioMargen').classList.toggle('activo', modoPrecio === 'margen');
+  document.getElementById('pCampoMargen').classList.toggle('oculto', modoPrecio === 'manual');
+  document.getElementById('pPrecioVenta').readOnly = modoPrecio === 'margen';
+  if (modoPrecio === 'margen') recalcularPrecioPorMargen();
+}
+
+// Costo de compra ya convertido a colones — misma cuenta que usa guardarProducto().
+function costoTotalCRCActual() {
+  const moneda = document.getElementById('pMoneda').value;
+  const costo = parseMonto(document.getElementById('pCosto').value);
+  const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
+  return moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
+}
+
+function recalcularPrecioPorMargen() {
+  if (modoPrecio !== 'margen') return;
+  const costo = costoTotalCRCActual();
+  const pct = Number(document.getElementById('pMargenPct').value) || 0;
+  const precio = Math.round(costo * (1 + pct / 100));
+  document.getElementById('pPrecioVenta').value = precio;
+  const ganancia = precio - costo;
+  document.getElementById('pAyudaMargen').textContent =
+    `Costo ${formatoColones(costo)} + ${pct}% de ganancia (${formatoColones(ganancia)}) = precio de venta ${formatoColones(precio)}`;
 }
 
 function llenarSelectorMarcas() {
@@ -1839,6 +1892,7 @@ function actualizarCamposPorModalidad() {
 function nuevoProducto() {
   productoEditando = null;
   elegirModalidadProducto('stock');
+  elegirModoPrecio('manual');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
   document.getElementById('pMarca').value = '__nueva__';
@@ -1859,6 +1913,7 @@ function editarProducto(id) {
   if (!p) return;
   productoEditando = id;
   elegirModalidadProducto(p.modalidad === 'encargo' ? 'encargo' : 'stock');
+  elegirModoPrecio('manual');
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
