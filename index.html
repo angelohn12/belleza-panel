@@ -1403,8 +1403,8 @@ function renderPedidos() {
     const primerNombre = String(p.nombre || '').trim().split(' ')[0];
     const saludo = encodeURIComponent(
       p.entrega === 'retiro'
-        ? `Hola ${primerNombre}, somos Avellana Studio 💛 Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido y el método de entrega y pago (podés cancelar en efectivo o SINPE al retirar). Gracias.`
-        : `Hola ${primerNombre}, somos Avellana Studio 💛 Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido, la dirección de envío y el pago por SINPE. Gracias.`);
+        ? `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido y el método de entrega y pago (podés cancelar en efectivo o SINPE al retirar). Gracias.`
+        : `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido, la dirección de envío y el pago por SINPE. Gracias.`);
 
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
