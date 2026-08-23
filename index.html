@@ -1849,6 +1849,15 @@ function recalcularPrecioPorMargen() {
   if (modoPrecio !== 'margen') return;
   const costo = costoTotalCRCActual();
   const pct = Number(document.getElementById('pMargenPct').value) || 0;
+
+  if (costo <= 0) {
+    // Sin costo puesto todavía no hay nada que calcular — mejor decirlo
+    // claro que mostrar "Costo ₡0 ... = ₡0", que parece un error.
+    document.getElementById('pPrecioVenta').value = '';
+    document.getElementById('pAyudaMargen').textContent = 'Escribí primero el costo de compra (arriba) para calcular el precio.';
+    return;
+  }
+
   const precio = Math.round(costo * (1 + pct / 100));
   document.getElementById('pPrecioVenta').value = precio;
   const ganancia = precio - costo;
