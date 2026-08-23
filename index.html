@@ -70,6 +70,143 @@
   }
   button.secundario:hover{background:#fff4f4;}
 
+  /* ---------- Aviso de pedidos pendientes ---------- */
+  .avisoPedidos{
+    display:flex;align-items:center;gap:11px;cursor:pointer;
+    background:var(--coral);color:#fff;padding:13px 18px;
+    font-size:14.5px;font-weight:600;
+  }
+  .avisoPedidos:hover{background:var(--coral-dark);}
+  .avisoPedidos .avisoIr{margin-left:auto;font-weight:500;opacity:.9;white-space:nowrap;}
+  .pulso{
+    width:9px;height:9px;border-radius:50%;background:#fff;flex:0 0 auto;
+    animation:latir 1.6s ease-in-out infinite;
+  }
+  @keyframes latir{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+  .chivo{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:18px;height:18px;padding:0 5px;margin-left:6px;
+    background:var(--coral);color:#fff;border-radius:20px;
+    font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
+  }
+  .tab.activo .chivo{background:#fff;color:var(--coral);}
+
+  /* ---------- Fichas de pedido ---------- */
+  .pedido{
+    border:1px solid var(--border);border-radius:12px;padding:15px 16px;margin-bottom:12px;
+    background:#fff;
+  }
+  .pedido.nuevo{border-color:var(--coral);border-width:2px;padding:14px 15px;}
+  .pedido.revisar{background:#FFF7F8;}
+  .pedidoTop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px;}
+  .pedidoNum{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--brown-soft);}
+  .pedidoTotal{margin-left:auto;font-size:19px;font-weight:700;color:var(--brown);font-variant-numeric:tabular-nums;}
+  .pedidoNombre{font-size:16px;font-weight:700;color:var(--brown);}
+  .pedidoMeta{font-size:13px;color:var(--brown-soft);line-height:1.6;margin-bottom:10px;}
+  .pedidoItems{
+    background:var(--bg);border-radius:9px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;
+  }
+  .pedidoItems div{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-variant-numeric:tabular-nums;}
+  .pedidoAlerta{
+    background:#FBE3E6;color:#8E2B36;border-radius:8px;padding:9px 11px;
+    font-size:12.5px;font-weight:600;margin-bottom:11px;
+  }
+  .pedidoAcciones{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .pedidoAcciones .wa{
+    background:#1FA855;color:#fff;text-decoration:none;padding:9px 15px;
+    border-radius:8px;font-size:13.5px;font-weight:600;display:inline-block;
+  }
+  .pedidoAcciones .wa:hover{background:#178643;}
+  .btnPaso{padding:9px 15px;border-radius:8px;font-size:13.5px;font-weight:600;}
+  .btnCancelar{
+    background:#fff;color:var(--brown-soft);border:1px solid var(--border);
+    padding:9px 13px;border-radius:8px;font-size:13px;margin-left:auto;
+  }
+  .btnCancelar:hover{background:#fff4f4;color:var(--coral-dark);border-color:var(--coral);}
+  .selEstado{
+    padding:8px 11px;border-radius:8px;border:1px solid var(--border);
+    font-size:13.5px;background:#fff;color:var(--brown);
+  }
+
+  /* ---------- Tienda: qué ve el público ---------- */
+  .ayudaTienda{
+    font-size:13.5px;line-height:1.6;color:var(--brown-soft);
+    margin:0 0 18px;max-width:70ch;
+  }
+  .resumenTienda{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:10px;margin-bottom:20px;
+  }
+  .cajaT{
+    background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  }
+  .cajaT .n{font-size:24px;font-weight:700;color:var(--brown);line-height:1.1;font-variant-numeric:tabular-nums;}
+  .cajaT .t{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--brown-soft);margin-top:3px;}
+  .cajaT.alerta{border-color:var(--coral);}
+  .cajaT.alerta .n{color:var(--coral);}
+
+  .filtrosTienda{display:flex;gap:7px;flex-wrap:wrap;}
+  .chipT{
+    background:#fff;color:var(--brown-soft);border:1px solid var(--border);
+    padding:7px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  }
+  .chipT:hover{background:var(--bg);color:var(--brown);}
+  .chipT.activo{background:var(--brown);border-color:var(--brown);color:#fff;}
+  .chipT.activo:hover{background:var(--brown);}
+  .btnSuaveT{
+    background:#fff;color:var(--brown);border:1px solid var(--border);
+    padding:7px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  }
+  .btnSuaveT:hover{background:var(--bg);border-color:var(--brown-soft);color:var(--brown);}
+  .btnEnlace{
+    background:var(--brown);color:#fff;text-decoration:none;
+    padding:9px 16px;border-radius:8px;font-size:14px;font-weight:600;display:inline-block;
+  }
+  .btnEnlace:hover{background:#43220A;}
+
+  .rejillaT{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
+  .fichaT{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    padding:13px 14px;display:flex;gap:12px;align-items:flex-start;
+    transition:border-color .15s, opacity .15s;
+  }
+  .fichaT.apagada{opacity:.62;background:#FBF7F3;}
+  .fichaT .infoT{flex:1;min-width:0;}
+  .fichaT .nomT{
+    font-size:14px;font-weight:600;color:var(--brown);line-height:1.3;
+    overflow-wrap:anywhere;
+  }
+  .fichaT .metaT{font-size:12px;color:var(--brown-soft);margin-top:3px;}
+  .fichaT .avisosT{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+  .pastilla{
+    font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;
+    letter-spacing:.02em;white-space:nowrap;
+  }
+  .pastilla.verde{background:#DFF0E4;color:#3F7A57;}
+  .pastilla.ambar{background:#FDEBCF;color:#96631A;}
+  .pastilla.gris{background:#EFE7E0;color:#8A7566;}
+  .pastilla.roja{background:#FBE3E6;color:#A5323F;}
+
+  /* Interruptor de visibilidad */
+  .palanca{
+    flex:0 0 auto;width:46px;height:27px;border-radius:20px;background:#DCD3CB;
+    border:0;padding:0;position:relative;cursor:pointer;
+    transition:background .18s ease;
+  }
+  .palanca:hover{background:#CFC4BA;}
+  .palanca::after{
+    content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;
+    border-radius:50%;background:#fff;transition:transform .18s ease;
+    box-shadow:0 1px 3px rgba(93,48,14,.28);
+  }
+  .palanca[aria-pressed="true"]{background:var(--sage);}
+  .palanca[aria-pressed="true"]:hover{background:#528B6B;}
+  .palanca[aria-pressed="true"]::after{transform:translateX(19px);}
+  .palanca:disabled{opacity:.5;cursor:wait;}
+  @media (prefers-reduced-motion:reduce){
+    .palanca,.palanca::after{transition:none;}
+  }
+
   /* ---------- Login ---------- */
   #pantallaLogin{
     min-height:100vh;
@@ -244,13 +381,24 @@
     </div>
   </header>
 
+  <!-- Aviso de pedidos pendientes: se ve desde cualquier pestaña -->
+  <div class="avisoPedidos oculto" id="avisoPedidos" onclick="mostrarTab('pedidos')" role="button" tabindex="0"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarTab('pedidos')}">
+    <span class="pulso"></span>
+    <span id="avisoPedidosTexto"></span>
+    <span class="avisoIr">Ver pedidos →</span>
+  </div>
+
   <nav class="tabs">
     <button class="tab" data-tab="resumen" onclick="mostrarTab('resumen')">Resumen</button>
     <button class="tab" data-tab="tendencias" onclick="mostrarTab('tendencias')">Tendencias</button>
+    <button class="tab" data-tab="pedidos" onclick="mostrarTab('pedidos')">Pedidos<span class="chivo oculto" id="chivoTab">0</span></button>
     <button class="tab" data-tab="inventario" onclick="mostrarTab('inventario')">Inventario</button>
+    <button class="tab" data-tab="tienda" onclick="mostrarTab('tienda')">Tienda</button>
     <button class="tab" data-tab="ventas" onclick="mostrarTab('ventas')">Ventas</button>
     <button class="tab" data-tab="clientes" onclick="mostrarTab('clientes')">Clientes</button>
     <button class="tab" data-tab="finanzas" onclick="mostrarTab('finanzas')">Finanzas</button>
+    <button class="tab" data-tab="contenido" onclick="mostrarTab('contenido')">Publicaciones</button>
     <button class="tab" data-tab="config" onclick="mostrarTab('config')">Configuración</button>
   </nav>
 
@@ -381,6 +529,74 @@
           <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
         </div>
         <div id="listaProductos"></div>
+      </div>
+    </section>
+
+    <!-- ---------- PEDIDOS ---------- -->
+    <section id="tab-pedidos" class="oculto">
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Pedidos de la tienda</h2>
+          <button class="secundario" onclick="cargarDatos()">Actualizar</button>
+        </div>
+        <p class="ayudaTienda">
+          Cuando marcás un pedido como <strong>Pagado</strong>, se descuenta el stock y se registra
+          la venta con su costo y margen. Hasta ese momento el stock queda solo apartado.
+        </p>
+
+        <div class="resumenTienda" id="resumenPedidos"></div>
+
+        <div class="filtrosTienda" style="margin-bottom:16px">
+          <button class="chipT activo" data-fp="activos"  onclick="filtrarPedidos('activos')">Por atender</button>
+          <button class="chipT" data-fp="todos"     onclick="filtrarPedidos('todos')">Todos</button>
+          <button class="chipT" data-fp="Nuevo"     onclick="filtrarPedidos('Nuevo')">Nuevos</button>
+          <button class="chipT" data-fp="Contactado" onclick="filtrarPedidos('Contactado')">Contactados</button>
+          <button class="chipT" data-fp="Pagado"    onclick="filtrarPedidos('Pagado')">Pagados</button>
+          <button class="chipT" data-fp="Enviado"   onclick="filtrarPedidos('Enviado')">Enviados</button>
+        </div>
+
+        <div id="listaPedidos"></div>
+      </div>
+
+      <div class="panel">
+        <h2 style="margin:0 0 6px">Esperando que llegue</h2>
+        <p class="ayudaTienda">
+          Clientas que pidieron aviso de un producto agotado. Cuando lo repongas, escribiles:
+          es la lista más caliente que vas a tener.
+        </p>
+        <div id="listaSolicitudes"></div>
+      </div>
+    </section>
+
+    <!-- ---------- TIENDA (qué ve el público) ---------- -->
+    <section id="tab-tienda" class="oculto">
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Qué ve la gente en la tienda</h2>
+          <a class="btnEnlace" id="tiendaEnlace" href="catalogo.html" target="_blank" rel="noopener">Abrir la tienda ↗</a>
+        </div>
+        <p class="ayudaTienda">
+          Prendé o apagá cada producto. Los apagados <strong>no aparecen</strong> en la página pública,
+          aunque tengan stock. Los que están en cero se muestran como «Agotado» con la opción de que
+          la clienta pida aviso — no hay que apagarlos por eso.
+        </p>
+
+        <div class="resumenTienda" id="resumenTienda"></div>
+
+        <div class="filaBotones" style="margin-bottom:14px">
+          <div class="filtrosTienda">
+            <button class="chipT activo" data-ft="todos" onclick="filtrarTienda('todos')">Todos</button>
+            <button class="chipT" data-ft="visibles" onclick="filtrarTienda('visibles')">Visibles</button>
+            <button class="chipT" data-ft="ocultos" onclick="filtrarTienda('ocultos')">Ocultos</button>
+            <button class="chipT" data-ft="agotados" onclick="filtrarTienda('agotados')">Sin stock</button>
+          </div>
+          <div class="filtrosTienda">
+            <button class="btnSuaveT" onclick="visibilidadEnLote(true)">Mostrar todos</button>
+            <button class="btnSuaveT" onclick="ocultarSinStock()">Ocultar los que no tienen stock</button>
+          </div>
+        </div>
+
+        <div id="listaTienda"></div>
       </div>
     </section>
 
@@ -524,6 +740,56 @@
       </div>
     </section>
 
+    <!-- ---------- PUBLICACIONES ---------- -->
+    <section id="tab-contenido" class="oculto">
+      <div class="panel">
+        <div class="filaBotones">
+          <h2 style="margin:0">Calendario de publicaciones</h2>
+          <select id="filtroContenido" onchange="renderContenido()" style="max-width:200px;">
+            <option value="todas">Mostrar: Todas</option>
+            <option value="planeadas">Planeadas</option>
+            <option value="publicadas">Publicadas</option>
+          </select>
+          <button onclick="nuevaPublicacion()">+ Nueva publicación</button>
+        </div>
+        <div class="formulario oculto" id="formContenido">
+          <div><label>Fecha</label><input id="ktFecha" type="date" /></div>
+          <div><label>Tipo</label>
+            <select id="ktTipo">
+              <option>Meme / relatable</option>
+              <option>Educación / tips</option>
+              <option>Comunidad</option>
+              <option>Venta directa</option>
+            </select>
+          </div>
+          <div><label>Formato</label>
+            <select id="ktFormato">
+              <option>Feed</option>
+              <option>Reel</option>
+              <option>Historia</option>
+            </select>
+          </div>
+          <div><label>Producto</label>
+            <select id="ktProducto">
+              <option>General</option>
+              <option>Sheglam</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div><label>Estado</label>
+            <select id="ktEstado">
+              <option>Planeado</option>
+              <option>Publicado</option>
+            </select>
+          </div>
+          <div class="campoAncho"><label>Descripción</label><input id="ktDescripcion" placeholder="Ej: sticker hámster + frase sobre gloss reseco" /></div>
+          <div class="campoAncho"><label>Notas (opcional)</label><input id="ktNotas" placeholder="Link, idea de referencia, etc." /></div>
+          <div class="campoAncho"><button id="btnGuardarContenido" onclick="ejecutarConBoton('btnGuardarContenido', guardarPublicacion)">Guardar publicación</button></div>
+        </div>
+        <div id="listaContenido"></div>
+      </div>
+    </section>
+
     <!-- ---------- CONFIGURACIÓN ---------- -->
     <section id="tab-config" class="oculto">
       <div class="panel">
@@ -557,7 +823,10 @@ let estado = {
   clientes: [],
   movimientos: [],
   config: [],
-  abonos: []
+  abonos: [],
+  contenido: [],
+  pedidos: [],
+  solicitudes: []
 };
 
 // ids en edición (null = el formulario está en modo "crear nuevo")
@@ -565,6 +834,7 @@ let productoEditando = null;
 let clienteEditando = null;
 let movimientoEditando = null;
 let ventaEditando = null; // guarda la venta original completa (no solo el id) para reconciliar stock al editar
+let publicacionEditando = null;
 
 // ---------- API ----------
 
@@ -617,7 +887,9 @@ async function entrarApp() {
   document.getElementById('app').style.display = 'block';
   document.getElementById('nombreUsuarioActual').textContent = estado.usuario.usuario;
   await cargarDatos();
-  mostrarTab('resumen');
+  arrancarVigilancia();
+  // Si hay pedidos sin atender, se abre directo ahí en vez del resumen
+  mostrarTab(pedidosPendientes().length ? 'pedidos' : 'resumen');
 }
 
 // ---------- Carga de datos ----------
@@ -637,11 +909,48 @@ async function cargarDatos() {
     estado.movimientos = datos.movimientos || [];
     estado.config = datos.config || [];
     estado.abonos = datos.abonos || [];
+    estado.contenido = datos.contenido || [];
+    estado.pedidos = datos.pedidos || [];
+    estado.solicitudes = datos.solicitudes || [];
     renderTodo();
     return true;
   } catch (err) {
     mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
   }
+}
+
+// ---------- Vigilancia de pedidos nuevos ----------
+// El correo puede tardar o caer en spam, así que el dashboard se refresca solo
+// mientras esté abierto y avisa apenas entra algo.
+let vigilanciaId = null;
+
+function arrancarVigilancia() {
+  if (vigilanciaId) clearInterval(vigilanciaId);
+  vigilanciaId = setInterval(async () => {
+    if (document.hidden) return;              // no gasta llamadas con la pestaña de fondo
+    const antes = pedidosPendientes().length;
+    await cargarDatos();
+    const ahora = pedidosPendientes().length;
+    if (ahora > antes) {
+      mostrarToast(`Entró ${ahora - antes === 1 ? 'un pedido nuevo' : (ahora - antes) + ' pedidos nuevos'}.`);
+      sonarAviso();
+    }
+  }, 120000);                                  // cada 2 minutos
+}
+
+// Un bip corto generado en el momento: no depende de ningún archivo de audio.
+function sonarAviso() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const vol = ctx.createGain();
+    osc.connect(vol); vol.connect(ctx.destination);
+    osc.frequency.value = 880;
+    vol.gain.setValueAtTime(0.0001, ctx.currentTime);
+    vol.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+    vol.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+    osc.start(); osc.stop(ctx.currentTime + 0.45);
+  } catch (e) { /* si el navegador no deja sonar, no pasa nada */ }
 }
 
 function valorConfig(clave, porDefecto) {
@@ -692,7 +1001,11 @@ async function ejecutarConBotonElemento(boton, fn, textoCargando) {
 }
 
 function formatoColones(monto) {
-  return '₡' + Math.round(Number(monto) || 0).toLocaleString('es-CR');
+  // Punto para los miles (₡14.500). toLocaleString('es-CR') mete un espacio
+  // fino en vez del punto, y además queda distinto a la tienda pública.
+  const n = Math.round(Number(monto) || 0);
+  const signo = n < 0 ? '-' : '';
+  return signo + '₡' + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 function escaparHtml(texto) {
@@ -721,10 +1034,14 @@ function renderTodo() {
   renderResumen();
   renderTendencias();
   renderProductos();
+  renderPedidos();
+  renderSolicitudes();
+  renderTienda();
   renderClientes();
   renderVentas();
   renderMovimientos();
   renderAbonos();
+  renderContenido();
   llenarSelectoresVenta();
   llenarSelectorMarcas();
   llenarSelectorClientesAbono();
@@ -948,7 +1265,7 @@ function renderProductos() {
   const caja = document.getElementById('listaProductos');
   if (!estado.productos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay productos cargados.</div>'; return; }
   caja.innerHTML = tablaSimple(
-    ['Nombre', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Acciones'],
+    ['Nombre', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
     estado.productos.map(p => {
       const costo = Number(p.costoTotalCRC) || 0;
       const margen = (Number(p.precioVenta) || 0) - costo;
@@ -957,10 +1274,371 @@ function renderProductos() {
         `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
         p.stock,
         `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`,
+        estaPublicado(p)
+          ? '<span class="pastilla verde">Visible</span>'
+          : '<span class="pastilla gris">Oculto</span>',
         botonesAccion('editarProducto', 'eliminarProducto', p.id)
       ];
     })
   );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PEDIDOS de la tienda
+   ══════════════════════════════════════════════════════════════ */
+const PASOS = ['Nuevo', 'Contactado', 'Pagado', 'Enviado'];
+let filtroPedidos = 'activos';
+
+function pedidosPendientes() {
+  return estado.pedidos.filter(p => String(p.estado || '').trim() === 'Nuevo');
+}
+function pedidosActivos() {
+  return estado.pedidos.filter(p => ['Nuevo', 'Contactado', 'Pagado'].includes(String(p.estado || '').trim()));
+}
+
+function itemsDe(p) {
+  try { return JSON.parse(p.items || '[]'); } catch (e) { return []; }
+}
+
+function fechaCorta(v) {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  const hoy = new Date();
+  const mismoDia = d.toDateString() === hoy.toDateString();
+  const hora = d.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
+  if (mismoDia) return 'Hoy ' + hora;
+  return d.toLocaleDateString('es-CR', { day: 'numeric', month: 'short' }) + ' ' + hora;
+}
+
+// Aviso permanente + número en la pestaña
+function renderAvisoPedidos() {
+  const nuevos = pedidosPendientes().length;
+  const activos = pedidosActivos().length;
+
+  const chivo = document.getElementById('chivoTab');
+  if (chivo) {
+    chivo.textContent = activos;
+    chivo.classList.toggle('oculto', activos === 0);
+  }
+
+  const aviso = document.getElementById('avisoPedidos');
+  if (!aviso) return;
+  if (nuevos === 0) { aviso.classList.add('oculto'); return; }
+  aviso.classList.remove('oculto');
+  document.getElementById('avisoPedidosTexto').textContent =
+    nuevos === 1 ? 'Tenés 1 pedido sin atender' : `Tenés ${nuevos} pedidos sin atender`;
+}
+
+function filtrarPedidos(cual) {
+  filtroPedidos = cual;
+  document.querySelectorAll('.chipT[data-fp]').forEach(b => b.classList.toggle('activo', b.dataset.fp === cual));
+  renderPedidos();
+}
+
+function renderPedidos() {
+  renderAvisoPedidos();
+  const caja = document.getElementById('listaPedidos');
+  const resumen = document.getElementById('resumenPedidos');
+  if (!caja) return;
+
+  const todos = estado.pedidos;
+  const porEstado = e => todos.filter(p => String(p.estado || '').trim() === e).length;
+  const cobrado = todos.filter(p => ['Pagado', 'Enviado'].includes(String(p.estado || '').trim()))
+    .reduce((a, p) => a + (Number(p.total) || 0), 0);
+
+  resumen.innerHTML = `
+    <div class="cajaT${porEstado('Nuevo') ? ' alerta' : ''}"><div class="n">${porEstado('Nuevo')}</div><div class="t">Sin atender</div></div>
+    <div class="cajaT"><div class="n">${porEstado('Contactado')}</div><div class="t">Esperando pago</div></div>
+    <div class="cajaT"><div class="n">${porEstado('Pagado')}</div><div class="t">Por enviar</div></div>
+    <div class="cajaT"><div class="n">${formatoColones(cobrado)}</div><div class="t">Cobrado</div></div>`;
+
+  let lista = todos.slice().reverse();  // el más reciente primero
+  if (filtroPedidos === 'activos') lista = lista.filter(p => ['Nuevo', 'Contactado', 'Pagado'].includes(String(p.estado || '').trim()));
+  else if (filtroPedidos !== 'todos') lista = lista.filter(p => String(p.estado || '').trim() === filtroPedidos);
+
+  if (!lista.length) {
+    caja.innerHTML = `<div class="vacio">${filtroPedidos === 'activos'
+      ? 'Todo al día. No hay pedidos por atender.'
+      : 'No hay pedidos en este filtro.'}</div>`;
+    return;
+  }
+
+  caja.innerHTML = lista.map(p => {
+    const est = String(p.estado || 'Nuevo').trim();
+    const items = itemsDe(p);
+    const tel = String(p.telefono || '').replace(/\D/g, '');
+    const siguiente = PASOS[PASOS.indexOf(est) + 1];
+    const revisar = String(p.notas || '').trim();
+
+    const destino = p.entrega === 'retiro'
+      ? 'Retira en el punto'
+      : [p.provincia, p.canton, p.distrito].filter(Boolean).join(' · ') +
+        (p.direccion ? '<br>' + escaparHtml(p.direccion) : '');
+
+    const saludo = encodeURIComponent(
+      `¡Hola ${String(p.nombre || '').split(' ')[0]}! Te escribimos de Avellana Studio por tu pedido ${p.numero} 💛`);
+
+    return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
+      <div class="pedidoTop">
+        <span class="pedidoNombre">${escaparHtml(p.nombre)}</span>
+        <span class="pedidoNum">${escaparHtml(p.numero)} · ${fechaCorta(p.fecha)}</span>
+        <span class="pedidoTotal">${formatoColones(p.total)}</span>
+      </div>
+      <div class="pedidoMeta">
+        ${escaparHtml(p.entregaTexto || '')}${p.envio ? ' · envío ' + formatoColones(p.envio) : ''}<br>
+        ${destino}
+        ${p.correo ? '<br>' + escaparHtml(p.correo) : ''}
+      </div>
+      ${revisar ? `<div class="pedidoAlerta">${escaparHtml(revisar)}</div>` : ''}
+      <div class="pedidoItems">
+        ${items.map(i => `<div><span>${escaparHtml(i.nombre)}${i.tono ? ' · ' + escaparHtml(i.tono) : ''} × ${i.cantidad}</span><span>${formatoColones(i.subtotal)}</span></div>`).join('')}
+      </div>
+      <div class="pedidoAcciones">
+        <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
+        ${siguiente
+          ? `<button class="btnPaso" onclick="avanzarPedido('${escaparHtml(p.id)}','${siguiente}')">Marcar ${siguiente}</button>`
+          : '<span class="pastilla verde">Entregado</span>'}
+        <select class="selEstado" onchange="avanzarPedido('${escaparHtml(p.id)}', this.value)">
+          ${PASOS.concat(['Cancelado']).map(e => `<option value="${e}" ${e === est ? 'selected' : ''}>${e}</option>`).join('')}
+        </select>
+        <button class="btnCancelar" onclick="eliminarPedido('${escaparHtml(p.id)}')">Borrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Cambia el estado. Al pasar a Pagado descuenta stock y registra las ventas.
+async function avanzarPedido(id, nuevoEstado) {
+  const p = estado.pedidos.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const anterior = String(p.estado || 'Nuevo').trim();
+  if (anterior === nuevoEstado) return;
+
+  const yaCobrado = ['Pagado', 'Enviado'].includes(anterior);
+  const vaACobrar = ['Pagado', 'Enviado'].includes(nuevoEstado);
+
+  // El descuento de stock ocurre UNA sola vez: al cruzar a Pagado por primera vez
+  if (vaACobrar && !yaCobrado) {
+    const items = itemsDe(p);
+    const faltantes = items.filter(i => {
+      const prod = estado.productos.find(x => String(x.id) === String(i.id));
+      return !prod || (Number(prod.stock) || 0) < i.cantidad;
+    });
+    if (faltantes.length) {
+      const detalle = faltantes.map(f => '· ' + f.nombre).join('\n');
+      if (!confirm(`Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Marcar como pagado de todas formas? El stock puede quedar en negativo.`)) return;
+    }
+    if (!confirm(`Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)} por SINPE?\n\nEsto descuenta el stock y registra la venta.`)) return;
+
+    const cliente = await asegurarCliente(p);
+    for (const i of items) {
+      const prod = estado.productos.find(x => String(x.id) === String(i.id));
+      if (!prod) continue;
+      await apiPost({
+        accion: 'editar_fila', hoja: 'Productos', id: prod.id,
+        fila: filaProductoConStock(prod, (Number(prod.stock) || 0) - i.cantidad)
+      });
+      await apiPost({
+        accion: 'agregar_fila', hoja: 'Ventas',
+        fila: {
+          id: '', fecha: new Date().toISOString().slice(0, 10),
+          clienteId: cliente, productoId: prod.id, cantidad: i.cantidad,
+          costoUnitarioCRC: Number(prod.costoTotalCRC) || 0,
+          precioVenta: i.precioUnitario, canal: 'Tienda web',
+          estadoEntrega: p.entrega === 'retiro' ? 'Retiro' : 'Por enviar',
+          usuario: estado.usuario, formaPago: 'SINPE'
+        }
+      });
+    }
+  }
+
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Pedidos', id: p.id, fila: { ...p, estado: nuevoEstado } });
+  if (!res.ok) { mostrarToast('No se pudo guardar: ' + (res.error || '')); return; }
+
+  mostrarToast(`Pedido ${p.numero} → ${nuevoEstado}.`);
+  await cargarDatos();
+}
+
+// Reutiliza el cliente si ya existe (por teléfono); si no, lo crea.
+async function asegurarCliente(p) {
+  const tel = String(p.telefono || '').replace(/\D/g, '');
+  const existente = estado.clientes.find(c => String(c.telefono || '').replace(/\D/g, '') === tel);
+  if (existente) return existente.id;
+
+  const res = await apiPost({
+    accion: 'agregar_fila', hoja: 'Clientes',
+    fila: {
+      id: '', nombre: p.nombre, telefono: tel,
+      ubicacion: [p.provincia, p.canton, p.distrito].filter(Boolean).join(', '),
+      canalPreferido: 'WhatsApp', notas: 'Llegó por la tienda web'
+    }
+  });
+  return res.ok ? res.id : '';
+}
+
+async function eliminarPedido(id) {
+  const p = estado.pedidos.find(x => String(x.id) === String(id));
+  if (!p) return;
+  if (!confirm(`Borrar el pedido ${p.numero} de ${p.nombre}?\n\nNo se puede deshacer. Si ya lo cobraste, la venta registrada NO se borra.`)) return;
+  const res = await apiPost({ accion: 'eliminar_fila', hoja: 'Pedidos', id: p.id });
+  if (res.ok) { mostrarToast('Pedido borrado.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + res.error);
+}
+
+function renderSolicitudes() {
+  const caja = document.getElementById('listaSolicitudes');
+  if (!caja) return;
+  const pendientes = estado.solicitudes.filter(s => String(s.estado || '').toLowerCase() !== 'avisado');
+  if (!pendientes.length) {
+    caja.innerHTML = '<div class="vacio">Nadie ha pedido aviso de un producto agotado.</div>';
+    return;
+  }
+  caja.innerHTML = tablaSimple(
+    ['Producto', 'Quién', 'WhatsApp', 'Cuándo', ''],
+    pendientes.slice().reverse().map(s => {
+      const tel = String(s.telefono || '').replace(/\D/g, '');
+      const hay = estado.productos.find(p => String(p.id) === String(s.productoId));
+      const disponible = hay && (Number(hay.stock) || 0) > 0;
+      return [
+        escaparHtml(s.producto) + (disponible ? ' <span class="pastilla verde">Ya hay</span>' : ''),
+        escaparHtml(s.nombre),
+        `<a class="wa" style="padding:5px 11px;font-size:12.5px" target="_blank" rel="noopener"
+           href="https://wa.me/506${tel}?text=${encodeURIComponent('¡Hola ' + String(s.nombre).split(' ')[0] + '! Ya tenemos disponible ' + s.producto + ' 💛')}">Avisar</a>`,
+        fechaCorta(s.fecha),
+        `<button class="btnCancelar" style="margin:0" onclick="marcarAvisada('${escaparHtml(s.id)}')">Ya avisé</button>`
+      ];
+    })
+  );
+}
+
+async function marcarAvisada(id) {
+  const s = estado.solicitudes.find(x => String(x.id) === String(id));
+  if (!s) return;
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Avisado' } });
+  if (res.ok) { mostrarToast('Marcada como avisada.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + res.error);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TIENDA — control de qué productos ve el público
+   ══════════════════════════════════════════════════════════════ */
+let filtroTienda = 'todos';
+
+// Un producto sin el campo definido se considera visible: así los que ya
+// existían antes de esta función no desaparecen de golpe de la tienda.
+function estaPublicado(p) {
+  const v = String(p.publicado ?? '').trim().toLowerCase();
+  if (v === '') return true;
+  return !['no', 'false', '0', 'oculto'].includes(v);
+}
+
+function renderTienda() {
+  const caja = document.getElementById('listaTienda');
+  const resumen = document.getElementById('resumenTienda');
+  if (!caja) return;
+
+  const todos = estado.productos;
+  const visibles = todos.filter(estaPublicado);
+  const conStock = visibles.filter(p => (Number(p.stock) || 0) > 0);
+  const sinFoto = visibles.filter(p => !String(p.foto || '').trim());
+
+  resumen.innerHTML = `
+    <div class="cajaT"><div class="n">${visibles.length}</div><div class="t">En la tienda</div></div>
+    <div class="cajaT"><div class="n">${todos.length - visibles.length}</div><div class="t">Ocultos</div></div>
+    <div class="cajaT"><div class="n">${conStock.length}</div><div class="t">Se pueden pedir</div></div>
+    <div class="cajaT${sinFoto.length ? ' alerta' : ''}"><div class="n">${sinFoto.length}</div><div class="t">Sin foto</div></div>`;
+
+  let lista = todos;
+  if (filtroTienda === 'visibles')  lista = todos.filter(estaPublicado);
+  if (filtroTienda === 'ocultos')   lista = todos.filter(p => !estaPublicado(p));
+  if (filtroTienda === 'agotados')  lista = todos.filter(p => (Number(p.stock) || 0) <= 0);
+
+  if (!lista.length) {
+    caja.innerHTML = '<div class="vacio">No hay productos en este filtro.</div>';
+    return;
+  }
+
+  caja.innerHTML = '<div class="rejillaT">' + lista.map(p => {
+    const on = estaPublicado(p);
+    const stock = Number(p.stock) || 0;
+    const avisos = [];
+    if (stock <= 0) avisos.push('<span class="pastilla gris">Sin stock</span>');
+    else if (stock <= 3) avisos.push(`<span class="pastilla ambar">Quedan ${stock}</span>`);
+    else avisos.push(`<span class="pastilla verde">Stock ${stock}</span>`);
+    if (on && !String(p.foto || '').trim()) avisos.push('<span class="pastilla roja">Falta la foto</span>');
+    if (!Number(p.precioVenta)) avisos.push('<span class="pastilla roja">Sin precio</span>');
+
+    return `<div class="fichaT ${on ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
+      <div class="infoT">
+        <div class="nomT">${escaparHtml(p.nombre)}</div>
+        <div class="metaT">${escaparHtml(p.marca || 'Sin marca')}${p.tono ? ' · ' + escaparHtml(p.tono) : ''} · ${formatoColones(p.precioVenta)}</div>
+        <div class="avisosT">${avisos.join('')}</div>
+      </div>
+      <button class="palanca" role="switch" aria-pressed="${on}"
+        aria-label="${on ? 'Quitar' : 'Mostrar'} ${escaparHtml(p.nombre)} en la tienda"
+        onclick="alternarVisibilidad('${escaparHtml(p.id)}', this)"></button>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function filtrarTienda(cual) {
+  filtroTienda = cual;
+  document.querySelectorAll('.chipT').forEach(b => b.classList.toggle('activo', b.dataset.ft === cual));
+  renderTienda();
+}
+
+async function alternarVisibilidad(id, boton) {
+  const p = estado.productos.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const nuevo = estaPublicado(p) ? 'No' : 'Sí';
+
+  boton.disabled = true;
+  boton.setAttribute('aria-pressed', nuevo === 'Sí');           // respuesta inmediata
+  document.getElementById('fichaT-' + id)?.classList.toggle('apagada', nuevo !== 'Sí');
+
+  const res = await apiPost({
+    accion: 'editar_fila', hoja: 'Productos', id: p.id,
+    fila: { ...p, publicado: nuevo }
+  });
+
+  if (res.ok) {
+    p.publicado = nuevo;                                        // sin recargar todo
+    mostrarToast(nuevo === 'Sí' ? 'Ya se ve en la tienda.' : 'Se quitó de la tienda.');
+    renderTienda();
+  } else {
+    boton.setAttribute('aria-pressed', estaPublicado(p));        // revertir
+    document.getElementById('fichaT-' + id)?.classList.toggle('apagada', !estaPublicado(p));
+    mostrarToast('No se pudo guardar: ' + (res.error || 'error desconocido'));
+  }
+  boton.disabled = false;
+}
+
+async function visibilidadEnLote(mostrar) {
+  const objetivo = mostrar ? 'Sí' : 'No';
+  const afectados = estado.productos.filter(p => estaPublicado(p) !== mostrar);
+  if (!afectados.length) { mostrarToast('No hay nada que cambiar.'); return; }
+  if (!confirm(`${mostrar ? 'Mostrar' : 'Ocultar'} ${afectados.length} producto(s) en la tienda?`)) return;
+
+  mostrarToast(`Guardando ${afectados.length}…`);
+  for (const p of afectados) {
+    const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: { ...p, publicado: objetivo } });
+    if (res.ok) p.publicado = objetivo;
+  }
+  renderTienda();
+  mostrarToast('Listo.');
+}
+
+async function ocultarSinStock() {
+  const afectados = estado.productos.filter(p => (Number(p.stock) || 0) <= 0 && estaPublicado(p));
+  if (!afectados.length) { mostrarToast('Todos los agotados ya están ocultos.'); return; }
+  if (!confirm(`Ocultar ${afectados.length} producto(s) sin stock?`)) return;
+
+  for (const p of afectados) {
+    const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: { ...p, publicado: 'No' } });
+    if (res.ok) p.publicado = 'No';
+  }
+  renderTienda();
+  mostrarToast(`Se ocultaron ${afectados.length}.`);
 }
 
 function alternarMonedaProducto() {
@@ -1044,7 +1722,14 @@ async function guardarProducto() {
     if (!marca) { mostrarToast('Escribí el nombre de la marca nueva.'); return; }
   }
 
+  // OJO: editar_fila reescribe la fila COMPLETA. Partimos del producto original
+  // para no borrar columnas que este formulario no toca (publicado, foto, descripcion).
+  const original = productoEditando
+    ? (estado.productos.find(p => String(p.id) === String(productoEditando)) || {})
+    : {};
+
   const fila = {
+    ...original,
     id: productoEditando || '',
     nombre,
     categoria: document.getElementById('pCategoria').value,
@@ -1057,7 +1742,10 @@ async function guardarProducto() {
     stock,
     estado: stock > 0 ? 'Disponible' : 'Agotado',
     moneda,
-    tono: document.getElementById('pTono').value
+    tono: document.getElementById('pTono').value,
+    // Un producto nuevo nace visible en la tienda salvo que se diga lo contrario
+    publicado: original.publicado === undefined || original.publicado === ''
+      ? 'Sí' : original.publicado
   };
 
   const accion = productoEditando ? 'editar_fila' : 'agregar_fila';
@@ -1284,10 +1972,12 @@ function alternarRegalia() {
 
 // Reconstruye la fila completa de un producto, cambiando solo el stock.
 function filaProductoConStock(p, nuevoStock) {
+  // Se copia el producto entero primero: así una venta nunca borra la foto,
+  // la descripción ni la visibilidad en la tienda al actualizar el stock.
   return {
-    id: p.id, nombre: p.nombre, categoria: p.categoria, marca: p.marca, origen: p.origen,
-    costoCompra: p.costoCompra, tipoCambio: p.tipoCambio, costoTotalCRC: p.costoTotalCRC, precioVenta: p.precioVenta,
-    stock: nuevoStock, estado: nuevoStock > 0 ? 'Disponible' : 'Agotado', moneda: p.moneda, tono: p.tono
+    ...p,
+    stock: nuevoStock,
+    estado: nuevoStock > 0 ? 'Disponible' : 'Agotado'
   };
 }
 
@@ -1604,6 +2294,85 @@ async function guardarMovimiento() {
     mostrarToast(movimientoEditando ? 'Movimiento actualizado.' : 'Movimiento guardado.');
     document.getElementById('formMovimiento').classList.add('oculto');
     movimientoEditando = null;
+    await cargarDatos();
+  } else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Publicaciones ----------
+
+function renderContenido() {
+  const filtro = document.getElementById('filtroContenido') ? document.getElementById('filtroContenido').value : 'todas';
+  let lista = [...estado.contenido];
+  if (filtro === 'planeadas') lista = lista.filter(k => k.estado !== 'Publicado');
+  if (filtro === 'publicadas') lista = lista.filter(k => k.estado === 'Publicado');
+  lista.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const caja = document.getElementById('listaContenido');
+  if (!lista.length) { caja.innerHTML = '<div class="vacio">Todavía no hay publicaciones planeadas.</div>'; return; }
+  caja.innerHTML = tablaSimple(
+    ['Fecha', 'Tipo', 'Formato', 'Producto', 'Descripción', 'Estado', 'Acciones'],
+    lista.map(k => [
+      escaparHtml(k.fecha), escaparHtml(k.tipo), escaparHtml(k.formato), escaparHtml(k.producto),
+      escaparHtml(k.descripcion),
+      k.estado === 'Publicado' ? '<span style="color:var(--sage);font-weight:600;">✅ Publicado</span>' : '<span style="color:var(--brown-soft);">🕓 Planeado</span>',
+      botonesAccion('editarPublicacion', 'eliminarPublicacion', k.id)
+    ])
+  );
+}
+
+function nuevaPublicacion() {
+  publicacionEditando = null;
+  document.getElementById('ktFecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('ktTipo').value = 'Meme / relatable';
+  document.getElementById('ktFormato').value = 'Feed';
+  document.getElementById('ktProducto').value = 'General';
+  document.getElementById('ktEstado').value = 'Planeado';
+  document.getElementById('ktDescripcion').value = '';
+  document.getElementById('ktNotas').value = '';
+  document.getElementById('btnGuardarContenido').textContent = 'Guardar publicación';
+  document.getElementById('formContenido').classList.remove('oculto');
+}
+
+function editarPublicacion(id) {
+  const k = estado.contenido.find(x => String(x.id) === String(id));
+  if (!k) return;
+  publicacionEditando = id;
+  document.getElementById('ktFecha').value = k.fecha || '';
+  document.getElementById('ktTipo').value = k.tipo || 'Meme / relatable';
+  document.getElementById('ktFormato').value = k.formato || 'Feed';
+  document.getElementById('ktProducto').value = k.producto || 'General';
+  document.getElementById('ktEstado').value = k.estado || 'Planeado';
+  document.getElementById('ktDescripcion').value = k.descripcion || '';
+  document.getElementById('ktNotas').value = k.notas || '';
+  document.getElementById('btnGuardarContenido').textContent = 'Guardar cambios';
+  document.getElementById('formContenido').classList.remove('oculto');
+}
+
+async function eliminarPublicacion(id) {
+  if (!confirm('¿Eliminar esta publicación del calendario? No se puede deshacer.')) return;
+  const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Contenido', id });
+  if (resultado.ok) { mostrarToast('Publicación eliminada.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + resultado.error);
+}
+
+async function guardarPublicacion() {
+  const fila = {
+    id: publicacionEditando || '',
+    fecha: document.getElementById('ktFecha').value,
+    tipo: document.getElementById('ktTipo').value,
+    formato: document.getElementById('ktFormato').value,
+    producto: document.getElementById('ktProducto').value,
+    descripcion: document.getElementById('ktDescripcion').value,
+    estado: document.getElementById('ktEstado').value,
+    notas: document.getElementById('ktNotas').value,
+    usuario: estado.usuario.usuario
+  };
+  const accion = publicacionEditando ? 'editar_fila' : 'agregar_fila';
+  const resultado = await apiPost({ accion, hoja: 'Contenido', id: publicacionEditando, fila });
+  if (resultado.ok) {
+    mostrarToast(publicacionEditando ? 'Publicación actualizada.' : 'Publicación guardada.');
+    document.getElementById('formContenido').classList.add('oculto');
+    publicacionEditando = null;
     await cargarDatos();
   } else mostrarToast('Error: ' + resultado.error);
 }
