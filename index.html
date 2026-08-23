@@ -170,6 +170,16 @@
     padding:13px 14px;display:flex;gap:12px;align-items:flex-start;
     transition:border-color .15s, opacity .15s;
   }
+  .miniFoto{
+    flex:0 0 auto;width:48px;height:48px;border-radius:8px;overflow:hidden;
+    background:#F3ECE4;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;position:relative;border:1px solid var(--border);
+  }
+  .miniFoto:hover{border-color:var(--brown-soft);}
+  .miniFoto img{width:100%;height:100%;object-fit:cover;display:block;}
+  .miniFoto .miniIcono{font-size:17px;opacity:.5;}
+  .miniFoto.subiendo{opacity:.55;cursor:wait;pointer-events:none;}
+  .miniFoto.subiendo .miniIcono{font-size:10px;opacity:.85;}
   .fichaT.apagada{opacity:.62;background:#FBF7F3;}
   .fichaT .infoT{flex:1;min-width:0;}
   .fichaT .nomT{
@@ -1637,6 +1647,10 @@ function renderTienda() {
     if (!Number(p.precioVenta)) avisos.push('<span class="pastilla roja">Sin precio</span>');
 
     return `<div class="fichaT ${on ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
+      <label class="miniFoto" title="${p.foto ? 'Cambiar foto' : 'Subir foto'}">
+        ${p.foto ? `<img src="${escaparHtml(p.foto)}" alt="">` : `<span class="miniIcono">📷</span>`}
+        <input type="file" accept="image/*" hidden onchange="subirFoto('${escaparHtml(p.id)}', this)">
+      </label>
       <div class="infoT">
         <div class="nomT">${escaparHtml(p.nombre)}</div>
         <div class="metaT">${escaparHtml(p.marca || 'Sin marca')}${p.tono ? ' · ' + escaparHtml(p.tono) : ''} · ${formatoColones(p.precioVenta)}</div>
@@ -1647,6 +1661,60 @@ function renderTienda() {
         onclick="alternarVisibilidad('${escaparHtml(p.id)}', this)"></button>
     </div>`;
   }).join('') + '</div>';
+}
+
+// Achica la imagen en el navegador antes de mandarla (más rápido de subir,
+// menos espacio en Drive, y el tamaño ya queda parejo entre fotos).
+function redimensionarImagen(file, maxAncho) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const escala = Math.min(1, maxAncho / img.width);
+      const w = Math.round(img.width * escala) || 1;
+      const h = Math.round(img.height * escala) || 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagen inválida')); };
+    img.src = url;
+  });
+}
+
+async function subirFoto(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const miniFoto = document.querySelector(`#fichaT-${CSS.escape(String(id))} .miniFoto`);
+  miniFoto?.classList.add('subiendo');
+  if (miniFoto) miniFoto.querySelector('.miniIcono, img')?.remove();
+  if (miniFoto) miniFoto.insertAdjacentHTML('afterbegin', '<span class="miniIcono">…</span>');
+
+  try {
+    const dataUrl = await redimensionarImagen(file, 1000);
+    const base64 = dataUrl.split(',')[1];
+    const res = await apiPost({
+      accion: 'subir_foto', productoId: id, base64,
+      mimeType: 'image/jpeg', nombreArchivo: file.name
+    });
+    if (res.ok) {
+      const p = estado.productos.find(x => String(x.id) === String(id));
+      if (p) p.foto = res.foto;
+      mostrarToast('Foto guardada.');
+      renderTienda();
+    } else {
+      mostrarToast('No se pudo subir la foto: ' + (res.error || 'error desconocido'));
+      renderTienda();
+    }
+  } catch (err) {
+    mostrarToast('No se pudo procesar esa imagen.');
+    renderTienda();
+  } finally {
+    input.value = '';
+  }
 }
 
 function filtrarTienda(cual) {
