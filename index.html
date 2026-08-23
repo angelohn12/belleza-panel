@@ -1545,12 +1545,13 @@ function renderAvisosStock() {
     return;
   }
   caja.innerHTML = tablaSimple(
-    ['Producto', 'Quién', 'WhatsApp', 'Cuándo', ''],
+    ['N°', 'Producto', 'Quién', 'WhatsApp', 'Cuándo', ''],
     pendientes.slice().reverse().map(s => {
       const tel = String(s.telefono || '').replace(/\D/g, '');
       const hay = estado.productos.find(p => String(p.id) === String(s.productoId));
       const disponible = hay && (Number(hay.stock) || 0) > 0;
       return [
+        escaparHtml(s.numero || '—'),
         escaparHtml(s.producto) + (disponible ? ' <span class="pastilla verde">Ya hay</span>' : ''),
         escaparHtml(s.nombre),
         `<a class="wa" style="padding:5px 11px;font-size:12.5px" target="_blank" rel="noopener"
@@ -1586,10 +1587,11 @@ function renderEncargos() {
     return;
   }
   caja.innerHTML = tablaSimple(
-    ['Qué piden', 'Quién', 'WhatsApp', 'Cuándo', ''],
+    ['N°', 'Qué piden', 'Quién', 'WhatsApp', 'Cuándo', ''],
     pendientes.slice().reverse().map(s => {
       const tel = String(s.telefono || '').replace(/\D/g, '');
       return [
+        escaparHtml(s.numero || '—'),
         escaparHtml(s.producto),
         escaparHtml(s.nombre),
         `<a class="wa" style="padding:5px 11px;font-size:12.5px" target="_blank" rel="noopener"
@@ -1827,10 +1829,11 @@ function elegirModalidadProducto(m) {
 
 function actualizarCamposPorModalidad() {
   const esEncargo = modalidadProducto === 'encargo';
-  ['pCampoOrigen', 'pCampoMoneda', 'pCampoCosto', 'pCampoTipoCambio', 'pCampoStock'].forEach(id => {
-    document.getElementById(id)?.classList.toggle('oculto', esEncargo);
-  });
-  document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio estimado (₡, opcional)' : 'Precio de venta (₡)';
+  // Un encargo sí puede tener costo/origen/moneda — es útil saber cuánto te va
+  // a costar traerlo aunque todavía no lo tengas. Lo único que de verdad no
+  // aplica es "Stock inicial": no hay unidades que contar hasta que llegue.
+  document.getElementById('pCampoStock')?.classList.toggle('oculto', esEncargo);
+  document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
 }
 
 function nuevoProducto() {
@@ -1901,23 +1904,28 @@ async function guardarProducto() {
   let fila;
 
   if (esEncargo) {
-    // Sin inventario que rastrear: nada de costo/origen/tipo de cambio/stock
-    // — esos campos quedan en blanco a propósito, no son datos viejos que se
-    // reusan por accidente si el producto vino de editar uno con stock.
+    // Sí lleva costo de compra y precio estimados — es lo que te deja calcular
+    // el margen antes de traerlo. Lo único que de verdad no aplica es el
+    // stock: no hay unidades que contar hasta que el producto llegue.
+    const moneda = document.getElementById('pMoneda').value;
+    const costo = parseMonto(document.getElementById('pCosto').value);
+    const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
+    const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
+
     fila = {
       ...original,
       id: productoEditando || '',
       nombre,
       categoria: document.getElementById('pCategoria').value,
       marca,
-      origen: '',
-      costoCompra: '',
-      tipoCambio: '',
-      costoTotalCRC: '',
+      origen: document.getElementById('pOrigen').value,
+      costoCompra: costo,
+      tipoCambio: moneda === 'USD' ? tipoCambio : '',
+      costoTotalCRC,
       precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
       stock: 0,
       estado: 'Por encargo',
-      moneda: '',
+      moneda,
       tono: document.getElementById('pTono').value,
       modalidad: 'encargo',
       publicado: original.publicado === undefined || original.publicado === ''
