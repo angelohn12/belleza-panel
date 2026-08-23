@@ -838,12 +838,14 @@
 
 <script>
 // ============================================================
-// CONFIGURACIÓN — completar API_URL cuando Anyelo despliegue
-// el Apps Script (ver instrucciones aparte).
+// CONFIGURACIÓN
+// La clave YA NO vive acá. Este archivo llama a /api/proxy (una función
+// de Cloudflare Pages que corre en el servidor, nunca en el navegador) y
+// es esa función la que le agrega la clave antes de hablar con Apps Script.
+// Así, aunque alguien vea el código fuente de esta página, nunca ve la clave.
 // ============================================================
 const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbxQVdDsH_Qgg9MnRgb0rDyzYPkvRESEi2FGD-ENHeT9L7CMbZl_xTaVxDs0wfNe3tflMg/exec',
-  KEY: 'Belleza2026!'
+  API_URL: '/api/proxy'
 };
 
 let estado = {
@@ -869,15 +871,14 @@ let publicacionEditando = null;
 // ---------- API ----------
 
 async function apiLeer() {
-  const url = `${CONFIG.API_URL}?accion=leer&key=${encodeURIComponent(CONFIG.KEY)}`;
-  const res = await fetch(url);
+  const res = await fetch(`${CONFIG.API_URL}?accion=leer`);
   return res.json();
 }
 
 async function apiPost(cuerpo) {
   const res = await fetch(CONFIG.API_URL, {
     method: 'POST',
-    body: JSON.stringify({ ...cuerpo, key: CONFIG.KEY })
+    body: JSON.stringify(cuerpo)
   });
   return res.json();
 }
