@@ -505,6 +505,17 @@
           <button onclick="nuevoProducto()">+ Nuevo producto</button>
         </div>
         <div class="formulario oculto" id="formProducto">
+          <div class="campoAncho">
+            <label>¿Tenés esto en inventario ahora mismo?</label>
+            <div class="filtrosTienda" style="margin:4px 0 0">
+              <button type="button" class="chipT activo" id="modoStockSi" onclick="elegirModalidadProducto('stock')">Sí, tengo stock</button>
+              <button type="button" class="chipT" id="modoStockNo" onclick="elegirModalidadProducto('encargo')">No, es por encargo</button>
+            </div>
+            <p class="ayudaTienda" style="margin:6px 0 0">
+              "Por encargo" lo muestra en la tienda para que lo pidan, pero no resta de ningún inventario ni se
+              puede comprar directo — se coordina por WhatsApp, igual que cualquier otro encargo.
+            </p>
+          </div>
           <div><label>Nombre</label><input id="pNombre" placeholder="Labial mate rojo" /></div>
           <div><label>Categoría</label>
             <select id="pCategoria">
@@ -516,7 +527,7 @@
           <div><label>Tono / color (opcional)</label><input id="pTono" placeholder="Rojo, Nude, Coral…" /></div>
           <div><label>Marca</label><select id="pMarca" onchange="alternarMarcaNueva()"></select></div>
           <div id="pMarcaNuevaWrap" class="oculto"><label>Nombre de la marca nueva</label><input id="pMarcaNueva" placeholder="Ej: Fenty Beauty" /></div>
-          <div><label>Origen</label>
+          <div id="pCampoOrigen"><label>Origen</label>
             <select id="pOrigen">
               <option>Amazon</option>
               <option>Sephora</option>
@@ -526,16 +537,16 @@
               <option>Otro</option>
             </select>
           </div>
-          <div><label>Moneda de compra</label>
+          <div id="pCampoMoneda"><label>Moneda de compra</label>
             <select id="pMoneda" onchange="alternarMonedaProducto()">
               <option value="USD">Dólares ($)</option>
               <option value="CRC">Colones (₡)</option>
             </select>
           </div>
-          <div><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" /></div>
+          <div id="pCampoCosto"><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" /></div>
           <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" /></div>
-          <div><label>Precio de venta (₡)</label><input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" /></div>
-          <div><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
+          <div><label id="pLabelPrecio">Precio de venta (₡)</label><input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" /></div>
+          <div id="pCampoStock"><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
           <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
         </div>
         <div id="listaProductos"></div>
@@ -1638,13 +1649,20 @@ function renderTienda() {
 
   caja.innerHTML = '<div class="rejillaT">' + lista.map(p => {
     const on = estaPublicado(p);
+    const esEncargo = p.modalidad === 'encargo';
     const stock = Number(p.stock) || 0;
     const avisos = [];
-    if (stock <= 0) avisos.push('<span class="pastilla gris">Sin stock</span>');
-    else if (stock <= 3) avisos.push(`<span class="pastilla ambar">Quedan ${stock}</span>`);
-    else avisos.push(`<span class="pastilla verde">Stock ${stock}</span>`);
+    if (esEncargo) {
+      avisos.push('<span class="pastilla ambar">Por encargo</span>');
+    } else if (stock <= 0) {
+      avisos.push('<span class="pastilla gris">Sin stock</span>');
+    } else if (stock <= 3) {
+      avisos.push(`<span class="pastilla ambar">Quedan ${stock}</span>`);
+    } else {
+      avisos.push(`<span class="pastilla verde">Stock ${stock}</span>`);
+    }
     if (on && !String(p.foto || '').trim()) avisos.push('<span class="pastilla roja">Falta la foto</span>');
-    if (!Number(p.precioVenta)) avisos.push('<span class="pastilla roja">Sin precio</span>');
+    if (!esEncargo && !Number(p.precioVenta)) avisos.push('<span class="pastilla roja">Sin precio</span>');
 
     return `<div class="fichaT ${on ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
       <label class="miniFoto" title="${p.foto ? 'Cambiar foto' : 'Subir foto'}">
@@ -1797,8 +1815,26 @@ function alternarMarcaNueva() {
   document.getElementById('pMarcaNuevaWrap').classList.toggle('oculto', !esNueva);
 }
 
+let modalidadProducto = 'stock';
+
+function elegirModalidadProducto(m) {
+  modalidadProducto = m === 'encargo' ? 'encargo' : 'stock';
+  document.getElementById('modoStockSi').classList.toggle('activo', modalidadProducto === 'stock');
+  document.getElementById('modoStockNo').classList.toggle('activo', modalidadProducto === 'encargo');
+  actualizarCamposPorModalidad();
+}
+
+function actualizarCamposPorModalidad() {
+  const esEncargo = modalidadProducto === 'encargo';
+  ['pCampoOrigen', 'pCampoMoneda', 'pCampoCosto', 'pCampoTipoCambio', 'pCampoStock'].forEach(id => {
+    document.getElementById(id)?.classList.toggle('oculto', esEncargo);
+  });
+  document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio estimado (₡, opcional)' : 'Precio de venta (₡)';
+}
+
 function nuevoProducto() {
   productoEditando = null;
+  elegirModalidadProducto('stock');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
   document.getElementById('pMarca').value = '__nueva__';
@@ -1818,6 +1854,7 @@ function editarProducto(id) {
   const p = estado.productos.find(x => String(x.id) === String(id));
   if (!p) return;
   productoEditando = id;
+  elegirModalidadProducto(p.modalidad === 'encargo' ? 'encargo' : 'stock');
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
@@ -1844,13 +1881,8 @@ async function eliminarProducto(id) {
 }
 
 async function guardarProducto() {
-  const moneda = document.getElementById('pMoneda').value;
-  const costo = parseMonto(document.getElementById('pCosto').value);
-  const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
-  const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
   const nombre = document.getElementById('pNombre').value;
   if (!nombre) { mostrarToast('Poné el nombre del producto.'); return; }
-  const stock = Number(document.getElementById('pStock').value) || 0;
 
   let marca = document.getElementById('pMarca').value;
   if (marca === '__nueva__') {
@@ -1864,25 +1896,60 @@ async function guardarProducto() {
     ? (estado.productos.find(p => String(p.id) === String(productoEditando)) || {})
     : {};
 
-  const fila = {
-    ...original,
-    id: productoEditando || '',
-    nombre,
-    categoria: document.getElementById('pCategoria').value,
-    marca,
-    origen: document.getElementById('pOrigen').value,
-    costoCompra: costo,
-    tipoCambio: moneda === 'USD' ? tipoCambio : '',
-    costoTotalCRC,
-    precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
-    stock,
-    estado: stock > 0 ? 'Disponible' : 'Agotado',
-    moneda,
-    tono: document.getElementById('pTono').value,
-    // Un producto nuevo nace visible en la tienda salvo que se diga lo contrario
-    publicado: original.publicado === undefined || original.publicado === ''
-      ? 'Sí' : original.publicado
-  };
+  const esEncargo = modalidadProducto === 'encargo';
+  let fila;
+
+  if (esEncargo) {
+    // Sin inventario que rastrear: nada de costo/origen/tipo de cambio/stock
+    // — esos campos quedan en blanco a propósito, no son datos viejos que se
+    // reusan por accidente si el producto vino de editar uno con stock.
+    fila = {
+      ...original,
+      id: productoEditando || '',
+      nombre,
+      categoria: document.getElementById('pCategoria').value,
+      marca,
+      origen: '',
+      costoCompra: '',
+      tipoCambio: '',
+      costoTotalCRC: '',
+      precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
+      stock: 0,
+      estado: 'Por encargo',
+      moneda: '',
+      tono: document.getElementById('pTono').value,
+      modalidad: 'encargo',
+      publicado: original.publicado === undefined || original.publicado === ''
+        ? 'Sí' : original.publicado
+    };
+  } else {
+    const moneda = document.getElementById('pMoneda').value;
+    const costo = parseMonto(document.getElementById('pCosto').value);
+    const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
+    const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
+    const stock = Number(document.getElementById('pStock').value) || 0;
+
+    fila = {
+      ...original,
+      id: productoEditando || '',
+      nombre,
+      categoria: document.getElementById('pCategoria').value,
+      marca,
+      origen: document.getElementById('pOrigen').value,
+      costoCompra: costo,
+      tipoCambio: moneda === 'USD' ? tipoCambio : '',
+      costoTotalCRC,
+      precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
+      stock,
+      estado: stock > 0 ? 'Disponible' : 'Agotado',
+      moneda,
+      tono: document.getElementById('pTono').value,
+      modalidad: 'stock',
+      // Un producto nuevo nace visible en la tienda salvo que se diga lo contrario
+      publicado: original.publicado === undefined || original.publicado === ''
+        ? 'Sí' : original.publicado
+    };
+  }
 
   const accion = productoEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Productos', id: productoEditando, fila });
