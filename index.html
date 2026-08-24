@@ -2111,9 +2111,43 @@ async function guardarProducto() {
   if (resultado.ok) {
     mostrarToast(productoEditando ? 'Producto actualizado.' : 'Producto guardado.');
     document.getElementById('formProducto').classList.add('oculto');
+
+    // Precio en cascada: si este producto tiene más tonos (mismo nombre +
+    // marca) con un precio distinto, se les pone el mismo precio de una —
+    // así no hay que repetirlo tono por tono en productos con muchas
+    // variantes. Solo mira precio; todo lo demás de cada tono (foto,
+    // stock, medida) queda tal cual estaba.
+    const idGuardado = productoEditando || resultado.id;
+    if (idGuardado && Number(fila.precioVenta) > 0) {
+      await aplicarPrecioATonosHermanos(fila.marca, fila.nombre, idGuardado, Number(fila.precioVenta));
+    }
+
     productoEditando = null;
     await cargarDatos();
   } else mostrarToast('Error: ' + resultado.error);
+}
+
+async function aplicarPrecioATonosHermanos(marca, nombre, idGuardado, nuevoPrecio) {
+  const clave = (marca || '').trim().toLowerCase() + '|' + (nombre || '').trim().toLowerCase();
+  const hermanos = estado.productos.filter(p =>
+    String(p.id) !== String(idGuardado) &&
+    (p.marca || '').trim().toLowerCase() + '|' + (p.nombre || '').trim().toLowerCase() === clave &&
+    Number(p.precioVenta) !== nuevoPrecio
+  );
+  if (!hermanos.length) return;
+
+  mostrarToast(`Aplicando ${formatoColones(nuevoPrecio)} a ${hermanos.length} tono(s) más de este producto…`);
+  let ok = 0;
+  for (const h of hermanos) {
+    const resultado = await apiPost({
+      accion: 'editar_fila', hoja: 'Productos', id: h.id,
+      fila: { ...h, precioVenta: nuevoPrecio }
+    });
+    if (resultado.ok) ok++;
+  }
+  mostrarToast(ok === hermanos.length
+    ? `Precio aplicado a los ${ok} tono(s) restantes.`
+    : `Precio aplicado a ${ok} de ${hermanos.length} tono(s) — revisá los que fallaron.`);
 }
 
 // ---------- Clientes ----------
