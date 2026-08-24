@@ -526,7 +526,16 @@
               puede comprar directo — se coordina por WhatsApp, igual que cualquier otro encargo.
             </p>
           </div>
-          <div><label>Nombre</label><input id="pNombre" placeholder="Labial mate rojo" /></div>
+          <div>
+            <label>Nombre</label>
+            <input id="pNombre" placeholder="Rubor crema y polvo" />
+            <p class="ayudaTienda" style="margin:4px 0 0">
+              Siempre en español: qué tipo de producto es ("Rubor crema y polvo", "Base de maquillaje",
+              "Primer"). Si el producto tiene un nombre de línea pegajoso que la clienta reconoce de redes
+              sociales (ej. "Easy Bake"), ponelo antes con un guión: <b>"Easy Bake — Polvo suelto fijador"</b>.
+              La marca ya se muestra aparte, no hace falta repetirla acá.
+            </p>
+          </div>
           <div><label>Categoría</label>
             <select id="pCategoria">
               <option>Maquillaje</option>
@@ -534,7 +543,14 @@
               <option>Bienestar</option>
             </select>
           </div>
-          <div><label>Tono / color (opcional)</label><input id="pTono" placeholder="Rojo, Nude, Coral…" /></div>
+          <div>
+            <label>Tono / color (opcional)</label>
+            <input id="pTono" placeholder="Espresso, Rose Envy, Cherry Cola…" />
+            <p class="ayudaTienda" style="margin:4px 0 0">
+              Siempre en inglés, tal cual lo llama la marca — copiá el nombre del tono directo del sitio
+              donde comprás (Amazon, Sephora, etc.), sin traducirlo.
+            </p>
+          </div>
           <div><label>Marca</label><select id="pMarca" onchange="alternarMarcaNueva()"></select></div>
           <div id="pMarcaNuevaWrap" class="oculto"><label>Nombre de la marca nueva</label><input id="pMarcaNueva" placeholder="Ej: Fenty Beauty" /></div>
           <div id="pCampoOrigen"><label>Origen</label>
