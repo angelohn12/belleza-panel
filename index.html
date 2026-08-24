@@ -568,6 +568,15 @@
             <input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" style="margin-top:8px" />
           </div>
           <div id="pCampoStock"><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
+          <div><label>Contenido / medida (opcional)</label><input id="pMedida" placeholder="10 ml, 50 g, 1 unidad…" /></div>
+          <div class="campoAncho">
+            <label>Qué es y para qué sirve (opcional)</label>
+            <input id="pDescripcion" placeholder="Ej: Rubor en crema de larga duración, ideal para un efecto natural." />
+            <p class="ayudaTienda" style="margin:6px 0 0">
+              Esto se ve en la ficha del producto cuando la clienta lo toca en la tienda. Si lo dejás vacío,
+              simplemente no se muestra esa parte — no es obligatorio.
+            </p>
+          </div>
           <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
         </div>
         <div id="listaProductos"></div>
@@ -1953,6 +1962,8 @@ function nuevoProducto() {
   elegirModoPrecio('manual');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
+  document.getElementById('pMedida').value = '';
+  document.getElementById('pDescripcion').value = '';
   document.getElementById('pMarca').value = '__nueva__';
   document.getElementById('pMarcaNueva').value = '';
   alternarMarcaNueva();
@@ -1975,6 +1986,8 @@ function editarProducto(id) {
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
+  document.getElementById('pMedida').value = p.medida || '';
+  document.getElementById('pDescripcion').value = p.descripcion || '';
   document.getElementById('pMarca').value = p.marca || '__nueva__';
   document.getElementById('pMarcaNueva').value = '';
   alternarMarcaNueva();
@@ -2040,6 +2053,8 @@ async function guardarProducto() {
       estado: 'Por encargo',
       moneda,
       tono: document.getElementById('pTono').value,
+      medida: document.getElementById('pMedida').value,
+      descripcion: document.getElementById('pDescripcion').value,
       modalidad: 'encargo',
       publicado: original.publicado === undefined || original.publicado === ''
         ? 'Sí' : original.publicado
@@ -2066,6 +2081,8 @@ async function guardarProducto() {
       estado: stock > 0 ? 'Disponible' : 'Agotado',
       moneda,
       tono: document.getElementById('pTono').value,
+      medida: document.getElementById('pMedida').value,
+      descripcion: document.getElementById('pDescripcion').value,
       modalidad: 'stock',
       // Un producto nuevo nace visible en la tienda salvo que se diga lo contrario
       publicado: original.publicado === undefined || original.publicado === ''
