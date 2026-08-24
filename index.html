@@ -583,6 +583,17 @@
             </div>
             <input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" style="margin-top:8px" />
           </div>
+          <div class="campoAncho">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+              <input type="checkbox" id="pAplicarATonos" checked style="width:auto">
+              Aplicar este costo y precio a los demás tonos de este producto
+            </label>
+            <p class="ayudaTienda" style="margin:6px 0 0">
+              Si este producto tiene más tonos (mismo nombre y marca) con costo o precio distinto, se les pone
+              igual al guardar — así no hay que repetirlo tono por tono. Desmarcá esto si este tono en
+              particular costó o se vende distinto a los demás (por una oferta, por ejemplo).
+            </p>
+          </div>
           <div id="pCampoStock"><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
           <div><label>Contenido / medida (opcional)</label><input id="pMedida" placeholder="10 ml, 50 g, 1 unidad…" /></div>
           <div class="campoAncho">
@@ -1989,6 +2000,7 @@ function nuevoProducto() {
   document.getElementById('pTipoCambio').value = 520;
   document.getElementById('pPrecioVenta').value = '';
   document.getElementById('pStock').value = 1;
+  document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar producto';
   document.getElementById('formProducto').classList.remove('oculto');
 }
@@ -2014,6 +2026,7 @@ function editarProducto(id) {
   document.getElementById('pTipoCambio').value = p.tipoCambio || 520;
   document.getElementById('pPrecioVenta').value = p.precioVenta || '';
   document.getElementById('pStock').value = p.stock || 0;
+  document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
   document.getElementById('formProducto').classList.remove('oculto');
 }
@@ -2112,14 +2125,16 @@ async function guardarProducto() {
     mostrarToast(productoEditando ? 'Producto actualizado.' : 'Producto guardado.');
     document.getElementById('formProducto').classList.add('oculto');
 
-    // Precio en cascada: si este producto tiene más tonos (mismo nombre +
-    // marca) con un precio distinto, se les pone el mismo precio de una —
-    // así no hay que repetirlo tono por tono en productos con muchas
-    // variantes. Solo mira precio; todo lo demás de cada tono (foto,
-    // stock, medida) queda tal cual estaba.
+    // Costo y precio en cascada: si este producto tiene más tonos (mismo
+    // nombre + marca), se les pone el mismo costo/precio de una — así no
+    // hay que repetirlo tono por tono en productos con muchas variantes.
+    // Se puede desactivar con la casilla (ej. un tono que costó distinto
+    // por una oferta puntual). Solo toca costo/precio; todo lo demás de
+    // cada tono (foto, stock, medida) queda tal cual estaba.
     const idGuardado = productoEditando || resultado.id;
-    if (idGuardado && Number(fila.precioVenta) > 0) {
-      await aplicarPrecioATonosHermanos(fila.marca, fila.nombre, idGuardado, Number(fila.precioVenta));
+    const aplicarATonos = document.getElementById('pAplicarATonos').checked;
+    if (idGuardado && aplicarATonos && (Number(fila.precioVenta) > 0 || Number(fila.costoCompra) > 0)) {
+      await aplicarCostoPrecioATonosHermanos(fila, idGuardado);
     }
 
     productoEditando = null;
@@ -2127,27 +2142,36 @@ async function guardarProducto() {
   } else mostrarToast('Error: ' + resultado.error);
 }
 
-async function aplicarPrecioATonosHermanos(marca, nombre, idGuardado, nuevoPrecio) {
-  const clave = (marca || '').trim().toLowerCase() + '|' + (nombre || '').trim().toLowerCase();
+async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
+  const clave = (filaGuardada.marca || '').trim().toLowerCase() + '|' + (filaGuardada.nombre || '').trim().toLowerCase();
+  const nuevoPrecio = Number(filaGuardada.precioVenta) || 0;
+  const nuevoCosto = Number(filaGuardada.costoCompra) || 0;
   const hermanos = estado.productos.filter(p =>
     String(p.id) !== String(idGuardado) &&
     (p.marca || '').trim().toLowerCase() + '|' + (p.nombre || '').trim().toLowerCase() === clave &&
-    Number(p.precioVenta) !== nuevoPrecio
+    (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto)
   );
   if (!hermanos.length) return;
 
-  mostrarToast(`Aplicando ${formatoColones(nuevoPrecio)} a ${hermanos.length} tono(s) más de este producto…`);
+  mostrarToast(`Aplicando costo/precio a ${hermanos.length} tono(s) más de este producto…`);
   let ok = 0;
   for (const h of hermanos) {
     const resultado = await apiPost({
       accion: 'editar_fila', hoja: 'Productos', id: h.id,
-      fila: { ...h, precioVenta: nuevoPrecio }
+      fila: {
+        ...h,
+        precioVenta: nuevoPrecio,
+        costoCompra: nuevoCosto,
+        tipoCambio: filaGuardada.tipoCambio,
+        costoTotalCRC: filaGuardada.costoTotalCRC,
+        moneda: filaGuardada.moneda
+      }
     });
     if (resultado.ok) ok++;
   }
   mostrarToast(ok === hermanos.length
-    ? `Precio aplicado a los ${ok} tono(s) restantes.`
-    : `Precio aplicado a ${ok} de ${hermanos.length} tono(s) — revisá los que fallaron.`);
+    ? `Costo y precio aplicados a los ${ok} tono(s) restantes.`
+    : `Aplicado a ${ok} de ${hermanos.length} tono(s) — revisá los que fallaron.`);
 }
 
 // ---------- Clientes ----------
