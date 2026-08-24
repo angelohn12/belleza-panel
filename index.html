@@ -217,6 +217,16 @@
     .palanca,.palanca::after{transition:none;}
   }
 
+  /* Estrella: marca qué fotos rotan en la portada de la tienda */
+  .estrella{
+    flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:#EFE7E0;
+    border:0;padding:0;cursor:pointer;font-size:16px;line-height:1;
+    color:#B0A499;transition:background .18s ease,color .18s ease;
+  }
+  .estrella:hover{background:#E4D9C9;}
+  .estrella[aria-pressed="true"]{background:#FDEBCF;color:#C6862A;}
+  .estrella:disabled{opacity:.5;cursor:wait;}
+
   /* ---------- Login ---------- */
   #pantallaLogin{
     min-height:100vh;
@@ -1635,6 +1645,13 @@ function estaPublicado(p) {
   return !['no', 'false', '0', 'oculto'].includes(v);
 }
 
+// A diferencia de "publicado", acá vacío SÍ es "no": la foto de portada es
+// opt-in, para que nunca rote en la tienda una foto que nadie eligió a mano.
+function estaEnPortada(p) {
+  const v = String(p.portada ?? '').trim().toLowerCase();
+  return ['sí', 'si', 'true', '1'].includes(v);
+}
+
 function renderTienda() {
   const caja = document.getElementById('listaTienda');
   const resumen = document.getElementById('resumenTienda');
@@ -1645,11 +1662,14 @@ function renderTienda() {
   const conStock = visibles.filter(p => (Number(p.stock) || 0) > 0);
   const sinFoto = visibles.filter(p => !String(p.foto || '').trim());
 
+  const enPortada = todos.filter(estaEnPortada);
+
   resumen.innerHTML = `
     <div class="cajaT"><div class="n">${visibles.length}</div><div class="t">En la tienda</div></div>
     <div class="cajaT"><div class="n">${todos.length - visibles.length}</div><div class="t">Ocultos</div></div>
     <div class="cajaT"><div class="n">${conStock.length}</div><div class="t">Se pueden pedir</div></div>
-    <div class="cajaT${sinFoto.length ? ' alerta' : ''}"><div class="n">${sinFoto.length}</div><div class="t">Sin foto</div></div>`;
+    <div class="cajaT${sinFoto.length ? ' alerta' : ''}"><div class="n">${sinFoto.length}</div><div class="t">Sin foto</div></div>
+    <div class="cajaT"><div class="n">${enPortada.length}</div><div class="t">En portada</div></div>`;
 
   let lista = todos;
   if (filtroTienda === 'visibles')  lista = todos.filter(estaPublicado);
@@ -1688,6 +1708,11 @@ function renderTienda() {
         <div class="metaT">${escaparHtml(p.marca || 'Sin marca')}${p.tono ? ' · ' + escaparHtml(p.tono) : ''} · ${formatoColones(p.precioVenta)}</div>
         <div class="avisosT">${avisos.join('')}</div>
       </div>
+      <button class="estrella" role="switch" aria-pressed="${estaEnPortada(p)}"
+        aria-label="${estaEnPortada(p) ? 'Quitar' : 'Mostrar'} ${escaparHtml(p.nombre)} en la foto rotativa del inicio"
+        title="${p.foto ? 'Mostrar en la portada de la tienda' : 'Subí una foto primero'}"
+        ${p.foto ? '' : 'disabled'}
+        onclick="alternarPortada('${escaparHtml(p.id)}', this)">★</button>
       <button class="palanca" role="switch" aria-pressed="${on}"
         aria-label="${on ? 'Quitar' : 'Mostrar'} ${escaparHtml(p.nombre)} en la tienda"
         onclick="alternarVisibilidad('${escaparHtml(p.id)}', this)"></button>
@@ -1776,6 +1801,30 @@ async function alternarVisibilidad(id, boton) {
   } else {
     boton.setAttribute('aria-pressed', estaPublicado(p));        // revertir
     document.getElementById('fichaT-' + id)?.classList.toggle('apagada', !estaPublicado(p));
+    mostrarToast('No se pudo guardar: ' + (res.error || 'error desconocido'));
+  }
+  boton.disabled = false;
+}
+
+async function alternarPortada(id, boton) {
+  const p = estado.productos.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const nuevo = estaEnPortada(p) ? 'No' : 'Sí';
+
+  boton.disabled = true;
+  boton.setAttribute('aria-pressed', nuevo === 'Sí');           // respuesta inmediata
+
+  const res = await apiPost({
+    accion: 'editar_fila', hoja: 'Productos', id: p.id,
+    fila: { ...p, portada: nuevo }
+  });
+
+  if (res.ok) {
+    p.portada = nuevo;                                          // sin recargar todo
+    mostrarToast(nuevo === 'Sí' ? 'Entra a la foto rotativa del inicio.' : 'Se quitó de la foto rotativa.');
+    renderTienda();
+  } else {
+    boton.setAttribute('aria-pressed', estaEnPortada(p));        // revertir
     mostrarToast('No se pudo guardar: ' + (res.error || 'error desconocido'));
   }
   boton.disabled = false;
