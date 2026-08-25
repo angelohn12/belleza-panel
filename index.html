@@ -145,6 +145,16 @@
   .cajaT.alerta{border-color:var(--coral);}
   .cajaT.alerta .n{color:var(--coral);}
 
+  .cajaBusqueda{
+    position:relative;flex:1 1 240px;min-width:200px;max-width:360px;
+  }
+  .cajaBusqueda .iconoBusqueda{
+    position:absolute;left:10px;top:50%;transform:translateY(-50%);
+    font-size:14px;opacity:.55;pointer-events:none;
+  }
+  .cajaBusqueda input{padding-left:32px;}
+  #inventarioFiltroMarca{flex:0 1 200px;min-width:150px;width:auto;}
+
   .filtrosTienda{display:flex;gap:7px;flex-wrap:wrap;}
   .chipT{
     background:#fff;color:var(--brown-soft);border:1px solid var(--border);
@@ -606,6 +616,26 @@
           </div>
           <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
         </div>
+        <div class="filaBotones" style="margin-bottom:14px;flex-wrap:wrap">
+          <div class="cajaBusqueda">
+            <span class="iconoBusqueda">🔍</span>
+            <input id="inventarioBusqueda" type="text" placeholder="Buscar por nombre, tono o marca…"
+              oninput="filtrarInventarioTexto(this.value)" />
+          </div>
+          <select id="inventarioFiltroMarca" onchange="filtrarInventarioMarca(this.value)">
+            <option value="todas">Todas las marcas</option>
+          </select>
+        </div>
+        <div class="filtrosTienda" style="margin-bottom:14px">
+          <button class="chipT activo" data-fi="todos" onclick="filtrarInventarioEstado('todos')">Todos</button>
+          <button class="chipT" data-fi="stock" onclick="filtrarInventarioEstado('stock')">Con stock</button>
+          <button class="chipT" data-fi="agotado" onclick="filtrarInventarioEstado('agotado')">Agotado</button>
+          <button class="chipT" data-fi="encargo" onclick="filtrarInventarioEstado('encargo')">Por encargo</button>
+          <button class="chipT" data-fi="visibles" onclick="filtrarInventarioEstado('visibles')">Visibles</button>
+          <button class="chipT" data-fi="ocultos" onclick="filtrarInventarioEstado('ocultos')">Ocultos</button>
+          <button class="chipT" data-fi="duplicados" onclick="filtrarInventarioEstado('duplicados')">⚠ Solo duplicados</button>
+        </div>
+        <p class="ayudaTienda" id="inventarioContador" style="margin:0 0 10px"></p>
         <div id="listaProductos"></div>
       </div>
     </section>
@@ -1349,9 +1379,36 @@ function renderTendencias() {
 
 // ---------- Inventario ----------
 
+let filtroInventarioTextoActual = '';
+let filtroInventarioMarcaActual = 'todas';
+let filtroInventarioEstadoActual = 'todos';
+
+function normalizaTexto(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function filtrarInventarioTexto(valor) {
+  filtroInventarioTextoActual = valor;
+  renderProductos();
+}
+function filtrarInventarioMarca(valor) {
+  filtroInventarioMarcaActual = valor;
+  renderProductos();
+}
+function filtrarInventarioEstado(cual) {
+  filtroInventarioEstadoActual = cual;
+  document.querySelectorAll('.chipT[data-fi]').forEach(b => b.classList.toggle('activo', b.dataset.fi === cual));
+  renderProductos();
+}
+
 function renderProductos() {
   const caja = document.getElementById('listaProductos');
-  if (!estado.productos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay productos cargados.</div>'; return; }
+  const contador = document.getElementById('inventarioContador');
+  if (!estado.productos.length) {
+    caja.innerHTML = '<div class="vacio">Todavía no hay productos cargados.</div>';
+    if (contador) contador.textContent = '';
+    return;
+  }
 
   // Se ordena por marca + nombre + tono para que los productos iguales (y sus
   // posibles duplicados) queden agrupados uno al lado del otro en la tabla —
@@ -1363,9 +1420,55 @@ function renderProductos() {
     conteoClaves[k] = (conteoClaves[k] || 0) + 1;
   });
 
-  const ordenados = estado.productos.slice().sort((a, b) =>
+  // Selector de marca: se arma una sola vez por lista de productos, conservando
+  // la marca elegida si sigue existiendo.
+  const selectMarca = document.getElementById('inventarioFiltroMarca');
+  if (selectMarca) {
+    const marcas = [...new Set(estado.productos.map(p => p.marca).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const opcionesActuales = [...selectMarca.options].map(o => o.value).join(',');
+    const opcionesNuevas = ['todas', ...marcas].join(',');
+    if (opcionesActuales !== opcionesNuevas) {
+      selectMarca.innerHTML = '<option value="todas">Todas las marcas</option>' +
+        marcas.map(m => `<option value="${escaparHtml(m)}">${escaparHtml(m)}</option>`).join('');
+    }
+    selectMarca.value = marcas.includes(filtroInventarioMarcaActual) || filtroInventarioMarcaActual === 'todas'
+      ? filtroInventarioMarcaActual : 'todas';
+  }
+
+  const textoBusqueda = normalizaTexto(filtroInventarioTextoActual.trim());
+
+  let filtrados = estado.productos.filter(p => {
+    if (textoBusqueda) {
+      const coincide = [p.nombre, p.tono, p.marca].some(v => normalizaTexto(v).includes(textoBusqueda));
+      if (!coincide) return false;
+    }
+    if (filtroInventarioMarcaActual !== 'todas' && p.marca !== filtroInventarioMarcaActual) return false;
+
+    switch (filtroInventarioEstadoActual) {
+      case 'stock':      return (Number(p.stock) || 0) > 0;
+      case 'agotado':     return p.modalidad !== 'encargo' && (Number(p.stock) || 0) <= 0;
+      case 'encargo':     return p.modalidad === 'encargo';
+      case 'visibles':    return estaPublicado(p);
+      case 'ocultos':     return !estaPublicado(p);
+      case 'duplicados':  return conteoClaves[claveProducto(p)] > 1;
+      default:            return true;
+    }
+  });
+
+  const ordenados = filtrados.slice().sort((a, b) =>
     claveProducto(a).localeCompare(claveProducto(b))
   );
+
+  if (contador) {
+    contador.textContent = filtrados.length === estado.productos.length
+      ? `${estado.productos.length} producto${estado.productos.length === 1 ? '' : 's'} en total`
+      : `Mostrando ${ordenados.length} de ${estado.productos.length} productos`;
+  }
+
+  if (!ordenados.length) {
+    caja.innerHTML = '<div class="vacio">Ningún producto coincide con esa búsqueda o filtro.</div>';
+    return;
+  }
 
   caja.innerHTML = tablaSimple(
     ['Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
