@@ -1352,13 +1352,34 @@ function renderTendencias() {
 function renderProductos() {
   const caja = document.getElementById('listaProductos');
   if (!estado.productos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay productos cargados.</div>'; return; }
+
+  // Se ordena por marca + nombre + tono para que los productos iguales (y sus
+  // posibles duplicados) queden agrupados uno al lado del otro en la tabla —
+  // así se pueden detectar a simple vista en vez de estar sueltos por toda la lista.
+  const claveProducto = p => [p.marca, p.nombre, p.tono].map(v => String(v || '').trim().toLowerCase()).join('|');
+  const conteoClaves = {};
+  estado.productos.forEach(p => {
+    const k = claveProducto(p);
+    conteoClaves[k] = (conteoClaves[k] || 0) + 1;
+  });
+
+  const ordenados = estado.productos.slice().sort((a, b) =>
+    claveProducto(a).localeCompare(claveProducto(b))
+  );
+
   caja.innerHTML = tablaSimple(
-    ['Nombre', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
-    estado.productos.map(p => {
+    ['Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
+    ordenados.map(p => {
       const costo = Number(p.costoTotalCRC) || 0;
       const margen = (Number(p.precioVenta) || 0) - costo;
+      const esDuplicado = conteoClaves[claveProducto(p)] > 1;
+      const nombreCelda = esDuplicado
+        ? `<span style="color:#A5323F;font-weight:700" title="Hay ${conteoClaves[claveProducto(p)]} productos con la misma marca, nombre y tono">⚠ ${escaparHtml(p.nombre)}</span>`
+        : escaparHtml(p.nombre);
       return [
-        escaparHtml(p.nombre), escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), formatoColones(p.precioVenta),
+        nombreCelda,
+        p.tono ? escaparHtml(p.tono) : '<span style="color:var(--gris,#999)">—</span>',
+        escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), formatoColones(p.precioVenta),
         `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
         p.stock,
         `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`,
