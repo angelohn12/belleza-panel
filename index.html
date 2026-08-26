@@ -1513,7 +1513,7 @@ function renderProductos() {
         ? `<span style="color:#A5323F;font-weight:700" title="Hay ${conteoClaves[claveProducto(p)]} productos con la misma marca, nombre y tono">⚠ ${escaparHtml(p.nombre)}</span>`
         : escaparHtml(p.nombre);
       const fotoCelda = p.foto
-        ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(p.foto)}" alt=""></div>`
+        ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(p.foto)}" alt="" loading="lazy"></div>`
         : `<div class="miniFoto" style="cursor:default"><span class="miniIcono">📷</span></div>`;
       return [
         fotoCelda,
@@ -1912,7 +1912,7 @@ function renderTienda() {
 
     return `<div class="fichaT ${on ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
       <label class="miniFoto" title="${p.foto ? 'Cambiar foto' : 'Subir foto'}">
-        ${p.foto ? `<img src="${escaparHtml(p.foto)}" alt="">` : `<span class="miniIcono">📷</span>`}
+        ${p.foto ? `<img src="${escaparHtml(p.foto)}" alt="" loading="lazy">` : `<span class="miniIcono">📷</span>`}
         <input type="file" accept="image/*" hidden onchange="subirFoto('${escaparHtml(p.id)}', this)">
       </label>
       <div class="infoT">
