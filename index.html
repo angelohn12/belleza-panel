@@ -564,7 +564,7 @@
           <div><label>Marca</label><select id="pMarca" onchange="alternarMarcaNueva()"></select></div>
           <div id="pMarcaNuevaWrap" class="oculto"><label>Nombre de la marca nueva</label><input id="pMarcaNueva" placeholder="Ej: Fenty Beauty" /></div>
           <div id="pCampoOrigen"><label>Origen</label>
-            <select id="pOrigen">
+            <select id="pOrigen" onchange="alternarOrigenNuevo()">
               <option>Amazon</option>
               <option>Sephora</option>
               <option>Target</option>
@@ -573,6 +573,7 @@
               <option>Otro</option>
             </select>
           </div>
+          <div id="pOrigenNuevoWrap" class="oculto"><label>¿Cuál origen?</label><input id="pOrigenNuevo" placeholder="Ej: Walmart" /></div>
           <div id="pCampoMoneda"><label>Moneda de compra</label>
             <select id="pMoneda" onchange="alternarMonedaProducto()">
               <option value="USD">Dólares ($)</option>
@@ -2116,6 +2117,37 @@ function alternarMarcaNueva() {
   document.getElementById('pMarcaNuevaWrap').classList.toggle('oculto', !esNueva);
 }
 
+const ORIGENES_FIJOS = ['Amazon', 'Sephora', 'Target', 'Marshalls', 'Revendedor CR'];
+
+function alternarOrigenNuevo() {
+  const esOtro = document.getElementById('pOrigen').value === 'Otro';
+  document.getElementById('pOrigenNuevoWrap').classList.toggle('oculto', !esOtro);
+}
+
+// Si el origen guardado no es uno de los fijos, selecciona "Otro" y lo
+// muestra en el campo de texto — para no perder orígenes ya escritos a mano.
+function fijarOrigenEnFormulario(origen) {
+  const sel = document.getElementById('pOrigen');
+  if (origen && !ORIGENES_FIJOS.includes(origen)) {
+    sel.value = 'Otro';
+    document.getElementById('pOrigenNuevo').value = origen;
+  } else {
+    sel.value = origen || 'Amazon';
+    document.getElementById('pOrigenNuevo').value = '';
+  }
+  alternarOrigenNuevo();
+}
+
+// Devuelve el origen a guardar: el texto escrito si eligió "Otro", o la opción fija.
+function obtenerOrigenSeleccionado() {
+  const sel = document.getElementById('pOrigen').value;
+  if (sel === 'Otro') {
+    const nuevo = document.getElementById('pOrigenNuevo').value.trim();
+    return nuevo || 'Otro';
+  }
+  return sel;
+}
+
 let modalidadProducto = 'stock';
 
 function elegirModalidadProducto(m) {
@@ -2145,6 +2177,7 @@ function nuevoProducto() {
   document.getElementById('pMarca').value = '__nueva__';
   document.getElementById('pMarcaNueva').value = '';
   alternarMarcaNueva();
+  fijarOrigenEnFormulario('Amazon');
   document.getElementById('pMoneda').value = 'USD';
   alternarMonedaProducto();
   document.getElementById('pCosto').value = '';
@@ -2170,7 +2203,7 @@ function editarProducto(id) {
   document.getElementById('pMarca').value = p.marca || '__nueva__';
   document.getElementById('pMarcaNueva').value = '';
   alternarMarcaNueva();
-  document.getElementById('pOrigen').value = p.origen || 'Amazon';
+  fijarOrigenEnFormulario(p.origen);
   document.getElementById('pMoneda').value = p.moneda || 'USD';
   alternarMonedaProducto();
   document.getElementById('pCosto').value = p.costoCompra || '';
@@ -2224,7 +2257,7 @@ async function guardarProducto() {
       nombre,
       categoria: document.getElementById('pCategoria').value,
       marca,
-      origen: document.getElementById('pOrigen').value,
+      origen: obtenerOrigenSeleccionado(),
       costoCompra: costo,
       tipoCambio: moneda === 'USD' ? tipoCambio : '',
       costoTotalCRC,
@@ -2252,7 +2285,7 @@ async function guardarProducto() {
       nombre,
       categoria: document.getElementById('pCategoria').value,
       marca,
-      origen: document.getElementById('pOrigen').value,
+      origen: obtenerOrigenSeleccionado(),
       costoCompra: costo,
       tipoCambio: moneda === 'USD' ? tipoCambio : '',
       costoTotalCRC,
