@@ -1829,8 +1829,9 @@ function mensajeEncargo(s) {
 }
 
 function encargosPendientes() {
+  const resueltos = ['avisado', 'procedió', 'no procedió'];
   return estado.solicitudes.filter(s =>
-    tipoSolicitud(s) === 'encargo' && String(s.estado || '').toLowerCase() !== 'avisado');
+    tipoSolicitud(s) === 'encargo' && !resueltos.includes(String(s.estado || '').toLowerCase()));
 }
 
 function renderEncargos() {
@@ -1852,7 +1853,10 @@ function renderEncargos() {
         `<a class="wa" style="padding:5px 11px;font-size:12.5px" target="_blank" rel="noopener"
            href="https://wa.me/506${tel}?text=${encodeURIComponent(mensajeEncargo(s))}">Confirmar</a>`,
         fechaCorta(s.fecha),
-        `<button class="btnCancelar" style="margin:0" onclick="marcarAvisada('${escaparHtml(s.id)}')">Ya contacté</button>`
+        `<div style="display:flex;gap:4px">
+          <button style="padding:4px 8px;font-size:12px;background:#4CAF50;color:#FFF;border:none;cursor:pointer;border-radius:3px" onclick="marcarProcedio('${escaparHtml(s.id)}')">✅ Procedió</button>
+          <button style="padding:4px 8px;font-size:12px;background:#F44336;color:#FFF;border:none;cursor:pointer;border-radius:3px" onclick="marcarNoProcedio('${escaparHtml(s.id)}')">❌ No procedió</button>
+         </div>`
       ];
     })
   );
@@ -1863,6 +1867,22 @@ async function marcarAvisada(id) {
   if (!s) return;
   const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Avisado' } });
   if (res.ok) { mostrarToast('Marcada como avisada.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + res.error);
+}
+
+async function marcarProcedio(id) {
+  const s = estado.solicitudes.find(x => String(x.id) === String(id));
+  if (!s) return;
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Procedió' } });
+  if (res.ok) { mostrarToast('✅ Cliente procedió con el encargo.'); await cargarDatos(); }
+  else mostrarToast('Error: ' + res.error);
+}
+
+async function marcarNoProcedio(id) {
+  const s = estado.solicitudes.find(x => String(x.id) === String(id));
+  if (!s) return;
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'No procedió' } });
+  if (res.ok) { mostrarToast('❌ Cliente rechazó el encargo.'); await cargarDatos(); }
   else mostrarToast('Error: ' + res.error);
 }
 
