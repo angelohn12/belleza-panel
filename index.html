@@ -2342,7 +2342,13 @@ async function guardarProducto() {
     const idGuardado = productoEditando || resultado.id;
     const aplicarATonos = document.getElementById('pAplicarATonos').checked;
     if (idGuardado && aplicarATonos && (Number(fila.precioVenta) > 0 || Number(fila.costoCompra) > 0)) {
-      await aplicarCostoPrecioATonosHermanos(fila, idGuardado);
+      try {
+        await aplicarCostoPrecioATonosHermanos(fila, idGuardado);
+      } catch (err) {
+        // El producto principal ya se guardó bien; si la cascada falla de
+        // forma inesperada no debe tapar eso ni dejar el resto a medias.
+        mostrarToast('El producto se guardó, pero no se pudo aplicar el costo/precio a los demás tonos. Volvé a guardarlo para reintentar.');
+      }
     }
 
     productoEditando = null;
@@ -2362,24 +2368,41 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   if (!hermanos.length) return;
 
   mostrarToast(`Aplicando costo/precio a ${hermanos.length} tono(s) más de este producto…`);
-  let ok = 0;
-  for (const h of hermanos) {
-    const resultado = await apiPost({
-      accion: 'editar_fila', hoja: 'Productos', id: h.id,
-      fila: {
-        ...h,
-        precioVenta: nuevoPrecio,
-        costoCompra: nuevoCosto,
-        tipoCambio: filaGuardada.tipoCambio,
-        costoTotalCRC: filaGuardada.costoTotalCRC,
-        moneda: filaGuardada.moneda
-      }
-    });
-    if (resultado.ok) ok++;
+
+  // Un tono que falla (red inestable, respuesta rara del servidor) no debe
+  // frenar a los demás — antes una sola falla cortaba todo el ciclo y el
+  // resto se quedaba con el costo/precio viejo sin ningún aviso. Cada tono
+  // se intenta hasta 2 veces antes de darlo por fallado.
+  async function aplicarConReintento(h) {
+    for (let intento = 1; intento <= 2; intento++) {
+      try {
+        const resultado = await apiPost({
+          accion: 'editar_fila', hoja: 'Productos', id: h.id,
+          fila: {
+            ...h,
+            precioVenta: nuevoPrecio,
+            costoCompra: nuevoCosto,
+            tipoCambio: filaGuardada.tipoCambio,
+            costoTotalCRC: filaGuardada.costoTotalCRC,
+            moneda: filaGuardada.moneda
+          }
+        });
+        if (resultado.ok) return true;
+      } catch (err) { /* reintenta */ }
+    }
+    return false;
   }
-  mostrarToast(ok === hermanos.length
+
+  let ok = 0;
+  const fallidos = [];
+  for (const h of hermanos) {
+    const logrado = await aplicarConReintento(h);
+    if (logrado) ok++; else fallidos.push(h.tono || '(sin tono)');
+  }
+
+  mostrarToast(fallidos.length === 0
     ? `Costo y precio aplicados a los ${ok} tono(s) restantes.`
-    : `Aplicado a ${ok} de ${hermanos.length} tono(s) — revisá los que fallaron.`);
+    : `Aplicado a ${ok} de ${hermanos.length} tono(s). Faltó: ${fallidos.join(', ')} — guardalos de nuevo para reintentar.`);
 }
 
 // ---------- Clientes ----------
