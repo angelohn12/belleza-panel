@@ -592,17 +592,33 @@
               <select id="pMargenPct" onchange="recalcularPrecioPorMargen()"></select>
               <p class="ayudaTienda" id="pAyudaMargen" style="margin:6px 0 0"></p>
             </div>
-            <input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" style="margin-top:8px" />
+            <input id="pPrecioVenta" type="text" inputmode="decimal" placeholder="8000" style="margin-top:8px" oninput="actualizarVistaDescuento()" />
+          </div>
+          <div><label>Descuento</label>
+            <select id="pDescuento" onchange="actualizarVistaDescuento()">
+              <option value="0">Sin descuento</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+              <option value="15">15%</option>
+              <option value="20">20%</option>
+              <option value="25">25%</option>
+              <option value="30">30%</option>
+              <option value="35">35%</option>
+              <option value="40">40%</option>
+              <option value="45">45%</option>
+              <option value="50">50%</option>
+            </select>
+            <p class="ayudaTienda" id="pAyudaDescuento" style="margin:6px 0 0"></p>
           </div>
           <div class="campoAncho">
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
               <input type="checkbox" id="pAplicarATonos" checked style="width:auto">
-              Aplicar este costo y precio a los demás tonos de este producto
+              Aplicar este costo, precio y descuento a los demás tonos de este producto
             </label>
             <p class="ayudaTienda" style="margin:6px 0 0">
-              Si este producto tiene más tonos (mismo nombre y marca) con costo o precio distinto, se les pone
-              igual al guardar — así no hay que repetirlo tono por tono. Desmarcá esto si este tono en
-              particular costó o se vende distinto a los demás (por una oferta, por ejemplo).
+              Si este producto tiene más tonos (mismo nombre y marca) con costo, precio o descuento distinto,
+              se les pone igual al guardar — así no hay que repetirlo tono por tono. Desmarcá esto si este tono
+              en particular costó, se vende o tiene un descuento distinto a los demás.
             </p>
           </div>
           <div id="pCampoStock"><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
@@ -1507,7 +1523,9 @@ function renderProductos() {
     ['Foto', 'Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
     ordenados.map(p => {
       const costo = Number(p.costoTotalCRC) || 0;
-      const margen = (Number(p.precioVenta) || 0) - costo;
+      const tieneDescuento = Number(p.descuento) > 0;
+      const precioFinal = precioConDescuento(p.precioVenta, p.descuento);
+      const margen = precioFinal - costo;
       const esDuplicado = conteoClaves[claveProducto(p)] > 1;
       const nombreCelda = esDuplicado
         ? `<span style="color:#A5323F;font-weight:700" title="Hay ${conteoClaves[claveProducto(p)]} productos con la misma marca, nombre y tono">⚠ ${escaparHtml(p.nombre)}</span>`
@@ -1515,11 +1533,16 @@ function renderProductos() {
       const fotoCelda = p.foto
         ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(p.foto)}" alt="" loading="lazy"></div>`
         : `<div class="miniFoto" style="cursor:default"><span class="miniIcono">📷</span></div>`;
+      const precioCelda = tieneDescuento
+        ? `<span style="color:var(--gris,#999);text-decoration:line-through;font-size:12px">${formatoColones(p.precioVenta)}</span><br>
+           <span style="color:#A5323F;font-weight:700">${formatoColones(precioFinal)}</span>
+           <span class="pastilla roja" style="margin-left:4px">-${Number(p.descuento)}%</span>`
+        : formatoColones(p.precioVenta);
       return [
         fotoCelda,
         nombreCelda,
         p.tono ? escaparHtml(p.tono) : '<span style="color:var(--gris,#999)">—</span>',
-        escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), formatoColones(p.precioVenta),
+        escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), precioCelda,
         `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
         p.stock,
         `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`,
@@ -1917,7 +1940,11 @@ function renderTienda() {
       </label>
       <div class="infoT">
         <div class="nomT">${escaparHtml(p.nombre)}</div>
-        <div class="metaT">${escaparHtml(p.marca || 'Sin marca')}${p.tono ? ' · ' + escaparHtml(p.tono) : ''} · ${formatoColones(p.precioVenta)}</div>
+        <div class="metaT">${escaparHtml(p.marca || 'Sin marca')}${p.tono ? ' · ' + escaparHtml(p.tono) : ''} · ${
+          Number(p.descuento) > 0
+            ? `<span style="text-decoration:line-through;opacity:.6">${formatoColones(p.precioVenta)}</span> <b style="color:#A5323F">${formatoColones(precioConDescuento(p.precioVenta, p.descuento))}</b> (-${Number(p.descuento)}%)`
+            : formatoColones(p.precioVenta)
+        }</div>
         <div class="avisosT">${avisos.join('')}</div>
       </div>
       <button class="estrella" role="switch" aria-pressed="${estaEnPortada(p)}"
@@ -2148,6 +2175,24 @@ function alternarOrigenNuevo() {
   document.getElementById('pOrigenNuevoWrap').classList.toggle('oculto', !esOtro);
 }
 
+// Precio final ya con el descuento aplicado (redondeado a colones enteros).
+// Se usa igual en el formulario, en Inventario y en Tienda.
+function precioConDescuento(precioVenta, descuento) {
+  const pct = Number(descuento) || 0;
+  const precio = Number(precioVenta) || 0;
+  return pct > 0 ? Math.round(precio * (1 - pct / 100)) : precio;
+}
+
+function actualizarVistaDescuento() {
+  const pct = Number(document.getElementById('pDescuento').value) || 0;
+  const precio = parseMonto(document.getElementById('pPrecioVenta').value);
+  const ayuda = document.getElementById('pAyudaDescuento');
+  if (!ayuda) return;
+  ayuda.textContent = pct > 0 && precio > 0
+    ? `Precio final en la tienda: ${formatoColones(precioConDescuento(precio, pct))} (antes ${formatoColones(precio)})`
+    : '';
+}
+
 // Si el origen guardado no es uno de los fijos, selecciona "Otro" y lo
 // muestra en el campo de texto — para no perder orígenes ya escritos a mano.
 function fijarOrigenEnFormulario(origen) {
@@ -2208,6 +2253,8 @@ function nuevoProducto() {
   document.getElementById('pTipoCambio').value = 520;
   document.getElementById('pPrecioVenta').value = '';
   document.getElementById('pStock').value = 1;
+  document.getElementById('pDescuento').value = '0';
+  actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar producto';
   document.getElementById('formProducto').classList.remove('oculto');
@@ -2234,6 +2281,10 @@ function editarProducto(id) {
   document.getElementById('pTipoCambio').value = p.tipoCambio || 520;
   document.getElementById('pPrecioVenta').value = p.precioVenta || '';
   document.getElementById('pStock').value = p.stock || 0;
+  const selDescuento = document.getElementById('pDescuento');
+  const descuentoGuardado = String(Number(p.descuento) || 0);
+  selDescuento.value = [...selDescuento.options].some(o => o.value === descuentoGuardado) ? descuentoGuardado : '0';
+  actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
   document.getElementById('formProducto').classList.remove('oculto');
@@ -2286,6 +2337,7 @@ async function guardarProducto() {
       tipoCambio: moneda === 'USD' ? tipoCambio : '',
       costoTotalCRC,
       precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
+      descuento: Number(document.getElementById('pDescuento').value) || 0,
       stock: 0,
       estado: 'Por encargo',
       moneda,
@@ -2314,6 +2366,7 @@ async function guardarProducto() {
       tipoCambio: moneda === 'USD' ? tipoCambio : '',
       costoTotalCRC,
       precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
+      descuento: Number(document.getElementById('pDescuento').value) || 0,
       stock,
       estado: stock > 0 ? 'Disponible' : 'Agotado',
       moneda,
@@ -2341,13 +2394,13 @@ async function guardarProducto() {
     // cada tono (foto, stock, medida) queda tal cual estaba.
     const idGuardado = productoEditando || resultado.id;
     const aplicarATonos = document.getElementById('pAplicarATonos').checked;
-    if (idGuardado && aplicarATonos && (Number(fila.precioVenta) > 0 || Number(fila.costoCompra) > 0)) {
+    if (idGuardado && aplicarATonos && (Number(fila.precioVenta) > 0 || Number(fila.costoCompra) > 0 || Number(fila.descuento) > 0)) {
       try {
         await aplicarCostoPrecioATonosHermanos(fila, idGuardado);
       } catch (err) {
         // El producto principal ya se guardó bien; si la cascada falla de
         // forma inesperada no debe tapar eso ni dejar el resto a medias.
-        mostrarToast('El producto se guardó, pero no se pudo aplicar el costo/precio a los demás tonos. Volvé a guardarlo para reintentar.');
+        mostrarToast('El producto se guardó, pero no se pudo aplicar el costo/precio/descuento a los demás tonos. Volvé a guardarlo para reintentar.');
       }
     }
 
@@ -2360,14 +2413,15 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   const clave = (filaGuardada.marca || '').trim().toLowerCase() + '|' + (filaGuardada.nombre || '').trim().toLowerCase();
   const nuevoPrecio = Number(filaGuardada.precioVenta) || 0;
   const nuevoCosto = Number(filaGuardada.costoCompra) || 0;
+  const nuevoDescuento = Number(filaGuardada.descuento) || 0;
   const hermanos = estado.productos.filter(p =>
     String(p.id) !== String(idGuardado) &&
     (p.marca || '').trim().toLowerCase() + '|' + (p.nombre || '').trim().toLowerCase() === clave &&
-    (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto)
+    (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto || (Number(p.descuento) || 0) !== nuevoDescuento)
   );
   if (!hermanos.length) return;
 
-  mostrarToast(`Aplicando costo/precio a ${hermanos.length} tono(s) más de este producto…`);
+  mostrarToast(`Aplicando costo/precio/descuento a ${hermanos.length} tono(s) más de este producto…`);
 
   // Un tono que falla (red inestable, respuesta rara del servidor) no debe
   // frenar a los demás — antes una sola falla cortaba todo el ciclo y el
@@ -2382,6 +2436,7 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
             ...h,
             precioVenta: nuevoPrecio,
             costoCompra: nuevoCosto,
+            descuento: nuevoDescuento,
             tipoCambio: filaGuardada.tipoCambio,
             costoTotalCRC: filaGuardada.costoTotalCRC,
             moneda: filaGuardada.moneda
@@ -2401,7 +2456,7 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   }
 
   mostrarToast(fallidos.length === 0
-    ? `Costo y precio aplicados a los ${ok} tono(s) restantes.`
+    ? `Costo, precio y descuento aplicados a los ${ok} tono(s) restantes.`
     : `Aplicado a ${ok} de ${hermanos.length} tono(s). Faltó: ${fallidos.join(', ')} — guardalos de nuevo para reintentar.`);
 }
 
