@@ -992,12 +992,26 @@ async function apiLeer() {
   return res.json();
 }
 
+// Si el fetch falla (sin internet, el proxy tarda demasiado, la respuesta no
+// es JSON válido) esto ANTES se colaba como una excepción sin capturar en
+// cada pantalla que guarda algo — el botón "Guardar" no hacía nada, sin
+// ningún aviso, y parecía que el precio/dato simplemente no se guardó.
+// Ahora se atrapa acá UNA sola vez y se devuelve el mismo { ok:false, error }
+// que ya todas las pantallas saben mostrar con mostrarToast('Error: ...').
 async function apiPost(cuerpo) {
-  const res = await fetch(CONFIG.API_URL, {
-    method: 'POST',
-    body: JSON.stringify(cuerpo)
-  });
-  return res.json();
+  try {
+    const res = await fetch(CONFIG.API_URL, {
+      method: 'POST',
+      body: JSON.stringify(cuerpo)
+    });
+    return await res.json();
+  } catch (err) {
+    return {
+      ok: false,
+      error: 'No se pudo conectar con el servidor. Revisá tu conexión e intentá guardar de nuevo.',
+      sinConexion: true
+    };
+  }
 }
 
 // ---------- Login ----------
@@ -1009,17 +1023,15 @@ async function iniciarSesion() {
 
   if (!usuario || !password) return;
 
-  try {
-    const resultado = await apiPost({ accion: 'login', usuario, password });
-    if (resultado.ok) {
-      estado.usuario = { usuario: resultado.usuario, rol: resultado.rol };
-      localStorage.setItem('avellana_usuario', JSON.stringify(estado.usuario));
-      await entrarApp();
-    } else {
-      document.getElementById('errorLogin').style.display = 'block';
-    }
-  } catch (err) {
+  const resultado = await apiPost({ accion: 'login', usuario, password });
+  if (resultado.ok) {
+    estado.usuario = { usuario: resultado.usuario, rol: resultado.rol };
+    localStorage.setItem('avellana_usuario', JSON.stringify(estado.usuario));
+    await entrarApp();
+  } else if (resultado.sinConexion) {
     mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
+  } else {
+    document.getElementById('errorLogin').style.display = 'block';
   }
 }
 
