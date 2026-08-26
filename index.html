@@ -1499,8 +1499,8 @@ function renderProductos() {
       case 'stock':      return (Number(p.stock) || 0) > 0;
       case 'agotado':     return p.modalidad !== 'encargo' && (Number(p.stock) || 0) <= 0;
       case 'encargo':     return p.modalidad === 'encargo';
-      case 'visibles':    return estaPublicado(p);
-      case 'ocultos':     return !estaPublicado(p);
+      case 'visibles':    return seVeEnLaTienda(p);
+      case 'ocultos':     return !seVeEnLaTienda(p);
       case 'duplicados':  return conteoClaves[claveProducto(p)] > 1;
       default:            return true;
     }
@@ -1546,9 +1546,11 @@ function renderProductos() {
         `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
         p.stock,
         `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`,
-        estaPublicado(p)
+        seVeEnLaTienda(p)
           ? '<span class="pastilla verde">Visible</span>'
-          : '<span class="pastilla gris">Oculto</span>',
+          : estaPublicado(p)
+            ? '<span class="pastilla ambar" title="Encendido, pero no se muestra hasta ponerle costo de compra y precio de venta">Sin precio</span>'
+            : '<span class="pastilla gris">Oculto</span>',
         botonesAccion('editarProducto', 'eliminarProducto', p.id)
       ];
     })
@@ -1871,6 +1873,19 @@ function estaPublicado(p) {
   return !['no', 'false', '0', 'oculto'].includes(v);
 }
 
+// El interruptor de "publicado" es solo una parte: el servidor (Code.gs)
+// NUNCA muestra un producto en la tienda pública si le falta el costo de
+// compra o el precio de venta, sin importar el interruptor — así se puede
+// ir cargando inventario sin que el cliente vea nada a ₡0. Esta función
+// refleja esa misma regla acá, para que lo que se ve en el dashboard
+// coincida con lo que realmente ve el cliente.
+function tienePrecioCompleto(p) {
+  return Number(p.costoCompra) > 0 && Number(p.precioVenta) > 0;
+}
+function seVeEnLaTienda(p) {
+  return estaPublicado(p) && tienePrecioCompleto(p);
+}
+
 // A diferencia de "publicado", acá vacío SÍ es "no": la foto de portada es
 // opt-in, para que nunca rote en la tienda una foto que nadie eligió a mano.
 function estaEnPortada(p) {
@@ -1884,7 +1899,8 @@ function renderTienda() {
   if (!caja) return;
 
   const todos = estado.productos;
-  const visibles = todos.filter(estaPublicado);
+  const visibles = todos.filter(seVeEnLaTienda);
+  const sinPrecio = todos.filter(p => estaPublicado(p) && !tienePrecioCompleto(p));
   const conStock = visibles.filter(p => (Number(p.stock) || 0) > 0);
   const sinFoto = visibles.filter(p => !String(p.foto || '').trim());
 
@@ -1893,13 +1909,14 @@ function renderTienda() {
   resumen.innerHTML = `
     <div class="cajaT"><div class="n">${visibles.length}</div><div class="t">En la tienda</div></div>
     <div class="cajaT"><div class="n">${todos.length - visibles.length}</div><div class="t">Ocultos</div></div>
+    <div class="cajaT${sinPrecio.length ? ' alerta' : ''}"><div class="n">${sinPrecio.length}</div><div class="t">Sin costo/precio</div></div>
     <div class="cajaT"><div class="n">${conStock.length}</div><div class="t">Se pueden pedir</div></div>
     <div class="cajaT${sinFoto.length ? ' alerta' : ''}"><div class="n">${sinFoto.length}</div><div class="t">Sin foto</div></div>
     <div class="cajaT"><div class="n">${enPortada.length}</div><div class="t">En portada</div></div>`;
 
   let lista = todos;
-  if (filtroTienda === 'visibles')  lista = todos.filter(estaPublicado);
-  if (filtroTienda === 'ocultos')   lista = todos.filter(p => !estaPublicado(p));
+  if (filtroTienda === 'visibles')  lista = todos.filter(seVeEnLaTienda);
+  if (filtroTienda === 'ocultos')   lista = todos.filter(p => !seVeEnLaTienda(p));
   if (filtroTienda === 'agotados')  lista = todos.filter(p => (Number(p.stock) || 0) <= 0);
 
   const texto = normalizaTexto(filtroTiendaTextoActual.trim());
@@ -1917,7 +1934,8 @@ function renderTienda() {
   }
 
   caja.innerHTML = '<div class="rejillaT">' + lista.map(p => {
-    const on = estaPublicado(p);
+    const on = estaPublicado(p);        // lo que controla el interruptor
+    const visible = seVeEnLaTienda(p);  // lo que el cliente realmente ve
     const esEncargo = p.modalidad === 'encargo';
     const stock = Number(p.stock) || 0;
     const avisos = [];
@@ -1930,10 +1948,10 @@ function renderTienda() {
     } else {
       avisos.push(`<span class="pastilla verde">Stock ${stock}</span>`);
     }
-    if (on && !String(p.foto || '').trim()) avisos.push('<span class="pastilla roja">Falta la foto</span>');
-    if (!esEncargo && !Number(p.precioVenta)) avisos.push('<span class="pastilla roja">Sin precio</span>');
+    if (visible && !String(p.foto || '').trim()) avisos.push('<span class="pastilla roja">Falta la foto</span>');
+    if (on && !tienePrecioCompleto(p)) avisos.push('<span class="pastilla roja" title="Falta costo de compra y/o precio de venta">Sin costo/precio — no se muestra</span>');
 
-    return `<div class="fichaT ${on ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
+    return `<div class="fichaT ${visible ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
       <label class="miniFoto" title="${p.foto ? 'Cambiar foto' : 'Subir foto'}">
         ${p.foto ? `<img src="${escaparHtml(p.foto)}" alt="" loading="lazy">` : `<span class="miniIcono">📷</span>`}
         <input type="file" accept="image/*" hidden onchange="subirFoto('${escaparHtml(p.id)}', this)">
