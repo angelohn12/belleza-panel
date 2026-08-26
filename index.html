@@ -1504,7 +1504,7 @@ function renderProductos() {
   }
 
   caja.innerHTML = tablaSimple(
-    ['Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
+    ['Foto', 'Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
     ordenados.map(p => {
       const costo = Number(p.costoTotalCRC) || 0;
       const margen = (Number(p.precioVenta) || 0) - costo;
@@ -1512,7 +1512,11 @@ function renderProductos() {
       const nombreCelda = esDuplicado
         ? `<span style="color:#A5323F;font-weight:700" title="Hay ${conteoClaves[claveProducto(p)]} productos con la misma marca, nombre y tono">⚠ ${escaparHtml(p.nombre)}</span>`
         : escaparHtml(p.nombre);
+      const fotoCelda = p.foto
+        ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(p.foto)}" alt=""></div>`
+        : `<div class="miniFoto" style="cursor:default"><span class="miniIcono">📷</span></div>`;
       return [
+        fotoCelda,
         nombreCelda,
         p.tono ? escaparHtml(p.tono) : '<span style="color:var(--gris,#999)">—</span>',
         escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), formatoColones(p.precioVenta),
