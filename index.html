@@ -709,6 +709,11 @@
 
         <div class="resumenTienda" id="resumenTienda"></div>
 
+        <div class="cajaBusqueda" style="margin-bottom:12px">
+          <span class="iconoBusqueda">🔍</span>
+          <input id="tiendaBusqueda" type="text" placeholder="Buscar por nombre, tono o marca…" oninput="filtrarTiendaTexto(this.value)" />
+        </div>
+
         <div class="filaBotones" style="margin-bottom:14px">
           <div class="filtrosTienda">
             <button class="chipT activo" data-ft="todos" onclick="filtrarTienda('todos')">Todos</button>
@@ -1824,6 +1829,12 @@ async function marcarAvisada(id) {
    TIENDA — control de qué productos ve el público
    ══════════════════════════════════════════════════════════════ */
 let filtroTienda = 'todos';
+let filtroTiendaTextoActual = '';
+
+function filtrarTiendaTexto(valor) {
+  filtroTiendaTextoActual = valor;
+  renderTienda();
+}
 
 // Un producto sin el campo definido se considera visible: así los que ya
 // existían antes de esta función no desaparecen de golpe de la tienda.
@@ -1864,8 +1875,17 @@ function renderTienda() {
   if (filtroTienda === 'ocultos')   lista = todos.filter(p => !estaPublicado(p));
   if (filtroTienda === 'agotados')  lista = todos.filter(p => (Number(p.stock) || 0) <= 0);
 
+  const texto = normalizaTexto(filtroTiendaTextoActual.trim());
+  if (texto) {
+    lista = lista.filter(p =>
+      normalizaTexto(p.nombre).includes(texto) ||
+      normalizaTexto(p.tono).includes(texto) ||
+      normalizaTexto(p.marca).includes(texto)
+    );
+  }
+
   if (!lista.length) {
-    caja.innerHTML = '<div class="vacio">No hay productos en este filtro.</div>';
+    caja.innerHTML = '<div class="vacio">No hay productos que coincidan con ese filtro.</div>';
     return;
   }
 
