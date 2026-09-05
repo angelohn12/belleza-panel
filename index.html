@@ -1029,7 +1029,7 @@ async function iniciarSesion() {
     localStorage.setItem('avellana_usuario', JSON.stringify(estado.usuario));
     await entrarApp();
   } else if (resultado.sinConexion) {
-    mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
+    mostrarToast('No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.');
   } else {
     document.getElementById('errorLogin').style.display = 'block';
   }
@@ -1059,24 +1059,63 @@ async function actualizarDatos() {
   if (ok) mostrarToast('Datos actualizados.');
 }
 
-async function cargarDatos() {
-  try {
-    const datos = await apiLeer();
-    if (!datos.ok) { mostrarToast('Error leyendo datos.'); return false; }
-    estado.productos = datos.productos || [];
-    estado.ventas = datos.ventas || [];
-    estado.clientes = datos.clientes || [];
-    estado.movimientos = datos.movimientos || [];
-    estado.config = datos.config || [];
-    estado.abonos = datos.abonos || [];
-    estado.contenido = datos.contenido || [];
-    estado.pedidos = datos.pedidos || [];
-    estado.solicitudes = datos.solicitudes || [];
-    renderTodo();
-    return true;
-  } catch (err) {
-    mostrarToast('No se pudo conectar. Revisa la URL del Apps Script.');
+function esperar(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Relee TODA la Sheet (las 9 hojas) y repinta la pantalla.
+//
+// Es la llamada más pesada del sistema y corre después de cada guardado, así
+// que es también la que más se cae: si Apps Script viene lento (varios
+// guardados seguidos, hoja grande), la respuesta se corta y antes eso mostraba
+// "No se pudo conectar. Revisa la URL del Apps Script." — un mensaje que
+// asusta y encima miente, porque para ese momento el dato YA se guardó bien.
+//
+// Dos cambios: (1) se reintenta una vez antes de darla por fallada, y (2) con
+// `silencioso` en true no muestra ningún aviso — lo usa quien ya guardó
+// correctamente y solo está refrescando, para poder dar él un mensaje honesto
+// ("se guardó, pero no se pudo refrescar la pantalla").
+//
+// OJO: solo se reintentan LECTURAS. Reintentar un guardado podría duplicar
+// filas si el primer intento sí había llegado.
+async function cargarDatos(silencioso) {
+  let datos = null;
+
+  for (let intento = 1; intento <= 2 && !datos; intento++) {
+    try {
+      const res = await apiLeer();
+      if (res && res.ok) datos = res;
+    } catch (err) { /* se reintenta abajo */ }
+    if (!datos && intento === 1) await esperar(1500);
   }
+
+  if (!datos) {
+    if (!silencioso) mostrarToast('No se pudo leer la información. Revisá tu conexión y actualizá.');
+    return false;
+  }
+
+  estado.productos = datos.productos || [];
+  estado.ventas = datos.ventas || [];
+  estado.clientes = datos.clientes || [];
+  estado.movimientos = datos.movimientos || [];
+  estado.config = datos.config || [];
+  estado.abonos = datos.abonos || [];
+  estado.contenido = datos.contenido || [];
+  estado.pedidos = datos.pedidos || [];
+  estado.solicitudes = datos.solicitudes || [];
+  renderTodo();
+  return true;
+}
+
+// Refresco después de un guardado que YA salió bien. Avisa del éxito de una
+// (el guardado ya está hecho, no hay por qué hacer esperar) y recién después
+// relee. Si la relectura falla, el dato NO se perdió: solo avisa que la
+// pantalla quedó sin refrescar.
+async function refrescarTrasGuardar(mensajeExito) {
+  mostrarToast(mensajeExito);
+  const ok = await cargarDatos(true);
+  if (!ok) mostrarToast('Se guardó, pero no se pudo refrescar la pantalla. Dale a "Actualizar" para verlo.');
+  return ok;
 }
 
 // ---------- Vigilancia de pedidos nuevos ----------
@@ -1089,7 +1128,10 @@ function arrancarVigilancia() {
   vigilanciaId = setInterval(async () => {
     if (document.hidden) return;              // no gasta llamadas con la pestaña de fondo
     const antes = pedidosPendientes().length;
-    await cargarDatos();
+    // Silencioso: es un refresco automático de fondo. Si falla, no tiene
+    // sentido tirarle un error a alguien que ni pidió nada — se reintenta
+    // solo a los 2 minutos.
+    await cargarDatos(true);
     const ahora = pedidosPendientes().length;
     if (ahora > antes) {
       mostrarToast(`Entró ${ahora - antes === 1 ? 'un pedido nuevo' : (ahora - antes) + ' pedidos nuevos'}.`);
@@ -1726,22 +1768,34 @@ async function avanzarPedido(id, nuevoEstado) {
     if (!confirm(`Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)} por SINPE?\n\nEsto descuenta el stock y registra la venta.`)) return;
 
     const cliente = await asegurarCliente(p);
-    for (const i of items) {
-      const prod = estado.productos.find(x => String(x.id) === String(i.id));
-      if (!prod) continue;
-      await apiPost({
-        accion: 'editar_fila', hoja: 'Productos', id: prod.id,
-        fila: filaProductoConStock(prod, (Number(prod.stock) || 0) - i.cantidad)
-      });
+    const productosDelPedido = items
+      .map(i => ({ item: i, prod: estado.productos.find(x => String(x.id) === String(i.id)) }))
+      .filter(x => x.prod);
+
+    // Los descuentos de stock tocan filas distintas de Productos (una por
+    // producto del pedido), así que van todos juntos en paralelo. Antes era
+    // uno tras otro y un pedido de 5 productos encadenaba 10 viajes a Apps
+    // Script — de ahí que "marcar como pagado" pareciera colgado.
+    await Promise.all(productosDelPedido.map(({ item, prod }) => apiPost({
+      accion: 'editar_fila', hoja: 'Productos', id: prod.id,
+      fila: filaProductoConStock(prod, (Number(prod.stock) || 0) - item.cantidad)
+    })));
+
+    // Las ventas SÍ van una por una a propósito: agregar_fila calcula el
+    // siguiente id leyendo la hoja, y dos altas simultáneas podrían sacar el
+    // mismo número y pisarse. Acá la lentitud es el precio de no duplicar ids.
+    for (const { item, prod } of productosDelPedido) {
       await apiPost({
         accion: 'agregar_fila', hoja: 'Ventas',
         fila: {
           id: '', fecha: new Date().toISOString().slice(0, 10),
-          clienteId: cliente, productoId: prod.id, cantidad: i.cantidad,
+          clienteId: cliente, productoId: prod.id, cantidad: item.cantidad,
           costoUnitarioCRC: Number(prod.costoTotalCRC) || 0,
-          precioVenta: i.precioUnitario, canal: 'Tienda web',
+          precioVenta: item.precioUnitario, canal: 'Tienda web',
           estadoEntrega: p.entrega === 'retiro' ? 'Retiro' : 'Por enviar',
-          usuario: estado.usuario, formaPago: 'SINPE'
+          // estado.usuario es un objeto { usuario, rol }: mandarlo entero
+          // escribía "[object Object]" en la columna usuario de Ventas.
+          usuario: estado.usuario ? estado.usuario.usuario : '', formaPago: 'SINPE'
         }
       });
     }
@@ -1750,8 +1804,7 @@ async function avanzarPedido(id, nuevoEstado) {
   const res = await apiPost({ accion: 'editar_fila', hoja: 'Pedidos', id: p.id, fila: { ...p, estado: nuevoEstado } });
   if (!res.ok) { mostrarToast('No se pudo guardar: ' + (res.error || '')); return; }
 
-  mostrarToast(`Pedido ${p.numero} → ${nuevoEstado}.`);
-  await cargarDatos();
+  await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`);
 }
 
 // Reutiliza el cliente si ya existe (por teléfono); si no, lo crea.
@@ -2455,7 +2508,8 @@ async function guardarProducto() {
     }
 
     productoEditando = null;
-    await cargarDatos();
+    const refrescado = await cargarDatos(true);
+    if (!refrescado) mostrarToast('Se guardó, pero no se pudo refrescar la pantalla. Dale a "Actualizar" para verlo.');
   } else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -2498,11 +2552,19 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
     return false;
   }
 
+  // Cada tono es una fila distinta de Productos (editar_fila, sin generar ids),
+  // así que se pueden mandar en tandas paralelas en vez de uno por uno. De a 4
+  // para no pasarse de las ejecuciones simultáneas que aguanta Apps Script:
+  // un producto de 40 tonos pasa de 40 viajes encadenados a 10 tandas.
   let ok = 0;
   const fallidos = [];
-  for (const h of hermanos) {
-    const logrado = await aplicarConReintento(h);
-    if (logrado) ok++; else fallidos.push(h.tono || '(sin tono)');
+  const TAMANO_TANDA = 4;
+  for (let i = 0; i < hermanos.length; i += TAMANO_TANDA) {
+    const tanda = hermanos.slice(i, i + TAMANO_TANDA);
+    const resultados = await Promise.all(tanda.map(h => aplicarConReintento(h)));
+    resultados.forEach((logrado, j) => {
+      if (logrado) ok++; else fallidos.push(tanda[j].tono || '(sin tono)');
+    });
   }
 
   mostrarToast(fallidos.length === 0
@@ -2835,8 +2897,7 @@ async function eliminarVenta(id) {
     });
   }
 
-  mostrarToast('Venta eliminada y stock restaurado.');
-  await cargarDatos();
+  await refrescarTrasGuardar('Venta eliminada y stock restaurado.');
 }
 
 async function guardarVenta() {
@@ -2917,28 +2978,38 @@ async function guardarVenta() {
   const resultado = await apiPost({ accion, hoja: 'Ventas', id: ventaEditando ? ventaEditando.id : undefined, fila });
   if (!resultado.ok) { mostrarToast('Error: ' + resultado.error); return; }
 
+  // Ajustes de stock. Son filas DISTINTAS de la hoja Productos (el producto
+  // viejo nunca es el mismo que el actual acá: si lo fuera, mismoProductoQueAntes
+  // sería true y no habría que devolver nada), así que se mandan en paralelo en
+  // vez de uno tras otro. Cada viaje a Apps Script son dos saltos de red y
+  // encadenarlos era lo que hacía que editar una venta tardara tanto que se
+  // cortaba la conexión.
+  const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
+  const ajustesDeStock = [];
+
   // Si el producto cambió respecto a la venta original, devolver el stock al producto viejo
   if (ventaEditando && !mismoProductoQueAntes) {
     const productoViejo = estado.productos.find(p => String(p.id) === String(ventaEditando.productoId));
     if (productoViejo) {
       const stockRestaurado = (Number(productoViejo.stock) || 0) + (Number(ventaEditando.cantidad) || 0);
-      await apiPost({
+      ajustesDeStock.push(apiPost({
         accion: 'editar_fila', hoja: 'Productos', id: productoViejo.id,
         fila: filaProductoConStock(productoViejo, stockRestaurado)
-      });
+      }));
     }
   }
 
   // Descontar stock del producto actual de la venta (restando también el regalo si es el mismo producto)
-  const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
   if (producto) {
     let nuevoStock = Math.max(stockDisponible - cantidad, 0);
     if (esMismoProductoQueElRegalo) nuevoStock = Math.max(nuevoStock - cantidadRegalo, 0);
-    await apiPost({
+    ajustesDeStock.push(apiPost({
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: filaProductoConStock(producto, nuevoStock)
-    });
+    }));
   }
+
+  if (ajustesDeStock.length) await Promise.all(ajustesDeStock);
 
   // Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
   if (hayRegalo && productoRegalo) {
@@ -2969,10 +3040,9 @@ async function guardarVenta() {
   const mensajeGuardado = ventaEditando
     ? 'Venta actualizada.'
     : (hayRegalo ? 'Venta y regalo guardados.' : (formaPago === 'Regalía' ? 'Regalía guardada.' : 'Venta guardada.'));
-  mostrarToast(mensajeGuardado);
   document.getElementById('formVenta').classList.add('oculto');
   ventaEditando = null;
-  await cargarDatos();
+  await refrescarTrasGuardar(mensajeGuardado);
 }
 
 // ---------- Finanzas ----------
