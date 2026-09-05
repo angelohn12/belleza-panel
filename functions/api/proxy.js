@@ -21,8 +21,15 @@ export async function onRequest(context) {
       const params = new URLSearchParams(url.search);
       params.set('key', env.BELLEZA_KEY);
       const upstream = env.WEB_APP_URL_BELLEZA + '?' + params.toString();
-      const text = await fetchFollow(upstream, { method: 'GET' });
-      return new Response(text, {
+      const r = await fetchFollow(upstream, { method: 'GET' });
+      // Se devuelve el cuerpo TAL CUAL, sin leerlo acá. Leerlo con .text()
+      // obligaba a este worker a cargar en memoria y reprocesar los ~800 KB
+      // de la lectura completa (1.200+ productos), y Cloudflare le da muy
+      // poco tiempo de CPU: por eso el panel se quedaba sin cargar nada al
+      // darle "Actualizar". Pasando el flujo de largo, el worker casi no
+      // trabaja y el tamaño de la respuesta deja de importar.
+      return new Response(r.body, {
+        status: r.status,
         headers: { 'content-type': 'application/json' }
       });
     }
@@ -35,12 +42,13 @@ export async function onRequest(context) {
         return json({ ok: false, error: 'invalid json in request body' }, 400);
       }
       body.key = env.BELLEZA_KEY;
-      const text = await fetchFollow(env.WEB_APP_URL_BELLEZA, {
+      const r = await fetchFollow(env.WEB_APP_URL_BELLEZA, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return new Response(text, {
+      return new Response(r.body, {
+        status: r.status,
         headers: { 'content-type': 'application/json' }
       });
     }
@@ -55,6 +63,10 @@ export async function onRequest(context) {
 // Sigue redirects manualmente hasta 5 saltos.
 // Apps Script devuelve 302 al primer hit, con Location apuntando a
 // script.googleusercontent.com/macros/echo?... — ahí sí llega el JSON.
+//
+// Devuelve la respuesta ENTERA (no su texto): así quien llama puede pasar el
+// cuerpo de largo como flujo, sin que este worker tenga que cargarse en
+// memoria respuestas de cientos de KB.
 async function fetchFollow(url, init) {
   let r = await fetch(url, Object.assign({}, init, { redirect: 'manual' }));
   for (let i = 0; i < 5; i++) {
@@ -63,7 +75,7 @@ async function fetchFollow(url, init) {
     if (!loc) break;
     r = await fetch(loc, { method: 'GET', redirect: 'manual' });
   }
-  return await r.text();
+  return r;
 }
 
 function json(obj, status) {
