@@ -987,10 +987,22 @@ let publicacionEditando = null;
 
 // ---------- API ----------
 
-async function apiLeer() {
-  const res = await fetch(`${CONFIG.API_URL}?accion=leer`);
+// Con `hojas` (ej. ['Ventas']) trae SOLO esas hojas. Sin nada, trae todo.
+// Traer todo son ~800 KB y ~7 segundos, casi enteramente por los 1.200+
+// productos — un peso que no tiene ningún sentido pagar para refrescar
+// después de guardar un abono.
+async function apiLeer(hojas) {
+  const filtro = hojas && hojas.length ? '&hojas=' + encodeURIComponent(hojas.join(',')) : '';
+  const res = await fetch(`${CONFIG.API_URL}?accion=leer${filtro}`);
   return res.json();
 }
+
+// Nombre de la hoja (como lo conoce el backend) -> campo dentro de `estado`
+const CAMPO_POR_HOJA = {
+  Productos: 'productos', Ventas: 'ventas', Clientes: 'clientes',
+  Movimientos: 'movimientos', Config: 'config', Abonos: 'abonos',
+  Contenido: 'contenido', Pedidos: 'pedidos', Solicitudes: 'solicitudes'
+};
 
 // Si el fetch falla (sin internet, el proxy tarda demasiado, la respuesta no
 // es JSON válido) esto ANTES se colaba como una excepción sin capturar en
@@ -1112,12 +1124,12 @@ function esperar(ms) {
 //
 // OJO: solo se reintentan LECTURAS. Reintentar un guardado podría duplicar
 // filas si el primer intento sí había llegado.
-async function cargarDatos(silencioso) {
+async function cargarDatos(silencioso, hojas) {
   let datos = null;
 
   for (let intento = 1; intento <= 2 && !datos; intento++) {
     try {
-      const res = await apiLeer();
+      const res = await apiLeer(hojas);
       if (res && res.ok) datos = res;
     } catch (err) { /* se reintenta abajo */ }
     if (!datos && intento === 1) await esperar(1500);
@@ -1128,15 +1140,15 @@ async function cargarDatos(silencioso) {
     return false;
   }
 
-  estado.productos = datos.productos || [];
-  estado.ventas = datos.ventas || [];
-  estado.clientes = datos.clientes || [];
-  estado.movimientos = datos.movimientos || [];
-  estado.config = datos.config || [];
-  estado.abonos = datos.abonos || [];
-  estado.contenido = datos.contenido || [];
-  estado.pedidos = datos.pedidos || [];
-  estado.solicitudes = datos.solicitudes || [];
+  // Se reemplaza SOLO lo que el backend dice haber leído; el resto de `estado`
+  // queda intacto. Si el backend es viejo (no manda 'hojas'), devuelve todo y
+  // se reemplaza todo, como siempre.
+  const leidas = Array.isArray(datos.hojas) ? datos.hojas : Object.keys(CAMPO_POR_HOJA);
+  leidas.forEach(hoja => {
+    const campo = CAMPO_POR_HOJA[hoja];
+    if (campo && datos[campo] !== undefined) estado[campo] = datos[campo] || [];
+  });
+
   renderTodo();
   return true;
 }
@@ -1145,9 +1157,11 @@ async function cargarDatos(silencioso) {
 // (el guardado ya está hecho, no hay por qué hacer esperar) y recién después
 // relee. Si la relectura falla, el dato NO se perdió: solo avisa que la
 // pantalla quedó sin refrescar.
-async function refrescarTrasGuardar(mensajeExito) {
+// `hojas` limita el refresco a lo que de verdad cambió (ej. ['Abonos']).
+// Sin eso, guardar un abono se bajaba los 1.200+ productos de nuevo.
+async function refrescarTrasGuardar(mensajeExito, hojas) {
   mostrarToast(mensajeExito);
-  const ok = await cargarDatos(true);
+  const ok = await cargarDatos(true, hojas);
   if (!ok) mostrarToast('Se guardó, pero no se pudo refrescar la pantalla. Dale a "Actualizar" para verlo.');
   return ok;
 }
@@ -1165,7 +1179,12 @@ function arrancarVigilancia() {
     // Silencioso: es un refresco automático de fondo. Si falla, no tiene
     // sentido tirarle un error a alguien que ni pidió nada — se reintenta
     // solo a los 2 minutos.
-    await cargarDatos(true);
+    //
+    // Y solo pide Pedidos y Solicitudes, que es lo único que mira este
+    // vigilante. Antes se bajaba las 9 hojas enteras (~800 KB) cada 2 minutos
+    // nada más que para contar si había un pedido nuevo — de fondo, mientras
+    // se trabajaba, compitiendo con lo que uno estaba guardando.
+    await cargarDatos(true, ['Pedidos', 'Solicitudes']);
     const ahora = pedidosPendientes().length;
     if (ahora > antes) {
       mostrarToast(`Entró ${ahora - antes === 1 ? 'un pedido nuevo' : (ahora - antes) + ' pedidos nuevos'}.`);
@@ -1790,6 +1809,9 @@ async function avanzarPedido(id, nuevoEstado) {
 
   // Todo lo que hay que escribir por este cambio de estado, para mandarlo junto
   const operacionesDelCobro = [];
+  // Stocks que quedan distintos: se aplican en memoria para no tener que
+  // rebajarse los 1.200+ productos después de cobrar.
+  const stocksNuevos = [];
 
   // El descuento de stock ocurre UNA sola vez: al cruzar a Pagado por primera vez
   if (vaACobrar && !yaCobrado) {
@@ -1814,9 +1836,11 @@ async function avanzarPedido(id, nuevoEstado) {
     // una, "marcar como pagado" parecía colgado y terminaba cortándose. Ahora
     // va todo junto, incluido el cambio de estado del pedido.
     for (const { item, prod } of productosDelPedido) {
+      const stockTrasCobro = (Number(prod.stock) || 0) - item.cantidad;
+      stocksNuevos.push({ id: prod.id, stock: stockTrasCobro });
       operacionesDelCobro.push({
         accion: 'editar_fila', hoja: 'Productos', id: prod.id,
-        fila: filaProductoConStock(prod, (Number(prod.stock) || 0) - item.cantidad)
+        fila: filaProductoConStock(prod, stockTrasCobro)
       });
       operacionesDelCobro.push({
         accion: 'agregar_fila', hoja: 'Ventas',
@@ -1849,7 +1873,15 @@ async function avanzarPedido(id, nuevoEstado) {
     mostrarToast('El pedido cambió de estado, pero algo del cobro falló (stock o registro de venta). Revisalo.');
   }
 
-  await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`);
+  // Si todo el lote salió bien, el stock nuevo ya lo sabemos: se aplica en
+  // memoria y solo se releen Pedidos y Ventas. Si algo falló, mejor releer
+  // Productos de verdad para no dejar la pantalla mintiendo sobre el stock.
+  if (lote.ok) {
+    stocksNuevos.forEach(s => ajustarStockLocal(s.id, s.stock));
+    await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`, ['Pedidos', 'Ventas', 'Clientes']);
+  } else {
+    await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`, ['Pedidos', 'Ventas', 'Clientes', 'Productos']);
+  }
 }
 
 // Reutiliza el cliente si ya existe (por teléfono); si no, lo crea.
@@ -1874,7 +1906,7 @@ async function eliminarPedido(id) {
   if (!p) return;
   if (!confirm(`Borrar el pedido ${p.numero} de ${p.nombre}?\n\nNo se puede deshacer. Si ya lo cobraste, la venta registrada NO se borra.`)) return;
   const res = await apiPost({ accion: 'eliminar_fila', hoja: 'Pedidos', id: p.id });
-  if (res.ok) { mostrarToast('Pedido borrado.'); await cargarDatos(); }
+  if (res.ok) { mostrarToast('Pedido borrado.'); await cargarDatos(true, ['Pedidos']); }
   else mostrarToast('Error: ' + res.error);
 }
 
@@ -1964,7 +1996,7 @@ async function marcarAvisada(id) {
   const s = estado.solicitudes.find(x => String(x.id) === String(id));
   if (!s) return;
   const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Avisado' } });
-  if (res.ok) { mostrarToast('Marcada como avisada.'); await cargarDatos(); }
+  if (res.ok) { mostrarToast('Marcada como avisada.'); await cargarDatos(true, ['Solicitudes']); }
   else mostrarToast('Error: ' + res.error);
 }
 
@@ -1972,7 +2004,7 @@ async function marcarProcedio(id) {
   const s = estado.solicitudes.find(x => String(x.id) === String(id));
   if (!s) return;
   const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Procedió' } });
-  if (res.ok) { mostrarToast('✅ Cliente procedió con el encargo.'); await cargarDatos(); }
+  if (res.ok) { mostrarToast('✅ Cliente procedió con el encargo.'); await cargarDatos(true, ['Solicitudes']); }
   else mostrarToast('Error: ' + res.error);
 }
 
@@ -1980,7 +2012,7 @@ async function marcarNoProcedio(id) {
   const s = estado.solicitudes.find(x => String(x.id) === String(id));
   if (!s) return;
   const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'No procedió' } });
-  if (res.ok) { mostrarToast('❌ Cliente rechazó el encargo.'); await cargarDatos(); }
+  if (res.ok) { mostrarToast('❌ Cliente rechazó el encargo.'); await cargarDatos(true, ['Solicitudes']); }
   else mostrarToast('Error: ' + res.error);
 }
 
@@ -2442,7 +2474,7 @@ async function eliminarProducto(id) {
   const p = estado.productos.find(x => String(x.id) === String(id));
   if (!confirm(`¿Eliminar "${p ? p.nombre : 'este producto'}"? No se puede deshacer.`)) return;
   const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Productos', id });
-  if (resultado.ok) { mostrarToast('Producto eliminado.'); await cargarDatos(); }
+  if (resultado.ok) { mostrarToast('Producto eliminado.'); await cargarDatos(true, ['Productos']); }
   else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -2553,7 +2585,7 @@ async function guardarProducto() {
     }
 
     productoEditando = null;
-    const refrescado = await cargarDatos(true);
+    const refrescado = await cargarDatos(true, ['Productos']);
     if (!refrescado) mostrarToast('Se guardó, pero no se pudo refrescar la pantalla. Dale a "Actualizar" para verlo.');
   } else mostrarToast('Error: ' + resultado.error);
 }
@@ -2702,7 +2734,7 @@ async function eliminarCliente(id) {
   const c = estado.clientes.find(x => String(x.id) === String(id));
   if (!confirm(`¿Eliminar a "${c ? c.nombre : 'este cliente'}"? No se puede deshacer.`)) return;
   const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Clientes', id });
-  if (resultado.ok) { mostrarToast('Cliente eliminado.'); await cargarDatos(); }
+  if (resultado.ok) { mostrarToast('Cliente eliminado.'); await cargarDatos(true, ['Clientes']); }
   else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -2723,7 +2755,7 @@ async function guardarCliente() {
     mostrarToast(clienteEditando ? 'Cliente actualizado.' : 'Cliente guardado.');
     document.getElementById('formCliente').classList.add('oculto');
     clienteEditando = null;
-    await cargarDatos();
+    await cargarDatos(true, ['Clientes']);
   } else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -2763,14 +2795,14 @@ async function guardarAbono() {
     mostrarToast('Abono guardado.');
     document.getElementById('aMonto').value = '';
     document.getElementById('aNotas').value = '';
-    await cargarDatos();
+    await cargarDatos(true, ['Abonos']);
   } else mostrarToast('Error: ' + resultado.error);
 }
 
 async function eliminarAbono(id) {
   if (!confirm('¿Eliminar este abono? No se puede deshacer.')) return;
   const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Abonos', id });
-  if (resultado.ok) { mostrarToast('Abono eliminado.'); await cargarDatos(); }
+  if (resultado.ok) { mostrarToast('Abono eliminado.'); await cargarDatos(true, ['Abonos']); }
   else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -2838,6 +2870,19 @@ function filaProductoConStock(p, nuevoStock) {
     stock: nuevoStock,
     estado: nuevoStock > 0 ? 'Disponible' : 'Agotado'
   };
+}
+
+// Aplica en memoria el mismo cambio de stock que se acaba de guardar en la
+// hoja. Así, después de una venta, NO hace falta volver a bajarse los 1.200+
+// productos (~800 KB, ~7 s) solo para enterarse de que a uno le bajó el stock:
+// el panel ya sabe exactamente cuánto quedó, porque él mismo lo calculó.
+// Debe reflejar lo mismo que filaProductoConStock, o la pantalla mostraría
+// algo distinto a lo que quedó guardado.
+function ajustarStockLocal(productoId, nuevoStock) {
+  const p = estado.productos.find(x => String(x.id) === String(productoId));
+  if (!p) return;
+  p.stock = nuevoStock;
+  p.estado = nuevoStock > 0 ? 'Disponible' : 'Agotado';
 }
 
 function nuevaVenta() {
@@ -2929,20 +2974,30 @@ async function eliminarVenta(id) {
   if (!v) return;
   if (!confirm('¿Eliminar esta venta? Se le devuelve el stock al producto. No se puede deshacer.')) return;
 
-  const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Ventas', id });
-  if (!resultado.ok) { mostrarToast('Error: ' + resultado.error); return; }
-
-  // devolver el stock al producto
+  // Borrar la venta y devolverle el stock al producto, en un solo viaje.
   const producto = estado.productos.find(p => String(p.id) === String(v.productoId));
+  const stockRestaurado = producto
+    ? (Number(producto.stock) || 0) + (Number(v.cantidad) || 0)
+    : null;
+
+  const operaciones = [{ accion: 'eliminar_fila', hoja: 'Ventas', id }];
   if (producto) {
-    const stockRestaurado = (Number(producto.stock) || 0) + (Number(v.cantidad) || 0);
-    await apiPost({
+    operaciones.push({
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: filaProductoConStock(producto, stockRestaurado)
     });
   }
 
-  await refrescarTrasGuardar('Venta eliminada y stock restaurado.');
+  const lote = await apiLote(operaciones);
+  const resultado = lote.resultados[0];
+  if (!resultado || !resultado.ok) {
+    mostrarToast('Error: ' + ((resultado && resultado.error) || lote.error || 'no se pudo eliminar la venta'));
+    return;
+  }
+  if (!lote.ok) mostrarToast('La venta se eliminó, pero no se pudo devolver el stock. Revisá ese producto.');
+
+  if (producto && lote.ok) ajustarStockLocal(producto.id, stockRestaurado);
+  await refrescarTrasGuardar('Venta eliminada y stock restaurado.', ['Ventas']);
 }
 
 async function guardarVenta() {
@@ -3025,6 +3080,9 @@ async function guardarVenta() {
   // minuto: de ahí el "no se pudo conectar" al editar una venta.
   const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
   const operaciones = [];
+  // Cada stock que esta venta deja distinto. Se aplican en memoria al final,
+  // para no tener que rebajarse los 1.200+ productos solo por eso.
+  const stocksNuevos = [];
 
   // 1. La venta en sí (siempre va primera: su resultado es el que decide si
   //    el guardado se considera exitoso).
@@ -3041,6 +3099,7 @@ async function guardarVenta() {
         accion: 'editar_fila', hoja: 'Productos', id: productoViejo.id,
         fila: filaProductoConStock(productoViejo, stockRestaurado)
       });
+      stocksNuevos.push({ id: productoViejo.id, stock: stockRestaurado });
     }
   }
 
@@ -3052,6 +3111,7 @@ async function guardarVenta() {
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: filaProductoConStock(producto, nuevoStock)
     });
+    stocksNuevos.push({ id: producto.id, stock: nuevoStock });
   }
 
   // 4. Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
@@ -3079,6 +3139,7 @@ async function guardarVenta() {
         accion: 'editar_fila', hoja: 'Productos', id: productoRegalo.id,
         fila: filaProductoConStock(productoRegalo, nuevoStockRegalo)
       });
+      stocksNuevos.push({ id: productoRegalo.id, stock: nuevoStockRegalo });
     }
   }
 
@@ -3102,7 +3163,17 @@ async function guardarVenta() {
     : (hayRegalo ? 'Venta y regalo guardados.' : (formaPago === 'Regalía' ? 'Regalía guardada.' : 'Venta guardada.'));
   document.getElementById('formVenta').classList.add('oculto');
   ventaEditando = null;
-  await refrescarTrasGuardar(mensajeGuardado);
+
+  // El stock ya lo sabemos: lo acabamos de calcular y guardar. Se aplica en
+  // memoria y solo se releen Ventas y Clientes (hojas chicas) — así el refresco
+  // pasa de ~800 KB a unos pocos KB. Si algún ajuste de stock falló, ahí sí se
+  // relee Productos de verdad, para no dejar la pantalla mintiendo.
+  if (lote.ok) {
+    stocksNuevos.forEach(s => ajustarStockLocal(s.id, s.stock));
+    await refrescarTrasGuardar(mensajeGuardado, ['Ventas', 'Clientes']);
+  } else {
+    await refrescarTrasGuardar(mensajeGuardado, ['Ventas', 'Clientes', 'Productos']);
+  }
 }
 
 // ---------- Finanzas ----------
@@ -3156,7 +3227,7 @@ function editarMovimiento(id) {
 async function eliminarMovimiento(id) {
   if (!confirm('¿Eliminar este movimiento? No se puede deshacer.')) return;
   const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Movimientos', id });
-  if (resultado.ok) { mostrarToast('Movimiento eliminado.'); await cargarDatos(); }
+  if (resultado.ok) { mostrarToast('Movimiento eliminado.'); await cargarDatos(true, ['Movimientos']); }
   else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -3176,7 +3247,7 @@ async function guardarMovimiento() {
     mostrarToast(movimientoEditando ? 'Movimiento actualizado.' : 'Movimiento guardado.');
     document.getElementById('formMovimiento').classList.add('oculto');
     movimientoEditando = null;
-    await cargarDatos();
+    await cargarDatos(true, ['Movimientos']);
   } else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -3233,7 +3304,7 @@ function editarPublicacion(id) {
 async function eliminarPublicacion(id) {
   if (!confirm('¿Eliminar esta publicación del calendario? No se puede deshacer.')) return;
   const resultado = await apiPost({ accion: 'eliminar_fila', hoja: 'Contenido', id });
-  if (resultado.ok) { mostrarToast('Publicación eliminada.'); await cargarDatos(); }
+  if (resultado.ok) { mostrarToast('Publicación eliminada.'); await cargarDatos(true, ['Contenido']); }
   else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -3255,7 +3326,7 @@ async function guardarPublicacion() {
     mostrarToast(publicacionEditando ? 'Publicación actualizada.' : 'Publicación guardada.');
     document.getElementById('formContenido').classList.add('oculto');
     publicacionEditando = null;
-    await cargarDatos();
+    await cargarDatos(true, ['Contenido']);
   } else mostrarToast('Error: ' + resultado.error);
 }
 
@@ -3266,7 +3337,7 @@ async function guardarConfig() {
     .map(c => [c.clave, c.valor]);
   filas.push(['tipoCambio', Number(document.getElementById('cfgTipoCambio').value) || 520]);
   const resultado = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
-  if (resultado.ok) { mostrarToast('Configuración guardada.'); await cargarDatos(); }
+  if (resultado.ok) { mostrarToast('Configuración guardada.'); await cargarDatos(true, ['Config']); }
   else mostrarToast('Error: ' + resultado.error);
 }
 
