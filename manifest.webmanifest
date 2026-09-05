@@ -3,7 +3,7 @@
   "short_name": "Avellana",
   "start_url": ".",
   "scope": ".",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#D24558",
   "theme_color": "#D24558",
   "icons": [
