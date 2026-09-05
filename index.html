@@ -1014,6 +1014,40 @@ async function apiPost(cuerpo) {
   }
 }
 
+// Manda varias escrituras en UN solo viaje al backend.
+//
+// Cada llamada a Apps Script tarda entre 6 y 20 segundos, así que encadenar
+// 4 o 5 (editar una venta, cobrar un pedido) se pasaba del minuto y la
+// conexión se cortaba. La acción 'lote' hace todo en una sola ejecución.
+//
+// Funciona con el backend viejo Y con el nuevo: si el Code.gs que está
+// publicado todavía no conoce 'lote', responde 'accion desconocida' y acá se
+// cae de vuelta al camino de siempre (una llamada por operación). Apenas se
+// pegue el Code.gs nuevo en Apps Script, se vuelve rápido solo.
+//
+// Importante: si el lote falla por RED (no sabemos si llegó a ejecutarse), NO
+// se reintenta de a una — repetir un agregar_fila que sí había entrado
+// duplicaría la venta. En ese caso se reporta la falla, como cualquier otro
+// guardado que no se pudo confirmar.
+async function apiLote(operaciones) {
+  if (!operaciones || !operaciones.length) return { ok: true, resultados: [] };
+  if (operaciones.length === 1) {
+    const unico = await apiPost(operaciones[0]);
+    return { ok: !!unico.ok, resultados: [unico], error: unico.error };
+  }
+
+  const res = await apiPost({ accion: 'lote', operaciones });
+  if (res && Array.isArray(res.resultados)) return res;
+
+  if (res && /accion desconocida/i.test(String(res.error || ''))) {
+    const resultados = [];
+    for (const op of operaciones) resultados.push(await apiPost(op));
+    return { ok: resultados.every(r => r && r.ok), resultados };
+  }
+
+  return { ok: false, resultados: [], error: (res && res.error) || 'no se pudo guardar' };
+}
+
 // ---------- Login ----------
 
 async function iniciarSesion() {
@@ -1754,6 +1788,9 @@ async function avanzarPedido(id, nuevoEstado) {
   const yaCobrado = ['Pagado', 'Enviado'].includes(anterior);
   const vaACobrar = ['Pagado', 'Enviado'].includes(nuevoEstado);
 
+  // Todo lo que hay que escribir por este cambio de estado, para mandarlo junto
+  const operacionesDelCobro = [];
+
   // El descuento de stock ocurre UNA sola vez: al cruzar a Pagado por primera vez
   if (vaACobrar && !yaCobrado) {
     const items = itemsDe(p);
@@ -1772,20 +1809,16 @@ async function avanzarPedido(id, nuevoEstado) {
       .map(i => ({ item: i, prod: estado.productos.find(x => String(x.id) === String(i.id)) }))
       .filter(x => x.prod);
 
-    // Los descuentos de stock tocan filas distintas de Productos (una por
-    // producto del pedido), así que van todos juntos en paralelo. Antes era
-    // uno tras otro y un pedido de 5 productos encadenaba 10 viajes a Apps
-    // Script — de ahí que "marcar como pagado" pareciera colgado.
-    await Promise.all(productosDelPedido.map(({ item, prod }) => apiPost({
-      accion: 'editar_fila', hoja: 'Productos', id: prod.id,
-      fila: filaProductoConStock(prod, (Number(prod.stock) || 0) - item.cantidad)
-    })));
-
-    // Las ventas SÍ van una por una a propósito: agregar_fila calcula el
-    // siguiente id leyendo la hoja, y dos altas simultáneas podrían sacar el
-    // mismo número y pisarse. Acá la lentitud es el precio de no duplicar ids.
+    // Un pedido de 5 productos hacía 10 llamadas encadenadas (descontar stock
+    // + registrar venta, por producto) más la del estado: a 6-20 segundos cada
+    // una, "marcar como pagado" parecía colgado y terminaba cortándose. Ahora
+    // va todo junto, incluido el cambio de estado del pedido.
     for (const { item, prod } of productosDelPedido) {
-      await apiPost({
+      operacionesDelCobro.push({
+        accion: 'editar_fila', hoja: 'Productos', id: prod.id,
+        fila: filaProductoConStock(prod, (Number(prod.stock) || 0) - item.cantidad)
+      });
+      operacionesDelCobro.push({
         accion: 'agregar_fila', hoja: 'Ventas',
         fila: {
           id: '', fecha: new Date().toISOString().slice(0, 10),
@@ -1801,8 +1834,20 @@ async function avanzarPedido(id, nuevoEstado) {
     }
   }
 
-  const res = await apiPost({ accion: 'editar_fila', hoja: 'Pedidos', id: p.id, fila: { ...p, estado: nuevoEstado } });
-  if (!res.ok) { mostrarToast('No se pudo guardar: ' + (res.error || '')); return; }
+  // El cambio de estado va de último dentro del mismo lote: si algo del cobro
+  // falla, se ve en su propio resultado, pero el pedido igual queda marcado
+  // (es lo mismo que pasaba antes, solo que ahora en un solo viaje).
+  operacionesDelCobro.push({ accion: 'editar_fila', hoja: 'Pedidos', id: p.id, fila: { ...p, estado: nuevoEstado } });
+
+  const lote = await apiLote(operacionesDelCobro);
+  const resEstado = lote.resultados[lote.resultados.length - 1];
+  if (!resEstado || !resEstado.ok) {
+    mostrarToast('No se pudo guardar: ' + ((resEstado && resEstado.error) || lote.error || ''));
+    return;
+  }
+  if (!lote.ok) {
+    mostrarToast('El pedido cambió de estado, pero algo del cobro falló (stock o registro de venta). Revisalo.');
+  }
 
   await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`);
 }
@@ -2974,67 +3019,82 @@ async function guardarVenta() {
     usuario: ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
     formaPago
   };
-  const accion = ventaEditando ? 'editar_fila' : 'agregar_fila';
-  const resultado = await apiPost({ accion, hoja: 'Ventas', id: ventaEditando ? ventaEditando.id : undefined, fila });
-  if (!resultado.ok) { mostrarToast('Error: ' + resultado.error); return; }
-
-  // Ajustes de stock. Son filas DISTINTAS de la hoja Productos (el producto
-  // viejo nunca es el mismo que el actual acá: si lo fuera, mismoProductoQueAntes
-  // sería true y no habría que devolver nada), así que se mandan en paralelo en
-  // vez de uno tras otro. Cada viaje a Apps Script son dos saltos de red y
-  // encadenarlos era lo que hacía que editar una venta tardara tanto que se
-  // cortaba la conexión.
+  // Todo lo que hay que escribir (la venta, los ajustes de stock y el regalo)
+  // se arma primero y viaja JUNTO en un solo lote. Antes eran hasta 5 llamadas
+  // encadenadas y, como cada una tarda entre 6 y 20 segundos, se pasaba del
+  // minuto: de ahí el "no se pudo conectar" al editar una venta.
   const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
-  const ajustesDeStock = [];
+  const operaciones = [];
 
-  // Si el producto cambió respecto a la venta original, devolver el stock al producto viejo
+  // 1. La venta en sí (siempre va primera: su resultado es el que decide si
+  //    el guardado se considera exitoso).
+  operaciones.push(ventaEditando
+    ? { accion: 'editar_fila', hoja: 'Ventas', id: ventaEditando.id, fila }
+    : { accion: 'agregar_fila', hoja: 'Ventas', fila });
+
+  // 2. Si el producto cambió respecto a la venta original, devolver el stock al producto viejo
   if (ventaEditando && !mismoProductoQueAntes) {
     const productoViejo = estado.productos.find(p => String(p.id) === String(ventaEditando.productoId));
     if (productoViejo) {
       const stockRestaurado = (Number(productoViejo.stock) || 0) + (Number(ventaEditando.cantidad) || 0);
-      ajustesDeStock.push(apiPost({
+      operaciones.push({
         accion: 'editar_fila', hoja: 'Productos', id: productoViejo.id,
         fila: filaProductoConStock(productoViejo, stockRestaurado)
-      }));
+      });
     }
   }
 
-  // Descontar stock del producto actual de la venta (restando también el regalo si es el mismo producto)
+  // 3. Descontar stock del producto actual de la venta (restando también el regalo si es el mismo producto)
   if (producto) {
     let nuevoStock = Math.max(stockDisponible - cantidad, 0);
     if (esMismoProductoQueElRegalo) nuevoStock = Math.max(nuevoStock - cantidadRegalo, 0);
-    ajustesDeStock.push(apiPost({
+    operaciones.push({
       accion: 'editar_fila', hoja: 'Productos', id: producto.id,
       fila: filaProductoConStock(producto, nuevoStock)
-    }));
+    });
   }
 
-  if (ajustesDeStock.length) await Promise.all(ajustesDeStock);
-
-  // Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
+  // 4. Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
   if (hayRegalo && productoRegalo) {
-    const filaRegalo = {
-      id: '',
-      fecha: ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
-      clienteId,
-      productoId: productoRegalo.id,
-      cantidad: cantidadRegalo,
-      costoUnitarioCRC: Number(productoRegalo.costoTotalCRC) || 0,
-      precioVenta: 0,
-      canal: document.getElementById('vCanal').value,
-      estadoEntrega: document.getElementById('vEstado').value,
-      usuario: estado.usuario.usuario,
-      formaPago: 'Regalía'
-    };
-    await apiPost({ accion: 'agregar_fila', hoja: 'Ventas', fila: filaRegalo });
+    operaciones.push({
+      accion: 'agregar_fila', hoja: 'Ventas',
+      fila: {
+        id: '',
+        fecha: ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
+        clienteId,
+        productoId: productoRegalo.id,
+        cantidad: cantidadRegalo,
+        costoUnitarioCRC: Number(productoRegalo.costoTotalCRC) || 0,
+        precioVenta: 0,
+        canal: document.getElementById('vCanal').value,
+        estadoEntrega: document.getElementById('vEstado').value,
+        usuario: estado.usuario.usuario,
+        formaPago: 'Regalía'
+      }
+    });
 
     if (!esMismoProductoQueElRegalo) {
       const nuevoStockRegalo = Math.max(stockDisponibleRegalo - cantidadRegalo, 0);
-      await apiPost({
+      operaciones.push({
         accion: 'editar_fila', hoja: 'Productos', id: productoRegalo.id,
         fila: filaProductoConStock(productoRegalo, nuevoStockRegalo)
       });
     }
+  }
+
+  const lote = await apiLote(operaciones);
+  const resultadoVenta = lote.resultados[0];
+
+  // Si la venta misma no se pudo guardar, no hay nada que festejar.
+  if (!resultadoVenta || !resultadoVenta.ok) {
+    mostrarToast('Error: ' + ((resultadoVenta && resultadoVenta.error) || lote.error || 'no se pudo guardar la venta'));
+    return;
+  }
+
+  // La venta sí quedó, pero algún ajuste de stock falló: hay que decirlo, o el
+  // inventario queda mal sin que nadie se entere.
+  if (!lote.ok) {
+    mostrarToast('La venta se guardó, pero algún ajuste de stock falló. Revisá el inventario de ese producto.');
   }
 
   const mensajeGuardado = ventaEditando
