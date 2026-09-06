@@ -13,17 +13,24 @@
 <meta name="apple-mobile-web-app-title" content="Avellana" />
 <style>
   :root{
-    --brown:#5D300E;
-    --brown-soft:#8a5a3a;
+    /* Texto y superficies: neutro calido. Antes era cafe sobre crema, que se
+       leia simpatico pero no serio. El negro calido hace que los numeros
+       manden y el resto acompane. */
+    --brown:#22201E;
+    --brown-soft:#6E6862;
+    /* Marca: se mantiene tal cual para botones, pestana activa y encabezado */
     --coral:#D24558;
     --coral-dark:#A5323F;
     --pink:#FDA6AB;
     --peach:#FAC977;
     --mint:#C6E9C8;
     --sage:#61A07D;
-    --bg:#FFF9F3;
+    --bg:#F7F6F4;
     --surface:#FFFFFF;
-    --border:#F0DDD0;
+    --border:#E8E5E1;
+    /* Color con significado, solo para plata */
+    --entra:#2F7D5D;
+    --debe:#B0741F;
   }
   *{box-sizing:border-box;}
   body{
@@ -57,7 +64,7 @@
     padding:9px 16px;
     background:var(--coral);
     color:#fff;
-    font-weight:600;
+    font-weight:500;
     transition:transform .08s;
   }
   button:hover{background:var(--coral-dark);}
@@ -100,8 +107,8 @@
   .pedido.revisar{background:#FFF7F8;}
   .pedidoTop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px;}
   .pedidoNum{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--brown-soft);}
-  .pedidoTotal{margin-left:auto;font-size:19px;font-weight:700;color:var(--brown);font-variant-numeric:tabular-nums;}
-  .pedidoNombre{font-size:16px;font-weight:700;color:var(--brown);}
+  .pedidoTotal{margin-left:auto;font-size:19px;font-weight:500;color:var(--brown);font-variant-numeric:tabular-nums;}
+  .pedidoNombre{font-size:16px;font-weight:500;color:var(--brown);}
   .pedidoMeta{font-size:13px;color:var(--brown-soft);line-height:1.6;margin-bottom:10px;}
   .pedidoItems{
     background:var(--bg);border-radius:9px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;
@@ -140,7 +147,7 @@
   .cajaT{
     background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;
   }
-  .cajaT .n{font-size:24px;font-weight:700;color:var(--brown);line-height:1.1;font-variant-numeric:tabular-nums;}
+  .cajaT .n{font-size:24px;font-weight:500;color:var(--brown);line-height:1.1;font-variant-numeric:tabular-nums;}
   .cajaT .t{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--brown-soft);margin-top:3px;}
   .cajaT.alerta{border-color:var(--coral);}
   .cajaT.alerta .n{color:var(--coral);}
@@ -182,7 +189,7 @@
   }
   .miniFoto{
     flex:0 0 auto;width:48px;height:48px;border-radius:8px;overflow:hidden;
-    background:#F3ECE4;display:flex;align-items:center;justify-content:center;
+    background:#F1EFEC;display:flex;align-items:center;justify-content:center;
     cursor:pointer;position:relative;border:1px solid var(--border);
   }
   .miniFoto:hover{border-color:var(--brown-soft);}
@@ -190,10 +197,10 @@
   .miniFoto .miniIcono{font-size:17px;opacity:.5;}
   .miniFoto.subiendo{opacity:.55;cursor:wait;pointer-events:none;}
   .miniFoto.subiendo .miniIcono{font-size:10px;opacity:.85;}
-  .fichaT.apagada{opacity:.62;background:#FBF7F3;}
+  .fichaT.apagada{opacity:.62;background:#F7F6F4;}
   .fichaT .infoT{flex:1;min-width:0;}
   .fichaT .nomT{
-    font-size:14px;font-weight:600;color:var(--brown);line-height:1.3;
+    font-size:14px;font-weight:500;color:var(--brown);line-height:1.3;
     overflow-wrap:anywhere;
   }
   .fichaT .metaT{font-size:12px;color:var(--brown-soft);margin-top:3px;}
@@ -302,7 +309,7 @@
   nav.tabs button.tab{
     background:transparent;
     color:var(--brown-soft);
-    font-weight:600;
+    font-weight:500;
     padding:8px 14px;
     border-radius:8px;
   }
@@ -324,10 +331,10 @@
     background:var(--surface);
     border:1px solid var(--border);
     border-radius:12px;
-    padding:16px;
+    padding:18px;
   }
-  .tarjeta .etiqueta{font-size:12px;color:var(--brown-soft);margin:0 0 6px;}
-  .tarjeta .valor{font-size:24px;font-weight:700;margin:0;}
+  .tarjeta .etiqueta{font-size:13px;color:var(--brown-soft);margin:0 0 6px;}
+  .tarjeta .valor{font-size:24px;font-weight:500;margin:0;font-variant-numeric:tabular-nums;}
 
   .panel{
     background:var(--surface);
@@ -336,13 +343,13 @@
     padding:20px;
     margin-bottom:20px;
   }
-  .panel h2{font-size:16px;margin:0 0 14px;}
+  .panel h2{font-size:16px;font-weight:500;margin:0 0 16px;}
   .filaBotones{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
 
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th, td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
-  th{color:var(--brown-soft);font-weight:600;background:var(--bg);}
-  tr:hover td{background:#fffaf5;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;}
+  th, td{text-align:left;padding:10px;border-bottom:1px solid var(--border);}
+  th{color:var(--brown-soft);font-weight:500;background:var(--bg);}
+  tr:hover td{background:#FAF9F8;}
   .vacio{padding:24px;text-align:center;color:var(--brown-soft);font-size:13px;}
 
   .formulario{
