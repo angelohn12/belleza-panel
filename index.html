@@ -1350,7 +1350,14 @@ function calcularSaldo() {
     const monto = Number(m.monto) || 0;
     if (m.tipo === 'gasto') saldo -= monto; else saldo += monto;
   });
-  estado.ventas.forEach(v => { saldo += Number(v.precioVenta) || 0; });
+  // Ventas de contado: el efectivo entra completo en el momento de la venta.
+  // Ventas "A pagos": el efectivo NO entra por el precio de venta, sino poco a poco
+  // vía la hoja Abonos (ver abajo) — sumar precioVenta aquí duplicaba lo que ya
+  // faltaba por cobrar como si ya estuviera en caja.
+  estado.ventas.forEach(v => {
+    if (v.formaPago !== 'A pagos') saldo += Number(v.precioVenta) || 0;
+  });
+  estado.abonos.forEach(a => { saldo += Number(a.monto) || 0; });
   return saldo;
 }
 
