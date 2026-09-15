@@ -1011,13 +1011,26 @@ const CAMPO_POR_HOJA = {
   Contenido: 'contenido', Pedidos: 'pedidos', Solicitudes: 'solicitudes'
 };
 
+// Acciones que reescriben una fila que ya existe (o que no pasa nada si se
+// repiten): repetirlas ante una caída de red deja el mismo resultado final,
+// nunca un duplicado. 'agregar_fila' queda afuera a propósito: si la primera
+// llamada sí había llegado a Apps Script, repetirla duplicaría la venta/el
+// producto/el cliente.
+const ACCIONES_SEGURAS_PARA_REINTENTAR = new Set(['editar_fila', 'eliminar_fila', 'marcar_eliminado', 'restaurar_fila']);
+
 // Si el fetch falla (sin internet, el proxy tarda demasiado, la respuesta no
 // es JSON válido) esto ANTES se colaba como una excepción sin capturar en
 // cada pantalla que guarda algo — el botón "Guardar" no hacía nada, sin
 // ningún aviso, y parecía que el precio/dato simplemente no se guardó.
 // Ahora se atrapa acá UNA sola vez y se devuelve el mismo { ok:false, error }
 // que ya todas las pantallas saben mostrar con mostrarToast('Error: ...').
-async function apiPost(cuerpo) {
+//
+// `reintentar=true` le da UNA segunda oportunidad antes de rendirse, pero
+// solo cuando quien llama ya confirmó (ver ACCIONES_SEGURAS_PARA_REINTENTAR)
+// que repetir la operación es inofensivo. Apps Script es lento de por sí
+// (6-20 s) y a veces se pasa de eso; para una edición, reintentar en vez de
+// obligar a Anyelo a volver a apretar "Guardar" no tiene ningún riesgo.
+async function apiPost(cuerpo, reintentar) {
   try {
     const res = await fetch(CONFIG.API_URL, {
       method: 'POST',
@@ -1025,6 +1038,7 @@ async function apiPost(cuerpo) {
     });
     return await res.json();
   } catch (err) {
+    if (reintentar) return apiPost(cuerpo, false);
     return {
       ok: false,
       error: 'No se pudo conectar con el servidor. Revisá tu conexión e intentá guardar de nuevo.',
@@ -1047,20 +1061,25 @@ async function apiPost(cuerpo) {
 // Importante: si el lote falla por RED (no sabemos si llegó a ejecutarse), NO
 // se reintenta de a una — repetir un agregar_fila que sí había entrado
 // duplicaría la venta. En ese caso se reporta la falla, como cualquier otro
-// guardado que no se pudo confirmar.
+// guardado que no se pudo confirmar. La excepción es cuando TODAS las
+// operaciones del lote son de las seguras (p. ej. editar una venta ya
+// existente + ajustar el stock de un producto): ahí sí vale la pena
+// reintentar el lote entero una vez.
 async function apiLote(operaciones) {
   if (!operaciones || !operaciones.length) return { ok: true, resultados: [] };
+  const todasSeguras = operaciones.every(op => ACCIONES_SEGURAS_PARA_REINTENTAR.has(op && op.accion));
+
   if (operaciones.length === 1) {
-    const unico = await apiPost(operaciones[0]);
+    const unico = await apiPost(operaciones[0], todasSeguras);
     return { ok: !!unico.ok, resultados: [unico], error: unico.error };
   }
 
-  const res = await apiPost({ accion: 'lote', operaciones });
+  const res = await apiPost({ accion: 'lote', operaciones }, todasSeguras);
   if (res && Array.isArray(res.resultados)) return res;
 
   if (res && /accion desconocida/i.test(String(res.error || ''))) {
     const resultados = [];
-    for (const op of operaciones) resultados.push(await apiPost(op));
+    for (const op of operaciones) resultados.push(await apiPost(op, todasSeguras));
     return { ok: resultados.every(r => r && r.ok), resultados };
   }
 
@@ -2009,7 +2028,7 @@ function renderEncargos() {
 async function marcarAvisada(id) {
   const s = estado.solicitudes.find(x => String(x.id) === String(id));
   if (!s) return;
-  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Avisado' } });
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Avisado' } }, true);
   if (res.ok) { mostrarToast('Marcada como avisada.'); await cargarDatos(true, ['Solicitudes']); }
   else mostrarToast('Error: ' + res.error);
 }
@@ -2017,7 +2036,7 @@ async function marcarAvisada(id) {
 async function marcarProcedio(id) {
   const s = estado.solicitudes.find(x => String(x.id) === String(id));
   if (!s) return;
-  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Procedió' } });
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'Procedió' } }, true);
   if (res.ok) { mostrarToast('✅ Cliente procedió con el encargo.'); await cargarDatos(true, ['Solicitudes']); }
   else mostrarToast('Error: ' + res.error);
 }
@@ -2025,7 +2044,7 @@ async function marcarProcedio(id) {
 async function marcarNoProcedio(id) {
   const s = estado.solicitudes.find(x => String(x.id) === String(id));
   if (!s) return;
-  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'No procedió' } });
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Solicitudes', id: s.id, fila: { ...s, estado: 'No procedió' } }, true);
   if (res.ok) { mostrarToast('❌ Cliente rechazó el encargo.'); await cargarDatos(true, ['Solicitudes']); }
   else mostrarToast('Error: ' + res.error);
 }
@@ -2271,7 +2290,7 @@ async function visibilidadEnLote(mostrar) {
 
   mostrarToast(`Guardando ${afectados.length}…`);
   for (const p of afectados) {
-    const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: { ...p, publicado: objetivo } });
+    const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: { ...p, publicado: objetivo } }, true);
     if (res.ok) p.publicado = objetivo;
   }
   renderTienda();
@@ -2284,7 +2303,7 @@ async function ocultarSinStock() {
   if (!confirm(`Ocultar ${afectados.length} producto(s) sin stock?`)) return;
 
   for (const p of afectados) {
-    const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: { ...p, publicado: 'No' } });
+    const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: { ...p, publicado: 'No' } }, true);
     if (res.ok) p.publicado = 'No';
   }
   renderTienda();
