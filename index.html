@@ -347,6 +347,7 @@
   .filaBotones{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
 
   .tablaScroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .formulario{scroll-margin-top:16px;} /* aire arriba al subir al formulario */
   table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;}
   th, td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);}
   th{color:var(--brown-soft);font-weight:500;background:var(--bg);}
@@ -2612,7 +2613,7 @@ function nuevoProducto() {
   actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar producto';
-  document.getElementById('formProducto').classList.remove('oculto');
+  abrirFormulario('formProducto');
 }
 
 function editarProducto(id) {
@@ -2647,7 +2648,7 @@ function editarProducto(id) {
   actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
-  document.getElementById('formProducto').classList.remove('oculto');
+  abrirFormulario('formProducto');
 }
 
 // Botón "Cancelar" de los formularios: cierra sin guardar nada. Lo que se
@@ -2661,6 +2662,20 @@ const SOLTAR_EDICION = {
   formMovimiento: () => { movimientoEditando = null; },
   formContenido:  () => { publicacionEditando = null; }
 };
+// Muestra un formulario y lo lleva a la vista: al tocar "Editar" en una fila
+// de abajo de la tabla, la página sube sola hasta el formulario (antes había
+// que subir a mano para ver si se había tocado el botón correcto). El cursor
+// queda en el primer campo, listo para escribir.
+function abrirFormulario(idFormulario) {
+  const formulario = document.getElementById(idFormulario);
+  formulario.classList.remove('oculto');
+  formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // En celular no: enfocar un campo abre el teclado aunque solo se quiera mirar.
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
+  const primero = formulario.querySelector('input:not([type=hidden]):not([type=checkbox]):not([readonly]), select, textarea');
+  if (primero) primero.focus({ preventScroll: true });
+}
+
 function cancelarFormulario(idFormulario) {
   if (SOLTAR_EDICION[idFormulario]) SOLTAR_EDICION[idFormulario]();
   document.getElementById(idFormulario).classList.add('oculto');
@@ -2939,7 +2954,7 @@ function nuevoCliente() {
   document.getElementById('cTelefono').value = '';
   document.getElementById('cNotas').value = '';
   document.getElementById('btnGuardarCliente').textContent = 'Guardar cliente';
-  document.getElementById('formCliente').classList.remove('oculto');
+  abrirFormulario('formCliente');
 }
 
 function editarCliente(id) {
@@ -2952,7 +2967,7 @@ function editarCliente(id) {
   document.getElementById('cCanal').value = c.canalPreferido || 'WhatsApp';
   document.getElementById('cNotas').value = c.notas || '';
   document.getElementById('btnGuardarCliente').textContent = 'Guardar cambios';
-  document.getElementById('formCliente').classList.remove('oculto');
+  abrirFormulario('formCliente');
 }
 
 async function eliminarCliente(id) {
@@ -3128,7 +3143,7 @@ function nuevaVenta() {
   document.getElementById('vCantidadRegalo').value = 1;
   alternarRegaloVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar venta';
-  document.getElementById('formVenta').classList.remove('oculto');
+  abrirFormulario('formVenta');
 }
 
 // Regalía suelta: mismo formulario que una venta, pero sin cliente obligatorio
@@ -3158,7 +3173,7 @@ function editarVenta(id) {
   document.getElementById('vTieneRegalo').checked = false;
   alternarRegaloVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar cambios';
-  document.getElementById('formVenta').classList.remove('oculto');
+  abrirFormulario('formVenta');
 }
 
 function nombreProducto(id) {
@@ -3440,7 +3455,7 @@ function nuevoMovimiento() {
   document.getElementById('mCategoria').value = '';
   document.getElementById('mDescripcion').value = '';
   document.getElementById('btnGuardarMovimiento').textContent = 'Guardar movimiento';
-  document.getElementById('formMovimiento').classList.remove('oculto');
+  abrirFormulario('formMovimiento');
 }
 
 function editarMovimiento(id) {
@@ -3452,7 +3467,7 @@ function editarMovimiento(id) {
   document.getElementById('mCategoria').value = m.categoria || '';
   document.getElementById('mDescripcion').value = m.descripcion || '';
   document.getElementById('btnGuardarMovimiento').textContent = 'Guardar cambios';
-  document.getElementById('formMovimiento').classList.remove('oculto');
+  abrirFormulario('formMovimiento');
 }
 
 async function eliminarMovimiento(id) {
@@ -3514,7 +3529,7 @@ function nuevaPublicacion() {
   document.getElementById('ktDescripcion').value = '';
   document.getElementById('ktNotas').value = '';
   document.getElementById('btnGuardarContenido').textContent = 'Guardar publicación';
-  document.getElementById('formContenido').classList.remove('oculto');
+  abrirFormulario('formContenido');
 }
 
 function editarPublicacion(id) {
@@ -3529,7 +3544,7 @@ function editarPublicacion(id) {
   document.getElementById('ktDescripcion').value = k.descripcion || '';
   document.getElementById('ktNotas').value = k.notas || '';
   document.getElementById('btnGuardarContenido').textContent = 'Guardar cambios';
-  document.getElementById('formContenido').classList.remove('oculto');
+  abrirFormulario('formContenido');
 }
 
 async function eliminarPublicacion(id) {
