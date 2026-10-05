@@ -1700,7 +1700,7 @@ function renderProductos() {
            <span style="color:#A5323F;font-weight:700">${formatoColones(precioFinal)}</span>
            <span class="pastilla roja" style="margin-left:4px">-${Number(p.descuento)}%</span>`
         : formatoColones(p.precioVenta))
-        + (Number(p.precioMayorista) > 0 && p.modalidad !== 'encargo'
+        + (Number(p.precioMayorista) > 0
           ? `<br><span style="color:#1f4a30;font-size:12px;font-weight:600">Mayor ${formatoColones(precioConDescuento(p.precioMayorista, p.descuentoMayorista))}${Number(p.descuentoMayorista) > 0 ? ` (-${Number(p.descuentoMayorista)}%)` : ''}</span>`
           : '');
       return [
@@ -2552,10 +2552,9 @@ function actualizarCamposPorModalidad() {
   modalidadProducto = unidades > 0 ? 'stock' : 'encargo';
   const esEncargo = modalidadProducto === 'encargo';
   document.getElementById('pAyudaStock').textContent = esEncargo ? 'Con 0 sale como "Por encargo" en la tienda.' : '';
-  // Al por mayor solo se vende lo que está en stock (entrega inmediata)
-  document.getElementById('pCampoMayorista')?.classList.toggle('oculto', esEncargo);
-  document.getElementById('pCampoDescuentoMayorista')?.classList.toggle('oculto', esEncargo);
-  document.getElementById('pAyudaMayorista')?.parentElement.classList.toggle('oculto', esEncargo);
+  // El precio mayorista se puede poner siempre, aunque el producto esté por
+  // encargo: así queda listo para cuando llegue. (En la tienda solo se cobra
+  // al por mayor lo que está en stock — eso lo decide el servidor.)
   document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
 }
 
@@ -2675,6 +2674,15 @@ async function guardarProducto() {
     const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
     const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
 
+    // El precio mayorista también se guarda en un encargo (queda listo para
+    // cuando llegue), con las mismas reglas que en un producto en stock.
+    const precioVenta = parseMonto(document.getElementById('pPrecioVenta').value);
+    const descuento = Number(document.getElementById('pDescuento').value) || 0;
+    const precioMayorista = Math.round(parseMonto(document.getElementById('pPrecioMayorista').value));
+    const descuentoMayorista = Number(document.getElementById('pDescuentoMayorista').value) || 0;
+    const problema = problemaPrecioMayorista(precioConDescuento(precioMayorista, descuentoMayorista), precioConDescuento(precioVenta, descuento), costoTotalCRC);
+    if (problema) { mostrarToast('Precio mayorista: ' + problema); return; }
+
     fila = {
       ...original,
       id: productoEditando || '',
@@ -2685,8 +2693,10 @@ async function guardarProducto() {
       costoCompra: costo,
       tipoCambio: moneda === 'USD' ? tipoCambio : '',
       costoTotalCRC,
-      precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
-      descuento: Number(document.getElementById('pDescuento').value) || 0,
+      precioVenta,
+      descuento,
+      precioMayorista: precioMayorista > 0 ? precioMayorista : '',
+      descuentoMayorista: precioMayorista > 0 ? descuentoMayorista : 0,
       stock: 0,
       estado: 'Por encargo',
       moneda,
@@ -2774,11 +2784,9 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   const nuevoPrecio = Number(filaGuardada.precioVenta) || 0;
   const nuevoCosto = Number(filaGuardada.costoCompra) || 0;
   const nuevoDescuento = Number(filaGuardada.descuento) || 0;
-  // El precio mayorista solo se copia cuando se guarda un tono EN STOCK. Un
-  // tono por encargo no tiene campo de mayorista en el formulario: si se
-  // copiara desde ahí, les borraría el precio mayorista a los tonos que sí
-  // están en stock.
-  const copiarMayorista = filaGuardada.modalidad !== 'encargo';
+  // El formulario muestra el precio mayorista en todos los tonos (en stock o
+  // por encargo), así que lo que tenga al guardar es lo que se quiso poner.
+  const copiarMayorista = true;
   const nuevoMayorista = Number(filaGuardada.precioMayorista) || 0;
   const nuevoDescMayorista = Number(filaGuardada.descuentoMayorista) || 0;
   const hermanos = estado.productos.filter(p =>
