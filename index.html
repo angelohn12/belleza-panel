@@ -348,7 +348,7 @@
 
   .tablaScroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;}
-  th, td{text-align:left;padding:10px;border-bottom:1px solid var(--border);}
+  th, td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);}
   th{color:var(--brown-soft);font-weight:500;background:var(--bg);}
   tr:hover td{background:#FAF9F8;}
   .vacio{padding:24px;text-align:center;color:var(--brown-soft);font-size:13px;}
@@ -1452,7 +1452,9 @@ function tablaSimple(encabezados, filas) {
 
 function botonesAccion(fnEditar, fnEliminar, id) {
   const editar = fnEditar ? `<button class="secundario" style="padding:4px 10px;font-size:12px;" onclick="${fnEditar}(${id})">Editar</button>` : '';
-  return `<div style="display:flex;gap:6px;">
+  // flex-wrap: si la tabla no tiene espacio, Eliminar baja debajo de Editar
+  // en vez de empujar la tabla fuera del recuadro.
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;">
     ${editar}
     <button class="secundario" style="padding:4px 10px;font-size:12px;color:#A5323F;border-color:#A5323F;" onclick="ejecutarConBotonElemento(this, () => ${fnEliminar}(${id}))">Eliminar</button>
   </div>`;
