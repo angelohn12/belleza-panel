@@ -534,13 +534,7 @@
         <div class="formulario oculto" id="formProducto">
           <div>
             <label>Nombre</label>
-            <input id="pNombre" placeholder="Rubor crema y polvo" />
-            <p class="ayudaTienda" style="margin:4px 0 0">
-              Siempre en español: qué tipo de producto es ("Rubor crema y polvo", "Base de maquillaje",
-              "Primer"). Si el producto tiene un nombre de línea pegajoso que la clienta reconoce de redes
-              sociales (ej. "Easy Bake"), ponelo antes con un guión: <b>"Easy Bake — Polvo suelto fijador"</b>.
-              La marca ya se muestra aparte, no hace falta repetirla acá.
-            </p>
+            <input id="pNombre" placeholder="En español. Ej: Easy Bake — Polvo suelto" />
           </div>
           <div><label>Categoría</label>
             <select id="pCategoria">
@@ -551,11 +545,7 @@
           </div>
           <div>
             <label>Tono / color (opcional)</label>
-            <input id="pTono" placeholder="Espresso, Rose Envy, Cherry Cola…" />
-            <p class="ayudaTienda" style="margin:4px 0 0">
-              Siempre en inglés, tal cual lo llama la marca — copiá el nombre del tono directo del sitio
-              donde comprás (Amazon, Sephora, etc.), sin traducirlo.
-            </p>
+            <input id="pTono" placeholder="En inglés, como la marca. Ej: Espresso" />
           </div>
           <div><label>Marca</label><select id="pMarca" onchange="alternarMarcaNueva()"></select></div>
           <div id="pMarcaNuevaWrap" class="oculto"><label>Nombre de la marca nueva</label><input id="pMarcaNueva" placeholder="Ej: Fenty Beauty" /></div>
@@ -607,20 +597,20 @@
             <p class="ayudaTienda" id="pAyudaDescuento" style="margin:6px 0 0"></p>
           </div>
           <div id="pCampoMayorista" class="campoAncho">
-            <label>Precio mayorista por unidad (₡) — opcional</label>
-            <input id="pPrecioMayorista" type="text" inputmode="decimal" placeholder="Vacío = este producto no se vende al por mayor" oninput="actualizarVistaMayorista()" />
+            <label>Precio mayorista por unidad (₡)</label>
+            <div class="filtrosTienda" style="margin:4px 0 0">
+              <button type="button" class="chipT activo" id="modoMayorManual" onclick="elegirModoMayorista('manual')">Precio manual</button>
+              <button type="button" class="chipT" id="modoMayorMargen" onclick="elegirModoMayorista('margen')">Elegir % de ganancia</button>
+            </div>
+            <select id="pMargenMayorPct" class="oculto" style="margin-top:8px" onchange="actualizarVistaMayorista()"></select>
+            <input id="pPrecioMayorista" type="text" inputmode="decimal" placeholder="Ej: 6000" style="margin-top:8px" oninput="actualizarVistaMayorista()" />
             <p class="ayudaTienda" id="pAyudaMayorista" style="margin:6px 0 0"></p>
           </div>
           <div class="campoAncho">
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
               <input type="checkbox" id="pAplicarATonos" checked style="width:auto">
-              Aplicar este costo, precio, descuento y precio mayorista a los demás tonos de este producto
+              Aplicar costo y precios a los demás tonos
             </label>
-            <p class="ayudaTienda" style="margin:6px 0 0">
-              Si este producto tiene más tonos (mismo nombre y marca) con costo, precio, descuento o precio mayorista
-              distinto, se les pone igual al guardar — así no hay que repetirlo tono por tono. Desmarcá esto si este tono
-              en particular costó, se vende o tiene un descuento distinto a los demás.
-            </p>
           </div>
           <div id="pCampoStock">
             <label>Unidades en inventario</label>
@@ -631,10 +621,6 @@
           <div class="campoAncho">
             <label>Qué es y para qué sirve (opcional)</label>
             <input id="pDescripcion" placeholder="Ej: Rubor en crema de larga duración, ideal para un efecto natural." />
-            <p class="ayudaTienda" style="margin:6px 0 0">
-              Esto se ve en la ficha del producto cuando la clienta lo toca en la tienda. Si lo dejás vacío,
-              simplemente no se muestra esa parte — no es obligatorio.
-            </p>
           </div>
           <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
             <button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button>
@@ -2445,26 +2431,54 @@ function costoFormularioCRC() {
 // precioMayoristaValido() en Code.gs: el servidor tampoco lo ofrecería.
 function problemaPrecioMayorista(mayorista, precioNormal, costo) {
   if (!(mayorista > 0)) return '';
-  if (costo > 0 && mayorista < costo) return `Queda por debajo del costo (${formatoColones(costo)}): perderías plata en cada unidad.`;
+  if (costo > 0 && mayorista < costo) return `Queda por debajo del costo (${formatoColones(costo)}).`;
   if (precioNormal > 0 && mayorista >= precioNormal) return `Tiene que ser menor que el precio normal (${formatoColones(precioNormal)}).`;
   return '';
 }
 
+// Igual que el precio de venta: se escribe a mano, o se elige un % de
+// ganancia sobre el costo y el precio se calcula solo. Lo que se guarda
+// siempre es el precio que quedó (un número fijo), no el %.
+let modoMayorista = 'manual';
+function elegirModoMayorista(m) {
+  const sel = document.getElementById('pMargenMayorPct');
+  if (!sel.options.length) {
+    let html = '';
+    for (let pct = 5; pct <= 100; pct += 5) html += `<option value="${pct}">${pct}% de ganancia</option>`;
+    sel.innerHTML = html;
+    sel.value = '20';
+  }
+  modoMayorista = m === 'margen' ? 'margen' : 'manual';
+  document.getElementById('modoMayorManual').classList.toggle('activo', modoMayorista === 'manual');
+  document.getElementById('modoMayorMargen').classList.toggle('activo', modoMayorista === 'margen');
+  sel.classList.toggle('oculto', modoMayorista === 'manual');
+  document.getElementById('pPrecioMayorista').readOnly = modoMayorista === 'margen';
+  actualizarVistaMayorista();
+}
+
 // Ayuda bajo el campo: cuánto es de descuento contra el precio normal y
 // cuánto se gana por unidad, para decidir el precio con los dos números.
+// En modo "% de ganancia" también llena el precio (costo + %).
 function actualizarVistaMayorista() {
   const ayuda = document.getElementById('pAyudaMayorista');
   if (!ayuda) return;
+  const costo = costoFormularioCRC();
+  if (modoMayorista === 'margen') {
+    const pct = Number(document.getElementById('pMargenMayorPct').value) || 0;
+    document.getElementById('pPrecioMayorista').value = costo > 0 ? Math.round(costo * (1 + pct / 100)) : '';
+    if (!(costo > 0)) {
+      ayuda.style.color = '#A5323F';
+      ayuda.textContent = 'Escribí primero el costo de compra.';
+      return;
+    }
+  }
   const mayorista = parseMonto(document.getElementById('pPrecioMayorista').value);
   const precioNormal = precioConDescuento(
     parseMonto(document.getElementById('pPrecioVenta').value),
     Number(document.getElementById('pDescuento').value) || 0);
-  const costo = costoFormularioCRC();
-  const minimo = Number(valorConfig('minimoMayorista', 3)) || 3;
 
   if (!(mayorista > 0)) {
-    ayuda.style.color = '';
-    ayuda.textContent = `Si le ponés precio, en la tienda se ofrece al por mayor desde ${minimo} unidades de este producto (sumando tonos).`;
+    ayuda.textContent = '';
     return;
   }
   const problema = problemaPrecioMayorista(mayorista, precioNormal, costo);
@@ -2474,8 +2488,8 @@ function actualizarVistaMayorista() {
     return;
   }
   const partes = [];
-  if (precioNormal > 0) partes.push(`${Math.round((1 - mayorista / precioNormal) * 100)}% menos que el precio normal (${formatoColones(precioNormal)})`);
-  if (costo > 0) partes.push(`ganás ${formatoColones(mayorista - costo)} por unidad`);
+  if (precioNormal > 0) partes.push(`${Math.round((1 - mayorista / precioNormal) * 100)}% menos que el precio normal`);
+  if (costo > 0) partes.push(`ganás ${formatoColones(mayorista - costo)} c/u`);
   ayuda.style.color = '#1f4a30';
   ayuda.textContent = partes.join(' · ');
 }
@@ -2514,9 +2528,7 @@ function actualizarCamposPorModalidad() {
   const unidades = Number(document.getElementById('pStock').value) || 0;
   modalidadProducto = unidades > 0 ? 'stock' : 'encargo';
   const esEncargo = modalidadProducto === 'encargo';
-  document.getElementById('pAyudaStock').textContent = esEncargo
-    ? 'Con 0 se muestra en la tienda como "Por encargo": lo pueden pedir, pero no comprar directo.'
-    : 'Se puede comprar directo en la tienda (entrega inmediata).';
+  document.getElementById('pAyudaStock').textContent = esEncargo ? 'Con 0 sale como "Por encargo" en la tienda.' : '';
   // Al por mayor solo se vende lo que está en stock (entrega inmediata)
   document.getElementById('pCampoMayorista')?.classList.toggle('oculto', esEncargo);
   document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
@@ -2525,6 +2537,7 @@ function actualizarCamposPorModalidad() {
 function nuevoProducto() {
   productoEditando = null;
   elegirModoPrecio('manual');
+  elegirModoMayorista('manual');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
   document.getElementById('pMedida').value = '';
@@ -2553,6 +2566,7 @@ function editarProducto(id) {
   if (!p) return;
   productoEditando = id;
   elegirModoPrecio('manual');
+  elegirModoMayorista('manual');
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
