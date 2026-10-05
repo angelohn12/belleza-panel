@@ -587,8 +587,8 @@
               <option value="CRC">Colones (₡)</option>
             </select>
           </div>
-          <div id="pCampoCosto"><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" oninput="recalcularPrecioPorMargen()" /></div>
-          <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" oninput="recalcularPrecioPorMargen()" /></div>
+          <div id="pCampoCosto"><label>Costo de compra</label><input id="pCosto" type="text" inputmode="decimal" placeholder="12.50 o 1500" oninput="recalcularPrecioPorMargen(); actualizarVistaMayorista()" /></div>
+          <div id="pCampoTipoCambio"><label>Tipo de cambio (₡ por $)</label><input id="pTipoCambio" type="number" step="1" value="520" oninput="recalcularPrecioPorMargen(); actualizarVistaMayorista()" /></div>
           <div class="campoAncho">
             <label id="pLabelPrecio">Precio de venta (₡)</label>
             <div class="filtrosTienda" style="margin:4px 0 0">
@@ -617,14 +617,19 @@
             </select>
             <p class="ayudaTienda" id="pAyudaDescuento" style="margin:6px 0 0"></p>
           </div>
+          <div id="pCampoMayorista" class="campoAncho">
+            <label>Precio mayorista por unidad (₡) — opcional</label>
+            <input id="pPrecioMayorista" type="text" inputmode="decimal" placeholder="Vacío = este producto no se vende al por mayor" oninput="actualizarVistaMayorista()" />
+            <p class="ayudaTienda" id="pAyudaMayorista" style="margin:6px 0 0"></p>
+          </div>
           <div class="campoAncho">
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
               <input type="checkbox" id="pAplicarATonos" checked style="width:auto">
-              Aplicar este costo, precio y descuento a los demás tonos de este producto
+              Aplicar este costo, precio, descuento y precio mayorista a los demás tonos de este producto
             </label>
             <p class="ayudaTienda" style="margin:6px 0 0">
-              Si este producto tiene más tonos (mismo nombre y marca) con costo, precio o descuento distinto,
-              se les pone igual al guardar — así no hay que repetirlo tono por tono. Desmarcá esto si este tono
+              Si este producto tiene más tonos (mismo nombre y marca) con costo, precio, descuento o precio mayorista
+              distinto, se les pone igual al guardar — así no hay que repetirlo tono por tono. Desmarcá esto si este tono
               en particular costó, se vende o tiene un descuento distinto a los demás.
             </p>
           </div>
@@ -950,6 +955,11 @@
         <h2>Configuración general</h2>
         <div class="formulario">
           <div><label>Tipo de cambio actual (₡ por $)</label><input id="cfgTipoCambio" type="number" step="1" /></div>
+          <div>
+            <label>Mínimo para precio mayorista</label>
+            <input id="cfgMinimoMayorista" type="number" step="1" min="2" />
+            <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
+          </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
         </div>
       </div>
@@ -1327,6 +1337,7 @@ function renderTodo() {
   llenarSelectorMarcas();
   llenarSelectorClientesAbono();
   document.getElementById('cfgTipoCambio').value = valorConfig('tipoCambio', 520);
+  document.getElementById('cfgMinimoMayorista').value = valorConfig('minimoMayorista', 3);
 }
 
 // ---------- Resumen ----------
@@ -1673,11 +1684,14 @@ function renderProductos() {
       const fotoCelda = p.foto
         ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(p.foto)}" alt="" loading="lazy"></div>`
         : `<div class="miniFoto" style="cursor:default"><span class="miniIcono">📷</span></div>`;
-      const precioCelda = tieneDescuento
+      const precioCelda = (tieneDescuento
         ? `<span style="color:var(--gris,#999);text-decoration:line-through;font-size:12px">${formatoColones(p.precioVenta)}</span><br>
            <span style="color:#A5323F;font-weight:700">${formatoColones(precioFinal)}</span>
            <span class="pastilla roja" style="margin-left:4px">-${Number(p.descuento)}%</span>`
-        : formatoColones(p.precioVenta);
+        : formatoColones(p.precioVenta))
+        + (Number(p.precioMayorista) > 0 && p.modalidad !== 'encargo'
+          ? `<br><span style="color:#1f4a30;font-size:12px;font-weight:600">Mayor ${formatoColones(p.precioMayorista)}</span>`
+          : '');
       return [
         fotoCelda,
         nombreCelda,
@@ -1803,7 +1817,7 @@ function renderPedidos() {
 
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
-        <span class="pedidoNombre">${escaparHtml(p.nombre)}</span>
+        <span class="pedidoNombre">${escaparHtml(p.nombre)}${p.mayoreo === 'Sí' ? ' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : ''}</span>
         <span class="pedidoNum">${escaparHtml(p.numero)} · ${fechaCorta(p.fecha)}</span>
         <span class="pedidoTotal">${formatoColones(p.total)}</span>
       </div>
@@ -1814,7 +1828,7 @@ function renderPedidos() {
       </div>
       ${revisar ? `<div class="pedidoAlerta">${escaparHtml(revisar)}</div>` : ''}
       <div class="pedidoItems">
-        ${items.map(i => `<div><span>${escaparHtml(i.nombre)}${i.tono ? ' · ' + escaparHtml(i.tono) : ''} × ${i.cantidad}</span><span>${formatoColones(i.subtotal)}</span></div>`).join('')}
+        ${items.map(i => `<div><span>${escaparHtml(i.nombre)}${i.tono ? ' · ' + escaparHtml(i.tono) : ''} × ${i.cantidad}${i.tipoPrecio === 'mayor' ? ` <span style="color:#1f4a30;font-weight:600">· mayoreo ${formatoColones(i.precioUnitario)} c/u</span>` : ''}</span><span>${formatoColones(i.subtotal)}</span></div>`).join('')}
       </div>
       <div class="pedidoAcciones">
         <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
@@ -1885,7 +1899,10 @@ async function avanzarPedido(id, nuevoEstado) {
           estadoEntrega: p.entrega === 'retiro' ? 'Retiro' : 'Por enviar',
           // estado.usuario es un objeto { usuario, rol }: mandarlo entero
           // escribía "[object Object]" en la columna usuario de Ventas.
-          usuario: estado.usuario ? estado.usuario.usuario : '', formaPago: 'SINPE'
+          usuario: estado.usuario ? estado.usuario.usuario : '', formaPago: 'SINPE',
+          // Las líneas de un mismo pedido quedan agrupadas por su número
+          tipoPrecio: item.tipoPrecio === 'mayor' ? 'Mayor' : 'Detalle',
+          grupo: p.numero || ''
         }
       });
     }
@@ -2404,6 +2421,55 @@ function actualizarVistaDescuento() {
   ayuda.textContent = pct > 0 && precio > 0
     ? `Precio final en la tienda: ${formatoColones(precioConDescuento(precio, pct))} (antes ${formatoColones(precio)})`
     : '';
+  actualizarVistaMayorista();
+}
+
+// Costo en colones según lo que está escrito ahora en el formulario.
+function costoFormularioCRC() {
+  const costo = parseMonto(document.getElementById('pCosto').value);
+  const moneda = document.getElementById('pMoneda').value;
+  const tipoCambio = Number(document.getElementById('pTipoCambio').value) || 0;
+  return moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
+}
+
+// Revisa el precio mayorista contra el costo y el precio normal. Devuelve
+// el texto del problema, o '' si se puede guardar. Mismas reglas que
+// precioMayoristaValido() en Code.gs: el servidor tampoco lo ofrecería.
+function problemaPrecioMayorista(mayorista, precioNormal, costo) {
+  if (!(mayorista > 0)) return '';
+  if (costo > 0 && mayorista < costo) return `Queda por debajo del costo (${formatoColones(costo)}): perderías plata en cada unidad.`;
+  if (precioNormal > 0 && mayorista >= precioNormal) return `Tiene que ser menor que el precio normal (${formatoColones(precioNormal)}).`;
+  return '';
+}
+
+// Ayuda bajo el campo: cuánto es de descuento contra el precio normal y
+// cuánto se gana por unidad, para decidir el precio con los dos números.
+function actualizarVistaMayorista() {
+  const ayuda = document.getElementById('pAyudaMayorista');
+  if (!ayuda) return;
+  const mayorista = parseMonto(document.getElementById('pPrecioMayorista').value);
+  const precioNormal = precioConDescuento(
+    parseMonto(document.getElementById('pPrecioVenta').value),
+    Number(document.getElementById('pDescuento').value) || 0);
+  const costo = costoFormularioCRC();
+  const minimo = Number(valorConfig('minimoMayorista', 3)) || 3;
+
+  if (!(mayorista > 0)) {
+    ayuda.style.color = '';
+    ayuda.textContent = `Si le ponés precio, en la tienda se ofrece al por mayor desde ${minimo} unidades de este producto (sumando tonos).`;
+    return;
+  }
+  const problema = problemaPrecioMayorista(mayorista, precioNormal, costo);
+  if (problema) {
+    ayuda.style.color = '#A5323F';
+    ayuda.textContent = '⚠ ' + problema;
+    return;
+  }
+  const partes = [];
+  if (precioNormal > 0) partes.push(`${Math.round((1 - mayorista / precioNormal) * 100)}% menos que el precio normal (${formatoColones(precioNormal)})`);
+  if (costo > 0) partes.push(`ganás ${formatoColones(mayorista - costo)} por unidad`);
+  ayuda.style.color = '#1f4a30';
+  ayuda.textContent = partes.join(' · ');
 }
 
 // Si el origen guardado no es uno de los fijos, selecciona "Otro" y lo
@@ -2445,6 +2511,8 @@ function actualizarCamposPorModalidad() {
   // a costar traerlo aunque todavía no lo tengas. Lo único que de verdad no
   // aplica es "Stock inicial": no hay unidades que contar hasta que llegue.
   document.getElementById('pCampoStock')?.classList.toggle('oculto', esEncargo);
+  // Al por mayor solo se vende lo que está en stock (entrega inmediata)
+  document.getElementById('pCampoMayorista')?.classList.toggle('oculto', esEncargo);
   document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
 }
 
@@ -2467,6 +2535,7 @@ function nuevoProducto() {
   document.getElementById('pPrecioVenta').value = '';
   document.getElementById('pStock').value = 1;
   document.getElementById('pDescuento').value = '0';
+  document.getElementById('pPrecioMayorista').value = '';
   actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar producto';
@@ -2497,6 +2566,7 @@ function editarProducto(id) {
   const selDescuento = document.getElementById('pDescuento');
   const descuentoGuardado = String(Number(p.descuento) || 0);
   selDescuento.value = [...selDescuento.options].some(o => o.value === descuentoGuardado) ? descuentoGuardado : '0';
+  document.getElementById('pPrecioMayorista').value = Number(p.precioMayorista) > 0 ? p.precioMayorista : '';
   actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
@@ -2568,6 +2638,12 @@ async function guardarProducto() {
     const costoTotalCRC = moneda === 'USD' ? Math.round(costo * tipoCambio) : Math.round(costo);
     const stock = Number(document.getElementById('pStock').value) || 0;
 
+    const precioVenta = parseMonto(document.getElementById('pPrecioVenta').value);
+    const descuento = Number(document.getElementById('pDescuento').value) || 0;
+    const precioMayorista = Math.round(parseMonto(document.getElementById('pPrecioMayorista').value));
+    const problema = problemaPrecioMayorista(precioMayorista, precioConDescuento(precioVenta, descuento), costoTotalCRC);
+    if (problema) { mostrarToast('Precio mayorista: ' + problema); return; }
+
     fila = {
       ...original,
       id: productoEditando || '',
@@ -2578,8 +2654,9 @@ async function guardarProducto() {
       costoCompra: costo,
       tipoCambio: moneda === 'USD' ? tipoCambio : '',
       costoTotalCRC,
-      precioVenta: parseMonto(document.getElementById('pPrecioVenta').value),
-      descuento: Number(document.getElementById('pDescuento').value) || 0,
+      precioVenta,
+      descuento,
+      precioMayorista: precioMayorista > 0 ? precioMayorista : '',
       stock,
       estado: stock > 0 ? 'Disponible' : 'Agotado',
       moneda,
@@ -2607,7 +2684,7 @@ async function guardarProducto() {
     // cada tono (foto, stock, medida) queda tal cual estaba.
     const idGuardado = productoEditando || resultado.id;
     const aplicarATonos = document.getElementById('pAplicarATonos').checked;
-    if (idGuardado && aplicarATonos && (Number(fila.precioVenta) > 0 || Number(fila.costoCompra) > 0 || Number(fila.descuento) > 0)) {
+    if (idGuardado && aplicarATonos && (Number(fila.precioVenta) > 0 || Number(fila.costoCompra) > 0 || Number(fila.descuento) > 0 || Number(fila.precioMayorista) > 0)) {
       try {
         await aplicarCostoPrecioATonosHermanos(fila, idGuardado);
       } catch (err) {
@@ -2628,10 +2705,17 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   const nuevoPrecio = Number(filaGuardada.precioVenta) || 0;
   const nuevoCosto = Number(filaGuardada.costoCompra) || 0;
   const nuevoDescuento = Number(filaGuardada.descuento) || 0;
+  // El precio mayorista solo se copia cuando se guarda un tono EN STOCK. Un
+  // tono por encargo no tiene campo de mayorista en el formulario: si se
+  // copiara desde ahí, les borraría el precio mayorista a los tonos que sí
+  // están en stock.
+  const copiarMayorista = filaGuardada.modalidad !== 'encargo';
+  const nuevoMayorista = Number(filaGuardada.precioMayorista) || 0;
   const hermanos = estado.productos.filter(p =>
     String(p.id) !== String(idGuardado) &&
     (p.marca || '').trim().toLowerCase() + '|' + (p.nombre || '').trim().toLowerCase() === clave &&
-    (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto || (Number(p.descuento) || 0) !== nuevoDescuento)
+    (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto || (Number(p.descuento) || 0) !== nuevoDescuento ||
+     (copiarMayorista && (Number(p.precioMayorista) || 0) !== nuevoMayorista))
   );
   if (!hermanos.length) return;
 
@@ -2651,6 +2735,7 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
             precioVenta: nuevoPrecio,
             costoCompra: nuevoCosto,
             descuento: nuevoDescuento,
+            ...(copiarMayorista ? { precioMayorista: nuevoMayorista || '' } : {}),
             tipoCambio: filaGuardada.tipoCambio,
             costoTotalCRC: filaGuardada.costoTotalCRC,
             moneda: filaGuardada.moneda
@@ -2678,7 +2763,7 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   }
 
   mostrarToast(fallidos.length === 0
-    ? `Costo, precio y descuento aplicados a los ${ok} tono(s) restantes.`
+    ? `Costo, precio, descuento${copiarMayorista ? ' y precio mayorista' : ''} aplicados a los ${ok} tono(s) restantes.`
     : `Aplicado a ${ok} de ${hermanos.length} tono(s). Faltó: ${fallidos.join(', ')} — guardalos de nuevo para reintentar.`);
 }
 
@@ -2990,7 +3075,9 @@ function renderVentas() {
       const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
       const ganancia = (Number(v.precioVenta) || 0) - costo;
       return [
-        escaparHtml(v.fecha), escaparHtml(nombreCliente(v.clienteId)), escaparHtml(nombreProducto(v.productoId)), v.cantidad,
+        escaparHtml(v.fecha), escaparHtml(nombreCliente(v.clienteId)),
+        escaparHtml(nombreProducto(v.productoId)) + (v.tipoPrecio === 'Mayor' ? ' <span class="pastilla verde">Mayor</span>' : ''),
+        v.cantidad,
         formatoColones(costo), formatoColones(v.precioVenta),
         `<span style="color:${ganancia >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(ganancia)}</span>`,
         escaparHtml(v.canal),
@@ -3105,7 +3192,11 @@ async function guardarVenta() {
     canal: document.getElementById('vCanal').value,
     estadoEntrega: document.getElementById('vEstado').value,
     usuario: ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
-    formaPago
+    formaPago,
+    // editar_fila reescribe la fila completa: sin esto, editar una venta de
+    // un pedido mayorista le borraría la marca "Mayor" y su grupo.
+    tipoPrecio: ventaEditando ? (ventaEditando.tipoPrecio || '') : '',
+    grupo: ventaEditando ? (ventaEditando.grupo || '') : ''
   };
   // Todo lo que hay que escribir (la venta, los ajustes de stock y el regalo)
   // se arma primero y viaja JUNTO en un solo lote. Antes eran hasta 5 llamadas
@@ -3366,9 +3457,12 @@ async function guardarPublicacion() {
 // ---------- Configuración ----------
 
 async function guardarConfig() {
-  const filas = estado.config.filter(c => c.clave !== 'tipoCambio')
+  const minimo = Math.floor(Number(document.getElementById('cfgMinimoMayorista').value) || 0);
+  if (minimo < 2) { mostrarToast('El mínimo para precio mayorista tiene que ser 2 o más.'); return; }
+  const filas = estado.config.filter(c => c.clave !== 'tipoCambio' && c.clave !== 'minimoMayorista')
     .map(c => [c.clave, c.valor]);
   filas.push(['tipoCambio', Number(document.getElementById('cfgTipoCambio').value) || 520]);
+  filas.push(['minimoMayorista', minimo]);
   const resultado = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
   if (resultado.ok) { mostrarToast('Configuración guardada.'); await cargarDatos(true, ['Config']); }
   else mostrarToast('Error: ' + resultado.error);
