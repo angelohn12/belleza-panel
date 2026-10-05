@@ -348,6 +348,8 @@
 
   .tablaScroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .formulario{scroll-margin-top:16px;} /* aire arriba al subir al formulario */
+  @keyframes destelloForm{0%{box-shadow:0 0 0 3px rgba(210,69,88,.55);}100%{box-shadow:0 0 0 3px rgba(210,69,88,0);}}
+  .formulario.destello{animation:destelloForm 1.4s ease-out;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;}
   th, td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);}
   th{color:var(--brown-soft);font-weight:500;background:var(--bg);}
@@ -975,6 +977,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-04 · editar sube al formulario</p>
         </div>
       </div>
     </section>
@@ -2669,7 +2672,14 @@ const SOLTAR_EDICION = {
 function abrirFormulario(idFormulario) {
   const formulario = document.getElementById(idFormulario);
   formulario.classList.remove('oculto');
-  formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Desde el fondo de una lista larga (1.200+ productos son ~120.000 px) la
+  // animación suave puede tardar o trabarse: en ese caso se salta directo.
+  const distancia = Math.abs(formulario.getBoundingClientRect().top);
+  formulario.scrollIntoView({ behavior: distancia > 2500 ? 'auto' : 'smooth', block: 'start' });
+  // Destello corto para que se note a qué formulario se llegó
+  formulario.classList.remove('destello');
+  void formulario.offsetWidth;
+  formulario.classList.add('destello');
   // En celular no: enfocar un campo abre el teclado aunque solo se quiera mirar.
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
   const primero = formulario.querySelector('input:not([type=hidden]):not([type=checkbox]):not([readonly]), select, textarea');
