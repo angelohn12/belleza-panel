@@ -532,17 +532,6 @@
           <button onclick="nuevoProducto()">+ Nuevo producto</button>
         </div>
         <div class="formulario oculto" id="formProducto">
-          <div class="campoAncho">
-            <label>¿Tenés esto en inventario ahora mismo?</label>
-            <div class="filtrosTienda" style="margin:4px 0 0">
-              <button type="button" class="chipT activo" id="modoStockSi" onclick="elegirModalidadProducto('stock')">Sí, tengo stock</button>
-              <button type="button" class="chipT" id="modoStockNo" onclick="elegirModalidadProducto('encargo')">No, es por encargo</button>
-            </div>
-            <p class="ayudaTienda" style="margin:6px 0 0">
-              "Por encargo" lo muestra en la tienda para que lo pidan, pero no resta de ningún inventario ni se
-              puede comprar directo — se coordina por WhatsApp, igual que cualquier otro encargo.
-            </p>
-          </div>
           <div>
             <label>Nombre</label>
             <input id="pNombre" placeholder="Rubor crema y polvo" />
@@ -633,7 +622,11 @@
               en particular costó, se vende o tiene un descuento distinto a los demás.
             </p>
           </div>
-          <div id="pCampoStock"><label>Stock inicial</label><input id="pStock" type="number" step="1" value="1" /></div>
+          <div id="pCampoStock">
+            <label>Unidades en inventario</label>
+            <input id="pStock" type="number" step="1" min="0" value="1" oninput="actualizarCamposPorModalidad()" />
+            <p class="ayudaTienda" id="pAyudaStock" style="margin:6px 0 0"></p>
+          </div>
           <div><label>Contenido / medida (opcional)</label><input id="pMedida" placeholder="10 ml, 50 g, 1 unidad…" /></div>
           <div class="campoAncho">
             <label>Qué es y para qué sirve (opcional)</label>
@@ -643,7 +636,10 @@
               simplemente no se muestra esa parte — no es obligatorio.
             </p>
           </div>
-          <div class="campoAncho"><button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarProducto" onclick="ejecutarConBoton('btnGuardarProducto', guardarProducto)">Guardar producto</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formProducto')">Cancelar</button>
+          </div>
         </div>
         <div class="filaBotones" style="margin-bottom:14px;flex-wrap:wrap">
           <div class="cajaBusqueda">
@@ -814,7 +810,10 @@
           </div>
           <div id="vRegaloProductoWrap" class="oculto"><label>Producto de regalo</label><select id="vProductoRegalo"></select></div>
           <div id="vRegaloCantidadWrap" class="oculto"><label>Cantidad de regalo</label><input id="vCantidadRegalo" type="number" value="1" min="1" /></div>
-          <div class="campoAncho"><button id="btnGuardarVenta" onclick="ejecutarConBoton('btnGuardarVenta', guardarVenta)">Guardar venta</button></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarVenta" onclick="ejecutarConBoton('btnGuardarVenta', guardarVenta)">Guardar venta</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formVenta')">Cancelar</button>
+          </div>
         </div>
         <div id="listaVentas"></div>
       </div>
@@ -850,7 +849,10 @@
             </select>
           </div>
           <div class="campoAncho"><label>Notas</label><input id="cNotas" placeholder="Opcional" /></div>
-          <div class="campoAncho"><button id="btnGuardarCliente" onclick="ejecutarConBoton('btnGuardarCliente', guardarCliente)">Guardar cliente</button></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarCliente" onclick="ejecutarConBoton('btnGuardarCliente', guardarCliente)">Guardar cliente</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formCliente')">Cancelar</button>
+          </div>
         </div>
         <div id="listaClientes"></div>
       </div>
@@ -893,7 +895,10 @@
           <div><label>Monto (₡)</label><input id="mMonto" type="text" inputmode="decimal" /></div>
           <div><label>Categoría</label><input id="mCategoria" placeholder="Compra inventario, envío, etc." /></div>
           <div class="campoAncho"><label>Descripción</label><input id="mDescripcion" placeholder="Opcional" /></div>
-          <div class="campoAncho"><button id="btnGuardarMovimiento" onclick="ejecutarConBoton('btnGuardarMovimiento', guardarMovimiento)">Guardar movimiento</button></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarMovimiento" onclick="ejecutarConBoton('btnGuardarMovimiento', guardarMovimiento)">Guardar movimiento</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formMovimiento')">Cancelar</button>
+          </div>
         </div>
         <div id="listaMovimientos"></div>
       </div>
@@ -943,7 +948,10 @@
           </div>
           <div class="campoAncho"><label>Descripción</label><input id="ktDescripcion" placeholder="Ej: sticker hámster + frase sobre gloss reseco" /></div>
           <div class="campoAncho"><label>Notas (opcional)</label><input id="ktNotas" placeholder="Link, idea de referencia, etc." /></div>
-          <div class="campoAncho"><button id="btnGuardarContenido" onclick="ejecutarConBoton('btnGuardarContenido', guardarPublicacion)">Guardar publicación</button></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarContenido" onclick="ejecutarConBoton('btnGuardarContenido', guardarPublicacion)">Guardar publicación</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formContenido')">Cancelar</button>
+          </div>
         </div>
         <div id="listaContenido"></div>
       </div>
@@ -2496,21 +2504,19 @@ function obtenerOrigenSeleccionado() {
   return sel;
 }
 
+// "En stock" o "por encargo" ya no se pregunta: sale solo de las unidades.
+// 0 unidades = por encargo (la tienda lo muestra para pedirlo, no se compra
+// directo); 1 o más = en stock. Un encargo sí puede tener costo/origen/
+// moneda — sirve para saber cuánto cuesta traerlo aunque todavía no esté.
 let modalidadProducto = 'stock';
 
-function elegirModalidadProducto(m) {
-  modalidadProducto = m === 'encargo' ? 'encargo' : 'stock';
-  document.getElementById('modoStockSi').classList.toggle('activo', modalidadProducto === 'stock');
-  document.getElementById('modoStockNo').classList.toggle('activo', modalidadProducto === 'encargo');
-  actualizarCamposPorModalidad();
-}
-
 function actualizarCamposPorModalidad() {
+  const unidades = Number(document.getElementById('pStock').value) || 0;
+  modalidadProducto = unidades > 0 ? 'stock' : 'encargo';
   const esEncargo = modalidadProducto === 'encargo';
-  // Un encargo sí puede tener costo/origen/moneda — es útil saber cuánto te va
-  // a costar traerlo aunque todavía no lo tengas. Lo único que de verdad no
-  // aplica es "Stock inicial": no hay unidades que contar hasta que llegue.
-  document.getElementById('pCampoStock')?.classList.toggle('oculto', esEncargo);
+  document.getElementById('pAyudaStock').textContent = esEncargo
+    ? 'Con 0 se muestra en la tienda como "Por encargo": lo pueden pedir, pero no comprar directo.'
+    : 'Se puede comprar directo en la tienda (entrega inmediata).';
   // Al por mayor solo se vende lo que está en stock (entrega inmediata)
   document.getElementById('pCampoMayorista')?.classList.toggle('oculto', esEncargo);
   document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
@@ -2518,7 +2524,6 @@ function actualizarCamposPorModalidad() {
 
 function nuevoProducto() {
   productoEditando = null;
-  elegirModalidadProducto('stock');
   elegirModoPrecio('manual');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
@@ -2534,6 +2539,7 @@ function nuevoProducto() {
   document.getElementById('pTipoCambio').value = 520;
   document.getElementById('pPrecioVenta').value = '';
   document.getElementById('pStock').value = 1;
+  actualizarCamposPorModalidad();
   document.getElementById('pDescuento').value = '0';
   document.getElementById('pPrecioMayorista').value = '';
   actualizarVistaDescuento();
@@ -2546,7 +2552,6 @@ function editarProducto(id) {
   const p = estado.productos.find(x => String(x.id) === String(id));
   if (!p) return;
   productoEditando = id;
-  elegirModalidadProducto(p.modalidad === 'encargo' ? 'encargo' : 'stock');
   elegirModoPrecio('manual');
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
@@ -2562,7 +2567,8 @@ function editarProducto(id) {
   document.getElementById('pCosto').value = p.costoCompra || '';
   document.getElementById('pTipoCambio').value = p.tipoCambio || 520;
   document.getElementById('pPrecioVenta').value = p.precioVenta || '';
-  document.getElementById('pStock').value = p.stock || 0;
+  document.getElementById('pStock').value = Math.max(Number(p.stock) || 0, 0);
+  actualizarCamposPorModalidad();
   const selDescuento = document.getElementById('pDescuento');
   const descuentoGuardado = String(Number(p.descuento) || 0);
   selDescuento.value = [...selDescuento.options].some(o => o.value === descuentoGuardado) ? descuentoGuardado : '0';
@@ -2571,6 +2577,22 @@ function editarProducto(id) {
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
   document.getElementById('formProducto').classList.remove('oculto');
+}
+
+// Botón "Cancelar" de los formularios: cierra sin guardar nada. Lo que se
+// haya escrito se descarta — la próxima vez que se abra (nuevo o editar) se
+// vuelve a llenar desde cero. También se suelta el registro que se estaba
+// editando, para que el siguiente "Guardar" no lo pise por error.
+const SOLTAR_EDICION = {
+  formProducto:   () => { productoEditando = null; },
+  formVenta:      () => { ventaEditando = null; },
+  formCliente:    () => { clienteEditando = null; },
+  formMovimiento: () => { movimientoEditando = null; },
+  formContenido:  () => { publicacionEditando = null; }
+};
+function cancelarFormulario(idFormulario) {
+  if (SOLTAR_EDICION[idFormulario]) SOLTAR_EDICION[idFormulario]();
+  document.getElementById(idFormulario).classList.add('oculto');
 }
 
 async function eliminarProducto(id) {
@@ -2597,6 +2619,7 @@ async function guardarProducto() {
     ? (estado.productos.find(p => String(p.id) === String(productoEditando)) || {})
     : {};
 
+  actualizarCamposPorModalidad(); // 0 unidades = por encargo, 1+ = en stock
   const esEncargo = modalidadProducto === 'encargo';
   let fila;
 
