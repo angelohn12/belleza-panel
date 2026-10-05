@@ -1706,7 +1706,7 @@ function renderProductos() {
         ? `<span style="color:var(--gris,#999);text-decoration:line-through;font-size:12px">${formatoColones(p.precioVenta)}</span><br>
            <span style="color:#A5323F;font-weight:700">${formatoColones(precioFinal)}</span>
            <span class="pastilla roja" style="margin-left:4px">-${Number(p.descuento)}%</span>`
-        : formatoColones(p.precioVenta))
+        : `<span style="font-weight:700">${formatoColones(p.precioVenta)}</span>`)
         + lineaGanancia(margen, costo);
       // Columna propia para ver de un vistazo qué productos ya tienen precio
       // mayorista y cuáles no ("—"). Con descuento: el de antes tachado + final.
@@ -1724,7 +1724,9 @@ function renderProductos() {
       return [
         fotoCelda,
         nombreCelda,
-        p.tono ? escaparHtml(p.tono) : '<span style="color:var(--gris,#999)">—</span>',
+        // Tono con ancho máximo: un nombre de tono largo de algún producto
+        // ensanchaba la columna entera y dejaba espacio en blanco en todas.
+        p.tono ? `<span style="display:inline-block;max-width:96px">${escaparHtml(p.tono)}</span>` : '<span style="color:var(--gris,#999)">—</span>',
         escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), precioCelda, mayoristaCelda,
         p.stock,
         `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`,
@@ -2445,9 +2447,10 @@ function precioConDescuento(precioVenta, descuento) {
 // precio. Sin costo registrado no se muestra (daría una ganancia inventada).
 function lineaGanancia(monto, costo) {
   if (!(Number(costo) > 0)) return '';
+  // nowrap: "ganás ₡2.025" siempre en una sola línea
   return monto >= 0
-    ? `<br><span style="font-size:12px;color:#1f4a30">ganás ${formatoColones(monto)}</span>`
-    : `<br><span style="font-size:12px;color:#A5323F;font-weight:600">perdés ${formatoColones(-monto)}</span>`;
+    ? `<br><span style="font-size:12px;color:#1f4a30;white-space:nowrap">ganás ${formatoColones(monto)}</span>`
+    : `<br><span style="font-size:12px;color:#A5323F;font-weight:600;white-space:nowrap">perdés ${formatoColones(-monto)}</span>`;
 }
 
 function actualizarVistaDescuento() {
