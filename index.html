@@ -604,7 +604,24 @@
             </div>
             <select id="pMargenMayorPct" class="oculto" style="margin-top:8px" onchange="actualizarVistaMayorista()"></select>
             <input id="pPrecioMayorista" type="text" inputmode="decimal" placeholder="Ej: 6000" style="margin-top:8px" oninput="actualizarVistaMayorista()" />
-            <p class="ayudaTienda" id="pAyudaMayorista" style="margin:6px 0 0"></p>
+          </div>
+          <div id="pCampoDescuentoMayorista"><label>Descuento mayorista</label>
+            <select id="pDescuentoMayorista" onchange="actualizarVistaMayorista()">
+              <option value="0">Sin descuento</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+              <option value="15">15%</option>
+              <option value="20">20%</option>
+              <option value="25">25%</option>
+              <option value="30">30%</option>
+              <option value="35">35%</option>
+              <option value="40">40%</option>
+              <option value="45">45%</option>
+              <option value="50">50%</option>
+            </select>
+          </div>
+          <div class="campoAncho" style="margin-top:-6px">
+            <p class="ayudaTienda" id="pAyudaMayorista" style="margin:0"></p>
           </div>
           <div class="campoAncho">
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
@@ -1684,7 +1701,7 @@ function renderProductos() {
            <span class="pastilla roja" style="margin-left:4px">-${Number(p.descuento)}%</span>`
         : formatoColones(p.precioVenta))
         + (Number(p.precioMayorista) > 0 && p.modalidad !== 'encargo'
-          ? `<br><span style="color:#1f4a30;font-size:12px;font-weight:600">Mayor ${formatoColones(p.precioMayorista)}</span>`
+          ? `<br><span style="color:#1f4a30;font-size:12px;font-weight:600">Mayor ${formatoColones(precioConDescuento(p.precioMayorista, p.descuentoMayorista))}${Number(p.descuentoMayorista) > 0 ? ` (-${Number(p.descuentoMayorista)}%)` : ''}</span>`
           : '');
       return [
         fotoCelda,
@@ -2472,7 +2489,10 @@ function actualizarVistaMayorista() {
       return;
     }
   }
-  const mayorista = parseMonto(document.getElementById('pPrecioMayorista').value);
+  const base = parseMonto(document.getElementById('pPrecioMayorista').value);
+  const descMayor = Number(document.getElementById('pDescuentoMayorista').value) || 0;
+  // Lo que se cobra: el mayorista con su descuento (misma cuenta que el normal)
+  const mayorista = precioConDescuento(base, descMayor);
   const precioNormal = precioConDescuento(
     parseMonto(document.getElementById('pPrecioVenta').value),
     Number(document.getElementById('pDescuento').value) || 0);
@@ -2488,7 +2508,10 @@ function actualizarVistaMayorista() {
     return;
   }
   const partes = [];
-  if (precioNormal > 0) partes.push(`${Math.round((1 - mayorista / precioNormal) * 100)}% menos que el precio normal`);
+  if (descMayor > 0) partes.push(`Mayorista final ${formatoColones(mayorista)} (antes ${formatoColones(base)})`);
+  // "más barato" y no "menos que": es cuánto baja el PRECIO para la clienta,
+  // no cuánta ganancia se pierde (eso es el "ganás ₡X c/u").
+  if (precioNormal > 0) partes.push(`${Math.round((1 - mayorista / precioNormal) * 100)}% más barato que el precio normal`);
   if (costo > 0) partes.push(`ganás ${formatoColones(mayorista - costo)} c/u`);
   ayuda.style.color = '#1f4a30';
   ayuda.textContent = partes.join(' · ');
@@ -2531,6 +2554,8 @@ function actualizarCamposPorModalidad() {
   document.getElementById('pAyudaStock').textContent = esEncargo ? 'Con 0 sale como "Por encargo" en la tienda.' : '';
   // Al por mayor solo se vende lo que está en stock (entrega inmediata)
   document.getElementById('pCampoMayorista')?.classList.toggle('oculto', esEncargo);
+  document.getElementById('pCampoDescuentoMayorista')?.classList.toggle('oculto', esEncargo);
+  document.getElementById('pAyudaMayorista')?.parentElement.classList.toggle('oculto', esEncargo);
   document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
 }
 
@@ -2555,6 +2580,7 @@ function nuevoProducto() {
   actualizarCamposPorModalidad();
   document.getElementById('pDescuento').value = '0';
   document.getElementById('pPrecioMayorista').value = '';
+  document.getElementById('pDescuentoMayorista').value = '0';
   actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar producto';
@@ -2587,6 +2613,9 @@ function editarProducto(id) {
   const descuentoGuardado = String(Number(p.descuento) || 0);
   selDescuento.value = [...selDescuento.options].some(o => o.value === descuentoGuardado) ? descuentoGuardado : '0';
   document.getElementById('pPrecioMayorista').value = Number(p.precioMayorista) > 0 ? p.precioMayorista : '';
+  const selDescMayor = document.getElementById('pDescuentoMayorista');
+  const descMayorGuardado = String(Number(p.descuentoMayorista) || 0);
+  selDescMayor.value = [...selDescMayor.options].some(o => o.value === descMayorGuardado) ? descMayorGuardado : '0';
   actualizarVistaDescuento();
   document.getElementById('pAplicarATonos').checked = true;
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
@@ -2678,7 +2707,9 @@ async function guardarProducto() {
     const precioVenta = parseMonto(document.getElementById('pPrecioVenta').value);
     const descuento = Number(document.getElementById('pDescuento').value) || 0;
     const precioMayorista = Math.round(parseMonto(document.getElementById('pPrecioMayorista').value));
-    const problema = problemaPrecioMayorista(precioMayorista, precioConDescuento(precioVenta, descuento), costoTotalCRC);
+    const descuentoMayorista = Number(document.getElementById('pDescuentoMayorista').value) || 0;
+    // Se valida lo que de verdad se cobra: el mayorista ya con su descuento
+    const problema = problemaPrecioMayorista(precioConDescuento(precioMayorista, descuentoMayorista), precioConDescuento(precioVenta, descuento), costoTotalCRC);
     if (problema) { mostrarToast('Precio mayorista: ' + problema); return; }
 
     fila = {
@@ -2694,6 +2725,7 @@ async function guardarProducto() {
       precioVenta,
       descuento,
       precioMayorista: precioMayorista > 0 ? precioMayorista : '',
+      descuentoMayorista: precioMayorista > 0 ? descuentoMayorista : 0,
       stock,
       estado: stock > 0 ? 'Disponible' : 'Agotado',
       moneda,
@@ -2748,11 +2780,12 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   // están en stock.
   const copiarMayorista = filaGuardada.modalidad !== 'encargo';
   const nuevoMayorista = Number(filaGuardada.precioMayorista) || 0;
+  const nuevoDescMayorista = Number(filaGuardada.descuentoMayorista) || 0;
   const hermanos = estado.productos.filter(p =>
     String(p.id) !== String(idGuardado) &&
     (p.marca || '').trim().toLowerCase() + '|' + (p.nombre || '').trim().toLowerCase() === clave &&
     (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto || (Number(p.descuento) || 0) !== nuevoDescuento ||
-     (copiarMayorista && (Number(p.precioMayorista) || 0) !== nuevoMayorista))
+     (copiarMayorista && ((Number(p.precioMayorista) || 0) !== nuevoMayorista || (Number(p.descuentoMayorista) || 0) !== nuevoDescMayorista)))
   );
   if (!hermanos.length) return;
 
@@ -2772,7 +2805,7 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
             precioVenta: nuevoPrecio,
             costoCompra: nuevoCosto,
             descuento: nuevoDescuento,
-            ...(copiarMayorista ? { precioMayorista: nuevoMayorista || '' } : {}),
+            ...(copiarMayorista ? { precioMayorista: nuevoMayorista || '', descuentoMayorista: nuevoDescMayorista } : {}),
             tipoCambio: filaGuardada.tipoCambio,
             costoTotalCRC: filaGuardada.costoTotalCRC,
             moneda: filaGuardada.moneda
