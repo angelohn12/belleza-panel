@@ -669,6 +669,7 @@
           <button class="chipT" data-fi="encargo" onclick="filtrarInventarioEstado('encargo')">Por encargo</button>
           <button class="chipT" data-fi="visibles" onclick="filtrarInventarioEstado('visibles')">Visibles</button>
           <button class="chipT" data-fi="ocultos" onclick="filtrarInventarioEstado('ocultos')">Ocultos</button>
+          <button class="chipT" data-fi="sinMayorista" onclick="filtrarInventarioEstado('sinMayorista')">Sin precio mayorista</button>
           <button class="chipT" data-fi="duplicados" onclick="filtrarInventarioEstado('duplicados')">⚠ Solo duplicados</button>
         </div>
         <p class="ayudaTienda" id="inventarioContador" style="margin:0 0 10px"></p>
@@ -1664,6 +1665,7 @@ function renderProductos() {
       case 'visibles':    return seVeEnLaTienda(p);
       case 'ocultos':     return !seVeEnLaTienda(p);
       case 'duplicados':  return conteoClaves[claveProducto(p)] > 1;
+      case 'sinMayorista': return !(Number(p.precioMayorista) > 0);
       default:            return true;
     }
   });
@@ -1682,7 +1684,7 @@ function renderProductos() {
   }
 
   caja.innerHTML = tablaSimple(
-    ['Foto', 'Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
+    ['Foto', 'Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio venta', 'P. mayorista', 'Margen', 'Stock', 'Estado', 'Tienda', 'Acciones'],
     ordenados.map(p => {
       const costo = Number(p.costoTotalCRC) || 0;
       const tieneDescuento = Number(p.descuento) > 0;
@@ -1699,15 +1701,22 @@ function renderProductos() {
         ? `<span style="color:var(--gris,#999);text-decoration:line-through;font-size:12px">${formatoColones(p.precioVenta)}</span><br>
            <span style="color:#A5323F;font-weight:700">${formatoColones(precioFinal)}</span>
            <span class="pastilla roja" style="margin-left:4px">-${Number(p.descuento)}%</span>`
-        : formatoColones(p.precioVenta))
-        + (Number(p.precioMayorista) > 0
-          ? `<br><span style="color:#1f4a30;font-size:12px;font-weight:600">Mayor ${formatoColones(precioConDescuento(p.precioMayorista, p.descuentoMayorista))}${Number(p.descuentoMayorista) > 0 ? ` (-${Number(p.descuentoMayorista)}%)` : ''}</span>`
-          : '');
+        : formatoColones(p.precioVenta));
+      // Columna propia para ver de un vistazo qué productos ya tienen precio
+      // mayorista y cuáles no ("—"). Con descuento: el de antes tachado + final.
+      const descMayor = Number(p.descuentoMayorista) || 0;
+      const mayoristaCelda = Number(p.precioMayorista) > 0
+        ? (descMayor > 0
+          ? `<span style="color:var(--gris,#999);text-decoration:line-through;font-size:12px">${formatoColones(p.precioMayorista)}</span><br>
+             <span style="color:#1f4a30;font-weight:700">${formatoColones(precioConDescuento(p.precioMayorista, descMayor))}</span>
+             <span class="pastilla roja" style="margin-left:4px">-${descMayor}%</span>`
+          : `<span style="color:#1f4a30;font-weight:700">${formatoColones(p.precioMayorista)}</span>`)
+        : '<span style="color:var(--gris,#999)">—</span>';
       return [
         fotoCelda,
         nombreCelda,
         p.tono ? escaparHtml(p.tono) : '<span style="color:var(--gris,#999)">—</span>',
-        escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), precioCelda,
+        escaparHtml(p.categoria), escaparHtml(p.marca), formatoColones(costo), precioCelda, mayoristaCelda,
         `<span style="color:${margen >= 0 ? '#1f4a30' : '#A5323F'};font-weight:600">${formatoColones(margen)}</span>`,
         p.stock,
         `<span class="badge ${p.stock > 5 ? 'mint' : 'pink'}">${escaparHtml(p.estado || (p.stock > 0 ? 'Disponible' : 'Agotado'))}</span>`,
