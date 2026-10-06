@@ -134,6 +134,52 @@
     padding:8px 11px;border-radius:8px;border:1px solid var(--border);
     font-size:13.5px;background:#fff;color:var(--brown);
   }
+  .estadoFin{font-size:13px;color:var(--brown-soft);}
+
+  /* ---------- Registrar pago de un pedido ---------- */
+  .pagoPedido{
+    border-top:1px solid var(--border);margin-top:12px;padding-top:12px;
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .pagoPedido .titPago{font-size:12px;color:var(--brown-soft);margin-bottom:6px;}
+  .pagoPedido .chequeo{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--brown);cursor:pointer;margin:0;}
+  .pagoPedido .chequeo input{width:auto;}
+
+  /* ---------- Buscador de productos (ventas y regalías) ---------- */
+  .buscadorProd{position:relative;max-width:560px;}
+  .resultadosProd{
+    position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;
+    background:#fff;border:1px solid var(--border);border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.08);max-height:320px;overflow-y:auto;
+  }
+  .resultadoProd{
+    display:flex;justify-content:space-between;gap:12px;align-items:baseline;width:100%;
+    background:#fff;color:var(--brown);border-radius:0;padding:9px 12px;text-align:left;
+    border-bottom:1px solid var(--border);font-weight:400;font-size:13.5px;
+  }
+  .resultadoProd:last-child{border-bottom:none;}
+  .resultadoProd:hover{background:var(--bg);}
+  .resultadoProd:active{transform:none;}
+  .resultadoProd .rpNombre{min-width:0;overflow-wrap:anywhere;}
+  .resultadoProd .rpDato{color:var(--brown-soft);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .resultadosProd .vacio{padding:12px;font-size:13px;}
+
+  .lineasVenta{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .lineaVenta{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    background:var(--bg);border-radius:9px;padding:8px 10px;font-size:13.5px;
+  }
+  .lineaVenta .lvNombre{flex:1 1 220px;min-width:0;overflow-wrap:anywhere;line-height:1.35;}
+  .lineaVenta .lvSub{display:block;font-size:12px;color:var(--brown-soft);}
+  .lineaVenta input{padding:6px 8px;font-variant-numeric:tabular-nums;}
+  .lineaVenta .lvCant{width:68px;}
+  .lineaVenta .lvPrecio{width:110px;}
+  .lineaVenta .lvRegalo{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--brown-soft);margin:0;cursor:pointer;white-space:nowrap;}
+  .lineaVenta .lvRegalo input{width:auto;}
+  .lineaVenta .lvQuitar{background:transparent;color:var(--brown-soft);padding:4px 8px;font-size:18px;line-height:1;}
+  .lineaVenta .lvQuitar:hover{color:var(--coral-dark);background:#fff;}
+  .totalVenta{display:flex;justify-content:flex-end;gap:14px;font-size:14px;padding:4px 10px 0;font-variant-numeric:tabular-nums;color:var(--brown-soft);}
+  .totalVenta strong{font-weight:600;color:var(--brown);}
 
   /* ---------- Tienda: qué ve el público ---------- */
   .ayudaTienda{
@@ -689,19 +735,16 @@
           <button class="secundario" onclick="cargarDatos()">Actualizar</button>
         </div>
         <p class="ayudaTienda">
-          Cuando marcás un pedido como <strong>Pagado</strong>, se descuenta el stock y se registra
-          la venta con su costo y margen. Hasta ese momento el stock queda solo apartado.
+          Al <strong>registrar el pago</strong> se descuenta el stock y se guarda la venta (sin el envío).
         </p>
 
         <div class="resumenTienda" id="resumenPedidos"></div>
 
         <div class="filtrosTienda" style="margin-bottom:16px">
           <button class="chipT activo" data-fp="activos"  onclick="filtrarPedidos('activos')">Por atender</button>
+          <button class="chipT" data-fp="Enviado"   onclick="filtrarPedidos('Enviado')">Completados</button>
+          <button class="chipT" data-fp="Cancelado" onclick="filtrarPedidos('Cancelado')">Cancelados</button>
           <button class="chipT" data-fp="todos"     onclick="filtrarPedidos('todos')">Todos</button>
-          <button class="chipT" data-fp="Nuevo"     onclick="filtrarPedidos('Nuevo')">Nuevos</button>
-          <button class="chipT" data-fp="Contactado" onclick="filtrarPedidos('Contactado')">Contactados</button>
-          <button class="chipT" data-fp="Pagado"    onclick="filtrarPedidos('Pagado')">Pagados</button>
-          <button class="chipT" data-fp="Enviado"   onclick="filtrarPedidos('Enviado')">Enviados</button>
         </div>
 
         <div id="listaPedidos"></div>
@@ -784,9 +827,21 @@
               <option>Otro</option>
             </select>
           </div>
-          <div><label>Producto</label><select id="vProducto" onchange="autocompletarPrecioVenta()"></select></div>
-          <div><label>Cantidad</label><input id="vCantidad" type="number" value="1" min="1" oninput="autocompletarPrecioVenta()" /></div>
-          <div><label>Precio de venta (₡, total)</label><input id="vPrecio" type="text" inputmode="decimal" /></div>
+          <div class="campoAncho">
+            <label>Productos</label>
+            <div class="buscadorProd">
+              <input id="busq-venta" placeholder="Buscar por nombre, marca o tono…" autocomplete="off"
+                     oninput="buscarEnBuscador('venta')" onfocus="buscarEnBuscador('venta')" />
+              <div class="resultadosProd oculto" id="res-venta"></div>
+            </div>
+            <div id="vLineas"></div>
+          </div>
+          <div><label>Precio</label>
+            <select id="vTipoPrecio" onchange="recalcularLineasVenta()">
+              <option value="Detalle">Al detalle</option>
+              <option value="Mayor">Al por mayor</option>
+            </select>
+          </div>
           <div><label>Canal</label>
             <select id="vCanal">
               <option>Instagram</option>
@@ -798,7 +853,7 @@
             </select>
           </div>
           <div><label>Forma de pago</label>
-            <select id="vFormaPago" onchange="alternarRegalia()">
+            <select id="vFormaPago" onchange="renderLineasVenta()">
               <option>Efectivo</option>
               <option>SINPE Móvil</option>
               <option>A pagos</option>
@@ -811,14 +866,6 @@
               <option>Entregado</option>
             </select>
           </div>
-          <div class="campoAncho" style="border-top:1px solid var(--border);padding-top:12px;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-              <input type="checkbox" id="vTieneRegalo" onchange="alternarRegaloVenta()" style="width:auto;" />
-              Agregar un producto de regalo a esta venta
-            </label>
-          </div>
-          <div id="vRegaloProductoWrap" class="oculto"><label>Producto de regalo</label><select id="vProductoRegalo"></select></div>
-          <div id="vRegaloCantidadWrap" class="oculto"><label>Cantidad de regalo</label><input id="vCantidadRegalo" type="number" value="1" min="1" /></div>
           <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
             <button id="btnGuardarVenta" onclick="ejecutarConBoton('btnGuardarVenta', guardarVenta)">Guardar venta</button>
             <button type="button" class="secundario" onclick="cancelarFormulario('formVenta')">Cancelar</button>
@@ -978,7 +1025,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-05b · pedidos: cobro sin duplicar</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-05c · registrar pago y ventas de varios productos</p>
         </div>
       </div>
     </section>
@@ -1813,14 +1860,16 @@ function renderPedidos() {
 
   const todos = estado.pedidos;
   const porEstado = e => todos.filter(p => String(p.estado || '').trim() === e).length;
+  // Lo cobrado en productos: el envío no cuenta, esa plata es de Correos o
+  // de la mensajería.
   const cobrado = todos.filter(p => ['Pagado', 'Enviado'].includes(String(p.estado || '').trim()))
-    .reduce((a, p) => a + (Number(p.total) || 0), 0);
+    .reduce((a, p) => a + (Number(p.total) || 0) - (Number(p.envio) || 0), 0);
 
   resumen.innerHTML = `
     <div class="cajaT${porEstado('Nuevo') ? ' alerta' : ''}"><div class="n">${porEstado('Nuevo')}</div><div class="t">Sin atender</div></div>
     <div class="cajaT"><div class="n">${porEstado('Contactado')}</div><div class="t">Esperando pago</div></div>
-    <div class="cajaT"><div class="n">${porEstado('Pagado')}</div><div class="t">Por enviar</div></div>
-    <div class="cajaT"><div class="n">${formatoColones(cobrado)}</div><div class="t">Cobrado</div></div>`;
+    <div class="cajaT"><div class="n">${porEstado('Pagado')}</div><div class="t">Por entregar</div></div>
+    <div class="cajaT"><div class="n">${formatoColones(cobrado)}</div><div class="t">Cobrado (sin envíos)</div></div>`;
 
   let lista = todos.slice().reverse();  // el más reciente primero
   if (filtroPedidos === 'activos') lista = lista.filter(p => ['Nuevo', 'Contactado', 'Pagado'].includes(String(p.estado || '').trim()));
@@ -1837,8 +1886,26 @@ function renderPedidos() {
     const est = String(p.estado || 'Nuevo').trim();
     const items = itemsDe(p);
     const tel = String(p.telefono || '').replace(/\D/g, '');
-    const siguiente = PASOS[PASOS.indexOf(est) + 1];
     const revisar = String(p.notas || '').trim();
+    const id = escaparHtml(p.id);
+
+    // Un botón por paso, con lo que de verdad se hizo
+    let pasos = '';
+    if (est === 'Nuevo') {
+      pasos = `<button class="secundario btnPaso" onclick="avanzarPedido('${id}','Contactado')">Ya le escribí</button>
+               <button class="btnPaso" onclick="abrirPago('${id}')">Registrar pago</button>`;
+    } else if (est === 'Contactado') {
+      pasos = `<button class="btnPaso" onclick="abrirPago('${id}')">Registrar pago</button>`;
+    } else if (est === 'Pagado') {
+      pasos = `<button class="btnPaso" onclick="avanzarPedido('${id}','Enviado')">Marcar ${p.entrega === 'retiro' ? 'entregado' : 'enviado'}</button>`;
+    } else if (est === 'Enviado') {
+      pasos = `<span class="pastilla verde">${p.entrega === 'retiro' ? 'Entregado' : 'Enviado'}</span>`;
+    } else if (est === 'Cancelado') {
+      pasos = '<span class="estadoFin">Cancelado</span>';
+    }
+    const cancelar = est !== 'Cancelado'
+      ? `<button class="btnCancelar" onclick="avanzarPedido('${id}','Cancelado')">Cancelar pedido</button>` : '';
+    const borrar = `<button class="btnCancelar" style="${cancelar ? 'margin-left:0' : ''}" onclick="eliminarPedido('${id}')">Borrar</button>`;
 
     const destino = p.entrega === 'retiro'
       ? 'Retira en el punto'
@@ -1870,20 +1937,18 @@ function renderPedidos() {
       </div>
       <div class="pedidoAcciones">
         <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
-        ${siguiente
-          ? `<button class="btnPaso" onclick="avanzarPedido('${escaparHtml(p.id)}','${siguiente}')">Marcar ${etiquetaPaso(p, siguiente)}</button>`
-          : '<span class="pastilla verde">Entregado</span>'}
-        <select class="selEstado" onchange="avanzarPedido('${escaparHtml(p.id)}', this.value)">
-          ${PASOS.concat(['Cancelado']).map(e => `<option value="${e}" ${e === est ? 'selected' : ''}>${etiquetaPaso(p, e)}</option>`).join('')}
-        </select>
-        <button class="btnCancelar" onclick="eliminarPedido('${escaparHtml(p.id)}')">Borrar</button>
+        ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? '' : pasos}
+        ${cancelar}
+        ${borrar}
       </div>
+      ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? htmlPanelPago(p) : ''}
     </div>`;
   }).join('');
 }
 
 // Cambia el estado. Al pasar a Pagado descuenta stock y registra las ventas.
-async function avanzarPedido(id, nuevoEstado) {
+// opciones (al registrar el pago): { formaPago, regalias: [{ productoId, cantidad }], sinConfirmar }
+async function avanzarPedido(id, nuevoEstado, opciones = {}) {
   const p = estado.pedidos.find(x => String(x.id) === String(id));
   if (!p) return;
   const anterior = String(p.estado || 'Nuevo').trim();
@@ -1916,6 +1981,8 @@ async function avanzarPedido(id, nuevoEstado) {
   // Cancelar un pedido ya cobrado deshace el cobro: borra sus ventas y
   // devuelve el stock. Antes la venta y el stock quedaban como si se hubiera
   // vendido.
+  if (nuevoEstado === 'Cancelado' && !yaCobrado &&
+      !confirm(`¿Cancelar el pedido ${p.numero} de ${p.nombre}?`)) return;
   if (nuevoEstado === 'Cancelado' && yaCobrado) {
     if (!confirm(`El pedido ${p.numero} de ${p.nombre} ya estaba cobrado.\n\nAl cancelarlo se anula la venta registrada y se devuelve el stock. ¿Seguir?`)) { renderPedidos(); return; }
     operacionesDelCobro.push(...operacionesParaAnularCobro(ventasDelPedido, stocksNuevos));
@@ -1931,55 +1998,88 @@ async function avanzarPedido(id, nuevoEstado) {
   // El descuento de stock ocurre UNA sola vez: al cruzar a Pagado por primera vez
   if (vaACobrar && !yaCobrado) {
     const items = itemsDe(p);
-    const faltantes = items.filter(i => {
-      const prod = estado.productos.find(x => String(x.id) === String(i.id));
-      return !prod || (Number(prod.stock) || 0) < i.cantidad;
+    // Regalías que se entregan con el pedido: precio 0, mismo cliente y número
+    const regalias = (opciones.regalias || []).filter(r => r.cantidad > 0);
+    const formaPago = opciones.formaPago || 'SINPE Móvil';
+
+    // Unidades que salen de cada producto (lo vendido + lo regalado)
+    const salen = {};
+    items.forEach(i => { salen[i.id] = (salen[i.id] || 0) + (Number(i.cantidad) || 0); });
+    regalias.forEach(r => { salen[r.productoId] = (salen[r.productoId] || 0) + r.cantidad; });
+
+    const faltantes = Object.keys(salen).filter(pid => {
+      const prod = productoPorId(pid);
+      return !prod || (Number(prod.stock) || 0) < salen[pid];
+    }).map(pid => {
+      const prod = productoPorId(pid);
+      const item = items.find(i => String(i.id) === String(pid));
+      return prod ? prod.nombre : (item ? item.nombre : 'producto ' + pid);
     });
     if (faltantes.length) {
-      const detalle = faltantes.map(f => '· ' + f.nombre).join('\n');
-      if (!confirm(`Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Marcar como pagado de todas formas? El stock puede quedar en negativo.`)) return;
+      const detalle = faltantes.map(n => '· ' + n).join('\n');
+      if (!confirm(`Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Registrar el pago de todas formas? El stock puede quedar en negativo.`)) { renderPedidos(); return; }
     }
-    if (!confirm(`¿Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)}?\n\nEsto descuenta el stock y registra la venta.`)) { renderPedidos(); return; }
+    if (!opciones.sinConfirmar &&
+        !confirm(`¿Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)}?\n\nEsto descuenta el stock y registra la venta.`)) { renderPedidos(); return; }
 
     const cliente = await asegurarCliente(p);
-    const productosDelPedido = items
-      .map(i => ({ item: i, prod: estado.productos.find(x => String(x.id) === String(i.id)) }))
-      .filter(x => x.prod);
+    const hoy = new Date().toISOString().slice(0, 10);
+    // estado.usuario es un objeto { usuario, rol }: mandarlo entero
+    // escribía "[object Object]" en la columna usuario de Ventas.
+    const usuario = estado.usuario ? estado.usuario.usuario : '';
+    // Los mismos dos valores que tiene el formulario de Ventas; al marcar el
+    // pedido como Enviado/Entregado pasa a Entregado.
+    const estadoEntrega = nuevoEstado === 'Enviado' ? 'Entregado' : 'Pendiente';
 
     // Un pedido de 5 productos hacía 10 llamadas encadenadas (descontar stock
     // + registrar venta, por producto) más la del estado: a 6-20 segundos cada
     // una, "marcar como pagado" parecía colgado y terminaba cortándose. Ahora
     // va todo junto, incluido el cambio de estado del pedido.
-    for (const { item, prod } of productosDelPedido) {
-      const stockTrasCobro = (Number(prod.stock) || 0) - item.cantidad;
+    items.forEach(item => {
+      const prod = productoPorId(item.id);
+      if (!prod) return;
+      operacionesDelCobro.push({
+        accion: 'agregar_fila', hoja: 'Ventas',
+        fila: {
+          id: '', fecha: hoy,
+          clienteId: cliente, productoId: prod.id, cantidad: item.cantidad,
+          costoUnitarioCRC: Number(prod.costoTotalCRC) || 0,
+          // En Ventas, precioVenta es el TOTAL de la línea (así lo usan el
+          // formulario, Finanzas y la ganancia). El envío no entra: esa
+          // plata es de Correos o de la mensajería.
+          precioVenta: Number(item.subtotal) || (Number(item.precioUnitario) || 0) * item.cantidad,
+          canal: 'Tienda web', estadoEntrega, usuario, formaPago,
+          tipoPrecio: item.tipoPrecio === 'mayor' ? 'Mayor' : 'Detalle',
+          // Las líneas de un mismo pedido quedan agrupadas por su número
+          grupo: p.numero || ''
+        }
+      });
+    });
+    regalias.forEach(r => {
+      const prod = productoPorId(r.productoId);
+      if (!prod) return;
+      operacionesDelCobro.push({
+        accion: 'agregar_fila', hoja: 'Ventas',
+        fila: {
+          id: '', fecha: hoy,
+          clienteId: cliente, productoId: prod.id, cantidad: r.cantidad,
+          costoUnitarioCRC: Number(prod.costoTotalCRC) || 0,
+          precioVenta: 0, canal: 'Tienda web', estadoEntrega, usuario,
+          formaPago: 'Regalía', tipoPrecio: '', grupo: p.numero || ''
+        }
+      });
+    });
+    // Un solo ajuste de stock por producto, con todo lo que sale
+    Object.keys(salen).forEach(pid => {
+      const prod = productoPorId(pid);
+      if (!prod) return;
+      const stockTrasCobro = (Number(prod.stock) || 0) - salen[pid];
       stocksNuevos.push({ id: prod.id, stock: stockTrasCobro });
       operacionesDelCobro.push({
         accion: 'editar_fila', hoja: 'Productos', id: prod.id,
         fila: filaProductoConStock(prod, stockTrasCobro)
       });
-      operacionesDelCobro.push({
-        accion: 'agregar_fila', hoja: 'Ventas',
-        fila: {
-          id: '', fecha: new Date().toISOString().slice(0, 10),
-          clienteId: cliente, productoId: prod.id, cantidad: item.cantidad,
-          costoUnitarioCRC: Number(prod.costoTotalCRC) || 0,
-          // En Ventas, precioVenta es el TOTAL de la línea (así lo usan el
-          // formulario, Finanzas y la ganancia). Antes se guardaba el precio
-          // de UNA unidad: un pedido de 3 se registraba como si fuera de 1.
-          precioVenta: Number(item.subtotal) || (Number(item.precioUnitario) || 0) * item.cantidad,
-          canal: 'Tienda web',
-          // Los mismos dos valores que tiene el formulario de Ventas; al
-          // marcar el pedido como Enviado pasa a Entregado.
-          estadoEntrega: nuevoEstado === 'Enviado' ? 'Entregado' : 'Pendiente',
-          // estado.usuario es un objeto { usuario, rol }: mandarlo entero
-          // escribía "[object Object]" en la columna usuario de Ventas.
-          usuario: estado.usuario ? estado.usuario.usuario : '', formaPago: 'SINPE Móvil',
-          // Las líneas de un mismo pedido quedan agrupadas por su número
-          tipoPrecio: item.tipoPrecio === 'mayor' ? 'Mayor' : 'Detalle',
-          grupo: p.numero || ''
-        }
-      });
-    }
+    });
   }
 
   // El cambio de estado va de último dentro del mismo lote: si algo del cobro
@@ -2006,6 +2106,7 @@ async function avanzarPedido(id, nuevoEstado) {
   } else {
     await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`, ['Pedidos', 'Ventas', 'Clientes', 'Productos']);
   }
+  return true;
 }
 
 // Ventas que se registraron al cobrar este pedido (llevan su número en "grupo")
@@ -2039,6 +2140,113 @@ function operacionesParaAnularCobro(ventas, stocksNuevos) {
 // persona se lee mejor "Entregado".
 function etiquetaPaso(p, paso) {
   return paso === 'Enviado' && p.entrega === 'retiro' ? 'Entregado' : paso;
+}
+
+// ---------- Registrar pago de un pedido ----------
+// Se abre dentro de la ficha del pedido: cómo pagó, regalías que se le dan
+// con el pedido y, si retira en persona, si ya se lo llevó.
+// { id, formaPago, regalias: [{ productoId, cantidad }], entregado }
+let pagoAbierto = null;
+
+function abrirPago(id) {
+  const p = estado.pedidos.find(x => String(x.id) === String(id));
+  if (!p) return;
+  pagoAbierto = { id: p.id, formaPago: 'SINPE Móvil', regalias: [], entregado: false };
+  renderPedidos();
+}
+
+function cerrarPago() {
+  pagoAbierto = null;
+  renderPedidos();
+}
+
+function elegirFormaPago(forma) {
+  if (!pagoAbierto) return;
+  pagoAbierto.formaPago = forma;
+  document.querySelectorAll('.chipT[data-fpago]').forEach(b => b.classList.toggle('activo', b.dataset.fpago === forma));
+}
+
+function marcarEntregadoPago(marcado) {
+  if (!pagoAbierto) return;
+  pagoAbierto.entregado = marcado;
+}
+
+function agregarRegaloPago(id) {
+  if (!pagoAbierto) return;
+  const ya = pagoAbierto.regalias.find(r => String(r.productoId) === String(id));
+  if (ya) ya.cantidad += 1;
+  else pagoAbierto.regalias.push({ productoId: id, cantidad: 1 });
+  renderRegalosPago();
+}
+
+function cambiarCantRegaloPago(i, valor) {
+  const r = pagoAbierto && pagoAbierto.regalias[i];
+  if (!r) return;
+  r.cantidad = Math.max(1, Math.floor(Number(valor) || 1));
+  renderRegalosPago();
+}
+
+function quitarRegaloPago(i) {
+  if (!pagoAbierto) return;
+  pagoAbierto.regalias.splice(i, 1);
+  renderRegalosPago();
+}
+
+function htmlRegalosPago() {
+  if (!pagoAbierto || !pagoAbierto.regalias.length) return '';
+  return pagoAbierto.regalias.map((r, i) => {
+    const prod = productoPorId(r.productoId);
+    return `<div class="lineaVenta">
+      <span class="lvNombre">${escaparHtml(prod ? etiquetaProducto(prod) : 'Producto borrado')}<span class="lvSub">${prod ? prod.stock + ' en stock · ' : ''}regalo</span></span>
+      <input class="lvCant" type="number" min="1" value="${r.cantidad}" title="Cantidad" aria-label="Cantidad" onchange="cambiarCantRegaloPago(${i}, this.value)" />
+      <button type="button" class="lvQuitar" title="Quitar" onclick="quitarRegaloPago(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+// Solo se redibujan las regalías: el buscador no pierde lo escrito
+function renderRegalosPago() {
+  const caja = document.getElementById('regalosPago');
+  if (caja) caja.innerHTML = htmlRegalosPago();
+}
+
+function htmlPanelPago(p) {
+  const a = pagoAbierto;
+  const id = escaparHtml(p.id);
+  const chip = (forma, texto) =>
+    `<button type="button" class="chipT${a.formaPago === forma ? ' activo' : ''}" data-fpago="${forma}" onclick="elegirFormaPago('${forma}')">${texto}</button>`;
+  return `<div class="pagoPedido">
+    <div>
+      <div class="titPago">¿Cómo pagó?</div>
+      <div class="filtrosTienda">${chip('SINPE Móvil', 'SINPE')}${chip('Efectivo', 'Efectivo')}</div>
+    </div>
+    <div>
+      <div class="titPago">Regalías (opcional)</div>
+      <div class="buscadorProd">
+        <input id="busq-pago" placeholder="Buscar producto para regalar…" autocomplete="off"
+               oninput="buscarEnBuscador('pago')" onfocus="buscarEnBuscador('pago')" />
+        <div class="resultadosProd oculto" id="res-pago"></div>
+      </div>
+      <div class="lineasVenta" id="regalosPago">${htmlRegalosPago()}</div>
+    </div>
+    ${Number(p.envio) ? `<div class="titPago" style="margin:0">Los ${formatoColones(p.envio)} del envío no se suman a las ventas.</div>` : ''}
+    ${p.entrega === 'retiro' ? `<label class="chequeo"><input type="checkbox" ${a.entregado ? 'checked' : ''} onchange="marcarEntregadoPago(this.checked)" />Ya se lo llevó</label>` : ''}
+    <div class="pedidoAcciones">
+      <button id="btnConfirmarPago" class="btnPaso" onclick="ejecutarConBoton('btnConfirmarPago', () => confirmarPago('${id}'))">Confirmar pago de ${formatoColones(p.total)}</button>
+      <button type="button" class="secundario btnPaso" onclick="cerrarPago()">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+async function confirmarPago(id) {
+  const a = pagoAbierto;
+  if (!a || String(a.id) !== String(id)) return;
+  const ok = await avanzarPedido(id, a.entregado ? 'Enviado' : 'Pagado', {
+    formaPago: a.formaPago,
+    regalias: a.regalias.map(r => ({ productoId: r.productoId, cantidad: r.cantidad })),
+    sinConfirmar: true
+  });
+  if (ok) { pagoAbierto = null; renderPedidos(); }
 }
 
 // Reutiliza el cliente si ya existe (por teléfono); si no, lo crea.
@@ -2739,7 +2947,7 @@ function editarProducto(id) {
 // editando, para que el siguiente "Guardar" no lo pise por error.
 const SOLTAR_EDICION = {
   formProducto:   () => { productoEditando = null; },
-  formVenta:      () => { ventaEditando = null; },
+  formVenta:      () => { ventaEditando = null; lineasVenta = []; },
   formCliente:    () => { clienteEditando = null; },
   formMovimiento: () => { movimientoEditando = null; },
   formContenido:  () => { publicacionEditando = null; }
@@ -3152,20 +3360,14 @@ function renderAbonos() {
 
 function llenarSelectoresVenta() {
   const selCliente = document.getElementById('vCliente');
-  const selProducto = document.getElementById('vProducto');
-  const selProductoRegalo = document.getElementById('vProductoRegalo');
+  const elegido = selCliente.value;
   const opcionesClientes = estado.clientes.map(c => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
   selCliente.innerHTML = '<option value="__nuevo__">+ Cliente nuevo…</option><option value="__ninguno__">— Sin cliente (regalo general) —</option>' + opcionesClientes;
-  const opcionesProductos = estado.productos.map(p => `<option value="${p.id}" data-precio="${p.precioVenta}">${escaparHtml(p.nombre)}${p.marca ? ' — ' + escaparHtml(p.marca) : ''} (stock: ${p.stock})</option>`).join('');
-  selProducto.innerHTML = opcionesProductos;
-  selProductoRegalo.innerHTML = opcionesProductos;
+  // Recargar datos no le cambia el cliente a una venta que se está armando
+  if (elegido && [...selCliente.options].some(o => o.value === elegido)) selCliente.value = elegido;
   alternarClienteNuevo();
-}
-
-function alternarRegaloVenta() {
-  const marcado = document.getElementById('vTieneRegalo').checked;
-  document.getElementById('vRegaloProductoWrap').classList.toggle('oculto', !marcado);
-  document.getElementById('vRegaloCantidadWrap').classList.toggle('oculto', !marcado);
+  // El stock pudo cambiar: las líneas lo muestran
+  if (!document.getElementById('formVenta').classList.contains('oculto')) renderLineasVenta();
 }
 
 function alternarClienteNuevo() {
@@ -3175,19 +3377,204 @@ function alternarClienteNuevo() {
   });
 }
 
-function autocompletarPrecioVenta() {
-  if (document.getElementById('vFormaPago').value === 'Regalía') { document.getElementById('vPrecio').value = 0; return; }
-  const opcion = document.getElementById('vProducto').selectedOptions[0];
-  const cantidad = Number(document.getElementById('vCantidad').value) || 1;
-  if (opcion) document.getElementById('vPrecio').value = Math.round(Number(opcion.dataset.precio) * cantidad);
+// ---------- Buscador de productos (ventas y regalías) ----------
+// El mismo buscador sirve para el formulario de Ventas ('venta') y para las
+// regalías al registrar el pago de un pedido ('pago'). Cada uno dice qué
+// hacer con el producto elegido.
+const BUSCADORES = {
+  venta: { alElegir: id => agregarLineaVenta(id) },
+  pago:  { alElegir: id => agregarRegaloPago(id) }
+};
+
+function productoPorId(id) {
+  return estado.productos.find(p => String(p.id) === String(id));
 }
 
-function alternarRegalia() {
-  const esRegalia = document.getElementById('vFormaPago').value === 'Regalía';
-  const campoPrecio = document.getElementById('vPrecio');
-  campoPrecio.disabled = esRegalia;
-  if (esRegalia) campoPrecio.value = 0;
-  else autocompletarPrecioVenta();
+function etiquetaProducto(p) {
+  return [p.nombre, p.tono ? 'tono ' + p.tono : '', p.marca]
+    .map(s => String(s || '').trim()).filter(Boolean).join(' · ');
+}
+
+// Solo productos con stock (no se puede vender lo que no hay). Cada palabra
+// buscada tiene que aparecer en el nombre, la marca, el tono o la categoría.
+// Puntos, guiones y apóstrofes no cuentan: "elf" encuentra e.l.f. y "loreal", L'Oréal.
+function textoBuscable(s) {
+  return normalizaTexto(s).replace(/[.'’\-]/g, '');
+}
+
+function productosQueCoinciden(texto, limite) {
+  const palabras = textoBuscable(texto).split(/\s+/).filter(Boolean);
+  const conStock = estado.productos.filter(p => (Number(p.stock) || 0) > 0);
+  const hallados = palabras.length
+    ? conStock.filter(p => {
+        const t = textoBuscable([p.nombre, p.marca, p.tono, p.categoria].join(' '));
+        return palabras.every(w => t.includes(w));
+      })
+    : conStock;
+  return hallados.slice(0, limite);
+}
+
+function buscarEnBuscador(clave) {
+  const input = document.getElementById('busq-' + clave);
+  const caja = document.getElementById('res-' + clave);
+  if (!input || !caja) return;
+  const hallados = productosQueCoinciden(input.value, 40);
+  caja.classList.remove('oculto');
+  caja.innerHTML = hallados.length
+    ? hallados.map(p => `<button type="button" class="resultadoProd" onclick="elegirEnBuscador('${clave}', '${escaparHtml(p.id)}')">
+        <span class="rpNombre">${escaparHtml(etiquetaProducto(p))}</span>
+        <span class="rpDato">${p.stock} en stock · ${formatoColones(precioConDescuento(p.precioVenta, p.descuento))}</span>
+      </button>`).join('')
+    : `<div class="vacio">${input.value.trim() ? 'Ningún producto con stock coincide.' : 'No hay productos con stock.'}</div>`;
+}
+
+function elegirEnBuscador(clave, id) {
+  const input = document.getElementById('busq-' + clave);
+  if (input) input.value = '';
+  cerrarBuscador(clave);
+  BUSCADORES[clave].alElegir(id);
+}
+
+function cerrarBuscador(clave) {
+  const caja = document.getElementById('res-' + clave);
+  if (caja) caja.classList.add('oculto');
+}
+
+// Tocar fuera del buscador, o Escape, cierra su lista
+document.addEventListener('click', e => {
+  Object.keys(BUSCADORES).forEach(clave => {
+    const input = document.getElementById('busq-' + clave);
+    if (input && !input.closest('.buscadorProd').contains(e.target)) cerrarBuscador(clave);
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') Object.keys(BUSCADORES).forEach(cerrarBuscador);
+});
+
+// ---------- Líneas de la venta ----------
+// La venta que se está armando: { productoId, cantidad, precio (total de la
+// línea), regalo, precioManual (si se escribió a mano, no se recalcula) }
+let lineasVenta = [];
+
+// Precio mayorista final (con su descuento), o 0 si el producto no tiene uno
+// que salga más barato que el normal.
+function precioMayoristaDe(p) {
+  const detalle = precioConDescuento(p.precioVenta, p.descuento);
+  const mayor = precioConDescuento(p.precioMayorista, p.descuentoMayorista);
+  return mayor > 0 && mayor < detalle ? mayor : 0;
+}
+
+// Precio de UNA unidad según el tipo de precio elegido en la venta
+function precioUnitarioVenta(p, tipo) {
+  return (tipo === 'Mayor' && precioMayoristaDe(p)) || precioConDescuento(p.precioVenta, p.descuento);
+}
+
+function esVentaRegalia() {
+  return document.getElementById('vFormaPago').value === 'Regalía';
+}
+
+function agregarLineaVenta(id) {
+  const p = productoPorId(id);
+  if (!p) return;
+  // Al editar, una venta guardada es un solo producto: elegir otro lo cambia
+  if (ventaEditando) lineasVenta = [];
+  const ya = lineasVenta.find(l => String(l.productoId) === String(p.id) && !l.regalo);
+  if (ya) ya.cantidad += 1;
+  else lineasVenta.push({ productoId: p.id, cantidad: 1, precio: 0, regalo: false, precioManual: false });
+  if (ya) ya.precioManual = false;
+  recalcularLineasVenta();
+}
+
+function recalcularLineasVenta() {
+  const tipo = document.getElementById('vTipoPrecio').value;
+  lineasVenta.forEach(l => {
+    if (l.precioManual) return;
+    const p = productoPorId(l.productoId);
+    l.precio = p ? precioUnitarioVenta(p, tipo) * l.cantidad : 0;
+  });
+  renderLineasVenta();
+}
+
+function cambiarCantidadLinea(i, valor) {
+  const l = lineasVenta[i];
+  if (!l) return;
+  l.cantidad = Math.max(1, Math.floor(Number(valor) || 1));
+  l.precioManual = false;
+  recalcularLineasVenta();
+}
+
+function cambiarPrecioLinea(i, valor) {
+  const l = lineasVenta[i];
+  if (!l) return;
+  l.precio = parseMonto(valor);
+  l.precioManual = true;
+  renderLineasVenta();
+}
+
+function cambiarRegaloLinea(i, marcado) {
+  const l = lineasVenta[i];
+  if (!l) return;
+  l.regalo = marcado;
+  l.precioManual = false;
+  recalcularLineasVenta();
+}
+
+function quitarLineaVenta(i) {
+  lineasVenta.splice(i, 1);
+  renderLineasVenta();
+}
+
+// Unidades disponibles de un producto para ESTA venta: al editar, lo que la
+// venta original ya había descontado vuelve a contar como disponible.
+function stockDisponibleVenta(p) {
+  const devuelto = ventaEditando && String(ventaEditando.productoId) === String(p.id)
+    ? Number(ventaEditando.cantidad) || 0 : 0;
+  return (Number(p.stock) || 0) + devuelto;
+}
+
+function unidadesPedidasPorProducto() {
+  const pedidas = {};
+  lineasVenta.forEach(l => { pedidas[l.productoId] = (pedidas[l.productoId] || 0) + l.cantidad; });
+  return pedidas;
+}
+
+function renderLineasVenta() {
+  const caja = document.getElementById('vLineas');
+  if (!caja) return;
+  if (!lineasVenta.length) {
+    caja.innerHTML = '<div class="lineasVenta"><div class="vacio" style="padding:6px 2px;text-align:left">Buscá un producto y tocalo para agregarlo.</div></div>';
+    return;
+  }
+  const todoRegalo = esVentaRegalia();
+  const tipo = document.getElementById('vTipoPrecio').value;
+  const pedidas = unidadesPedidasPorProducto();
+  let total = 0, unidades = 0;
+
+  const filas = lineasVenta.map((l, i) => {
+    const p = productoPorId(l.productoId);
+    const regalo = todoRegalo || l.regalo;
+    if (!regalo) total += Number(l.precio) || 0;
+    unidades += l.cantidad;
+    const disponible = p ? stockDisponibleVenta(p) : 0;
+    const notas = [
+      p && pedidas[l.productoId] > disponible
+        ? `<span style="color:var(--coral-dark);font-weight:600">solo hay ${disponible}</span>`
+        : (p ? `${disponible} en stock` : ''),
+      regalo ? 'regalo' : '',
+      tipo === 'Mayor' && !regalo && p && !precioMayoristaDe(p) ? 'sin precio mayorista' : ''
+    ].filter(Boolean).join(' · ');
+    return `<div class="lineaVenta">
+      <span class="lvNombre">${escaparHtml(p ? etiquetaProducto(p) : 'Producto borrado')}<span class="lvSub">${notas}</span></span>
+      <input class="lvCant" type="number" min="1" value="${l.cantidad}" title="Cantidad" aria-label="Cantidad" onchange="cambiarCantidadLinea(${i}, this.value)" />
+      ${regalo ? '' : `<input class="lvPrecio" type="text" inputmode="decimal" value="${Number(l.precio) || 0}" title="Precio total de esta línea (₡)" aria-label="Precio total" onchange="cambiarPrecioLinea(${i}, this.value)" />`}
+      ${todoRegalo || ventaEditando ? '' : `<label class="lvRegalo"><input type="checkbox" ${l.regalo ? 'checked' : ''} onchange="cambiarRegaloLinea(${i}, this.checked)" />Regalo</label>`}
+      <button type="button" class="lvQuitar" title="Quitar" onclick="quitarLineaVenta(${i})">×</button>
+    </div>`;
+  }).join('');
+
+  caja.innerHTML = `<div class="lineasVenta">${filas}
+    <div class="totalVenta"><span>${unidades} ${unidades === 1 ? 'unidad' : 'unidades'}</span>${todoRegalo ? '<span>Regalía</span>' : `<span>Total <strong>${formatoColones(total)}</strong></span>`}</div>
+  </div>`;
 }
 
 // Reconstruye la fila completa de un producto, cambiando solo el stock.
@@ -3216,21 +3603,18 @@ function ajustarStockLocal(productoId, nuevoStock) {
 
 function nuevaVenta() {
   ventaEditando = null;
+  lineasVenta = [];
   document.getElementById('vCliente').value = '__nuevo__';
   alternarClienteNuevo();
   document.getElementById('vNuevoNombre').value = '';
   document.getElementById('vNuevoTelefono').value = '';
-  if (document.getElementById('vProducto').options.length) document.getElementById('vProducto').selectedIndex = 0;
-  document.getElementById('vCantidad').value = 1;
+  document.getElementById('busq-venta').value = '';
+  cerrarBuscador('venta');
+  document.getElementById('vTipoPrecio').value = 'Detalle';
   document.getElementById('vCanal').value = 'Instagram';
   document.getElementById('vFormaPago').value = 'Efectivo';
-  alternarRegalia();
-  autocompletarPrecioVenta();
   document.getElementById('vEstado').value = 'Pendiente';
-  document.getElementById('vTieneRegalo').checked = false;
-  if (document.getElementById('vProductoRegalo').options.length) document.getElementById('vProductoRegalo').selectedIndex = 0;
-  document.getElementById('vCantidadRegalo').value = 1;
-  alternarRegaloVenta();
+  renderLineasVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar venta';
   abrirFormulario('formVenta');
 }
@@ -3242,7 +3626,7 @@ function nuevaRegalia() {
   document.getElementById('vCliente').value = '__ninguno__';
   alternarClienteNuevo();
   document.getElementById('vFormaPago').value = 'Regalía';
-  alternarRegalia();
+  renderLineasVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar regalía';
 }
 
@@ -3250,20 +3634,23 @@ function editarVenta(id) {
   const v = estado.ventas.find(x => String(x.id) === String(id));
   if (!v) return;
   ventaEditando = v;
+  // Una venta guardada es un solo producto, con el precio que tiene
+  lineasVenta = [{
+    productoId: v.productoId, cantidad: Number(v.cantidad) || 1,
+    precio: Number(v.precioVenta) || 0, regalo: false, precioManual: true
+  }];
   document.getElementById('vCliente').value = v.clienteId ? String(v.clienteId) : '__ninguno__';
   alternarClienteNuevo();
-  document.getElementById('vProducto').value = String(v.productoId);
-  document.getElementById('vCantidad').value = v.cantidad || 1;
+  document.getElementById('busq-venta').value = '';
+  cerrarBuscador('venta');
+  document.getElementById('vTipoPrecio').value = v.tipoPrecio === 'Mayor' ? 'Mayor' : 'Detalle';
   // Las ventas que vienen de la tienda traían valores que estos selectores no
   // tenían ("Tienda web", "SINPE", "Por enviar"): el selector quedaba en blanco
   // y al guardar se borraba ese dato de la venta.
   ponerEnSelector('vCanal', v.canal, 'Instagram');
   ponerEnSelector('vFormaPago', v.formaPago === 'SINPE' ? 'SINPE Móvil' : v.formaPago, 'Efectivo');
-  alternarRegalia();
-  document.getElementById('vPrecio').value = v.precioVenta || 0;
   ponerEnSelector('vEstado', v.estadoEntrega === 'Entregado' ? 'Entregado' : 'Pendiente', 'Pendiente');
-  document.getElementById('vTieneRegalo').checked = false;
-  alternarRegaloVenta();
+  renderLineasVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar cambios';
   abrirFormulario('formVenta');
 }
@@ -3344,8 +3731,24 @@ async function eliminarVenta(id) {
 }
 
 async function guardarVenta() {
-  const productoId = document.getElementById('vProducto').value;
-  if (!productoId) { mostrarToast('Elegí un producto.'); return; }
+  if (!lineasVenta.length) { mostrarToast('Agregá al menos un producto.'); return; }
+  if (ventaEditando && lineasVenta.length !== 1) { mostrarToast('Al editar, la venta lleva un solo producto.'); return; }
+
+  const formaPago = document.getElementById('vFormaPago').value;
+  const todoRegalo = formaPago === 'Regalía';
+  const tipo = document.getElementById('vTipoPrecio').value;
+
+  // Stock: se suma lo pedido de cada producto (puede venir en varias líneas,
+  // por ejemplo uno vendido y otro de regalo) antes de comparar.
+  const pedidas = unidadesPedidasPorProducto();
+  for (const id of Object.keys(pedidas)) {
+    const p = productoPorId(id);
+    if (!p) { mostrarToast('Un producto de la venta ya no existe. Quitalo de la lista.'); return; }
+    const disponible = stockDisponibleVenta(p);
+    if (pedidas[id] > disponible) { mostrarToast(`Solo hay ${disponible} en stock de "${p.nombre}".`); return; }
+  }
+  const sinPrecio = lineasVenta.find(l => !todoRegalo && !l.regalo && !(Number(l.precio) > 0));
+  if (sinPrecio) { mostrarToast(`Falta el precio de "${productoPorId(sinPrecio.productoId).nombre}". Si es regalo, marcá "Regalo".`); return; }
 
   // Cliente: existente, nuevo (creado en el mismo paso), o ninguno (regalo general)
   let clienteId = document.getElementById('vCliente').value;
@@ -3365,81 +3768,48 @@ async function guardarVenta() {
     clienteId = resCliente.id;
   }
 
-  const cantidad = Number(document.getElementById('vCantidad').value) || 1;
-  const producto = estado.productos.find(p => String(p.id) === String(productoId));
-  const costoUnitarioCRC = producto ? (Number(producto.costoTotalCRC) || 0) : 0;
-  const formaPago = document.getElementById('vFormaPago').value;
-  const precioVenta = formaPago === 'Regalía' ? 0 : parseMonto(document.getElementById('vPrecio').value);
+  const canal = document.getElementById('vCanal').value;
+  const estadoEntrega = document.getElementById('vEstado').value;
+  const fecha = ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10);
+  // Las líneas de una misma venta quedan agrupadas (como los pedidos de la tienda)
+  const grupo = ventaEditando
+    ? (ventaEditando.grupo || '')
+    : (lineasVenta.length > 1 ? 'V-' + Date.now().toString(36).toUpperCase() : '');
 
-  // Si estamos editando y el producto no cambió, la cantidad anterior de esta venta
-  // todavía cuenta como "disponible" para el nuevo cálculo (se va a re-descontar).
-  const mismoProductoQueAntes = ventaEditando && String(ventaEditando.productoId) === String(productoId);
-  const stockDisponible = producto
-    ? (Number(producto.stock) || 0) + (mismoProductoQueAntes ? Number(ventaEditando.cantidad) || 0 : 0)
-    : 0;
-
-  if (producto && cantidad > stockDisponible) {
-    mostrarToast(`Solo hay ${stockDisponible} en stock de "${producto.nombre}".`);
-    return;
-  }
-
-  // Regalo opcional dentro de la misma transacción: se valida ANTES de guardar nada,
-  // para no dejar la venta principal guardada si falla el regalo.
-  const hayRegalo = document.getElementById('vTieneRegalo').checked;
-  let productoRegalo = null;
-  let cantidadRegalo = 0;
-  let stockDisponibleRegalo = 0;
-  if (hayRegalo) {
-    const productoRegaloId = document.getElementById('vProductoRegalo').value;
-    if (!productoRegaloId) { mostrarToast('Elegí el producto de regalo, o desmarcá la casilla.'); return; }
-    cantidadRegalo = Number(document.getElementById('vCantidadRegalo').value) || 1;
-    productoRegalo = estado.productos.find(p => String(p.id) === String(productoRegaloId));
-    const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
-    stockDisponibleRegalo = esMismoProductoQueElRegalo
-      ? Math.max(stockDisponible - cantidad, 0)
-      : (productoRegalo ? Number(productoRegalo.stock) || 0 : 0);
-    if (productoRegalo && cantidadRegalo > stockDisponibleRegalo) {
-      mostrarToast(`Solo hay ${stockDisponibleRegalo} en stock de "${productoRegalo.nombre}" para el regalo.`);
-      return;
-    }
-  }
-
-  const fila = {
-    id: ventaEditando ? ventaEditando.id : '',
-    fecha: ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
-    clienteId,
-    productoId,
-    cantidad,
-    costoUnitarioCRC,
-    precioVenta,
-    canal: document.getElementById('vCanal').value,
-    estadoEntrega: document.getElementById('vEstado').value,
-    usuario: ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
-    formaPago,
-    // editar_fila reescribe la fila completa: sin esto, editar una venta de
-    // un pedido mayorista le borraría la marca "Mayor" y su grupo.
-    tipoPrecio: ventaEditando ? (ventaEditando.tipoPrecio || '') : '',
-    grupo: ventaEditando ? (ventaEditando.grupo || '') : ''
-  };
-  // Todo lo que hay que escribir (la venta, los ajustes de stock y el regalo)
-  // se arma primero y viaja JUNTO en un solo lote. Antes eran hasta 5 llamadas
-  // encadenadas y, como cada una tarda entre 6 y 20 segundos, se pasaba del
-  // minuto: de ahí el "no se pudo conectar" al editar una venta.
-  const esMismoProductoQueElRegalo = producto && productoRegalo && String(producto.id) === String(productoRegalo.id);
+  // Todo (las ventas y los ajustes de stock) viaja JUNTO en un solo lote: cada
+  // llamada tarda entre 6 y 20 segundos, y una por producto se pasaba del minuto.
   const operaciones = [];
   // Cada stock que esta venta deja distinto. Se aplican en memoria al final,
   // para no tener que rebajarse los 1.200+ productos solo por eso.
   const stocksNuevos = [];
 
-  // 1. La venta en sí (siempre va primera: su resultado es el que decide si
-  //    el guardado se considera exitoso).
-  operaciones.push(ventaEditando
-    ? { accion: 'editar_fila', hoja: 'Ventas', id: ventaEditando.id, fila }
-    : { accion: 'agregar_fila', hoja: 'Ventas', fila });
+  // 1. Las ventas (van primero: sus resultados deciden si se guardó)
+  lineasVenta.forEach(l => {
+    const p = productoPorId(l.productoId);
+    const regalo = todoRegalo || l.regalo;
+    const fila = {
+      id: ventaEditando ? ventaEditando.id : '',
+      fecha, clienteId,
+      productoId: p.id,
+      cantidad: l.cantidad,
+      costoUnitarioCRC: Number(p.costoTotalCRC) || 0,
+      // precioVenta es el TOTAL de la línea
+      precioVenta: regalo ? 0 : Math.round(Number(l.precio) || 0),
+      canal, estadoEntrega,
+      usuario: ventaEditando ? ventaEditando.usuario : estado.usuario.usuario,
+      formaPago: regalo ? 'Regalía' : formaPago,
+      tipoPrecio: regalo ? '' : (tipo === 'Mayor' && precioMayoristaDe(p) ? 'Mayor' : 'Detalle'),
+      grupo
+    };
+    operaciones.push(ventaEditando
+      ? { accion: 'editar_fila', hoja: 'Ventas', id: ventaEditando.id, fila }
+      : { accion: 'agregar_fila', hoja: 'Ventas', fila });
+  });
+  const cuantasVentas = operaciones.length;
 
-  // 2. Si el producto cambió respecto a la venta original, devolver el stock al producto viejo
-  if (ventaEditando && !mismoProductoQueAntes) {
-    const productoViejo = estado.productos.find(p => String(p.id) === String(ventaEditando.productoId));
+  // 2. Al editar, si cambió el producto, el viejo recupera sus unidades
+  if (ventaEditando && String(ventaEditando.productoId) !== String(lineasVenta[0].productoId)) {
+    const productoViejo = productoPorId(ventaEditando.productoId);
     if (productoViejo) {
       const stockRestaurado = (Number(productoViejo.stock) || 0) + (Number(ventaEditando.cantidad) || 0);
       operaciones.push({
@@ -3450,71 +3820,47 @@ async function guardarVenta() {
     }
   }
 
-  // 3. Descontar stock del producto actual de la venta (restando también el regalo si es el mismo producto)
-  if (producto) {
-    let nuevoStock = Math.max(stockDisponible - cantidad, 0);
-    if (esMismoProductoQueElRegalo) nuevoStock = Math.max(nuevoStock - cantidadRegalo, 0);
+  // 3. Descontar el stock de cada producto, una sola vez por producto
+  Object.keys(pedidas).forEach(id => {
+    const p = productoPorId(id);
+    const nuevoStock = Math.max(stockDisponibleVenta(p) - pedidas[id], 0);
     operaciones.push({
-      accion: 'editar_fila', hoja: 'Productos', id: producto.id,
-      fila: filaProductoConStock(producto, nuevoStock)
+      accion: 'editar_fila', hoja: 'Productos', id: p.id,
+      fila: filaProductoConStock(p, nuevoStock)
     });
-    stocksNuevos.push({ id: producto.id, stock: nuevoStock });
-  }
-
-  // 4. Regalo: se guarda como una segunda fila de Ventas, con precio en cero pero costo real
-  if (hayRegalo && productoRegalo) {
-    operaciones.push({
-      accion: 'agregar_fila', hoja: 'Ventas',
-      fila: {
-        id: '',
-        fecha: ventaEditando ? ventaEditando.fecha : new Date().toISOString().slice(0, 10),
-        clienteId,
-        productoId: productoRegalo.id,
-        cantidad: cantidadRegalo,
-        costoUnitarioCRC: Number(productoRegalo.costoTotalCRC) || 0,
-        precioVenta: 0,
-        canal: document.getElementById('vCanal').value,
-        estadoEntrega: document.getElementById('vEstado').value,
-        usuario: estado.usuario.usuario,
-        formaPago: 'Regalía'
-      }
-    });
-
-    if (!esMismoProductoQueElRegalo) {
-      const nuevoStockRegalo = Math.max(stockDisponibleRegalo - cantidadRegalo, 0);
-      operaciones.push({
-        accion: 'editar_fila', hoja: 'Productos', id: productoRegalo.id,
-        fila: filaProductoConStock(productoRegalo, nuevoStockRegalo)
-      });
-      stocksNuevos.push({ id: productoRegalo.id, stock: nuevoStockRegalo });
-    }
-  }
+    stocksNuevos.push({ id: p.id, stock: nuevoStock });
+  });
 
   const lote = await apiLote(operaciones);
-  const resultadoVenta = lote.resultados[0];
+  const resultadosVentas = (lote.resultados || []).slice(0, cuantasVentas);
+  const guardadas = resultadosVentas.filter(r => r && r.ok).length;
 
-  // Si la venta misma no se pudo guardar, no hay nada que festejar.
-  if (!resultadoVenta || !resultadoVenta.ok) {
-    mostrarToast('Error: ' + ((resultadoVenta && resultadoVenta.error) || lote.error || 'no se pudo guardar la venta'));
+  // Si ninguna venta se pudo guardar, no hay nada que festejar.
+  if (!guardadas) {
+    const r = resultadosVentas.find(x => x && x.error);
+    mostrarToast('Error: ' + ((r && r.error) || lote.error || 'no se pudo guardar la venta'));
     return;
   }
 
-  // La venta sí quedó, pero algún ajuste de stock falló: hay que decirlo, o el
-  // inventario queda mal sin que nadie se entere.
+  // Algo sí quedó, pero no todo: hay que decirlo, o el inventario o las
+  // ventas quedan mal sin que nadie se entere.
   if (!lote.ok) {
-    mostrarToast('La venta se guardó, pero algún ajuste de stock falló. Revisá el inventario de ese producto.');
+    mostrarToast(guardadas < cuantasVentas
+      ? `Solo se guardaron ${guardadas} de ${cuantasVentas} productos. Revisá Ventas e Inventario.`
+      : 'La venta se guardó, pero algún ajuste de stock falló. Revisá el inventario.');
   }
 
   const mensajeGuardado = ventaEditando
     ? 'Venta actualizada.'
-    : (hayRegalo ? 'Venta y regalo guardados.' : (formaPago === 'Regalía' ? 'Regalía guardada.' : 'Venta guardada.'));
+    : (todoRegalo ? 'Regalía guardada.'
+      : (cuantasVentas > 1 ? `Venta de ${cuantasVentas} productos guardada.` : 'Venta guardada.'));
   document.getElementById('formVenta').classList.add('oculto');
   ventaEditando = null;
+  lineasVenta = [];
 
   // El stock ya lo sabemos: lo acabamos de calcular y guardar. Se aplica en
-  // memoria y solo se releen Ventas y Clientes (hojas chicas) — así el refresco
-  // pasa de ~800 KB a unos pocos KB. Si algún ajuste de stock falló, ahí sí se
-  // relee Productos de verdad, para no dejar la pantalla mintiendo.
+  // memoria y solo se releen Ventas y Clientes (hojas chicas). Si algo falló,
+  // ahí sí se relee Productos de verdad, para no dejar la pantalla mintiendo.
   if (lote.ok) {
     stocksNuevos.forEach(s => ajustarStockLocal(s.id, s.stock));
     await refrescarTrasGuardar(mensajeGuardado, ['Ventas', 'Clientes']);
