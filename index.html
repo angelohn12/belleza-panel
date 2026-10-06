@@ -402,6 +402,43 @@
   tr:hover td{background:#FAF9F8;}
   .vacio{padding:24px;text-align:center;color:var(--brown-soft);font-size:13px;}
 
+  /* ---------- Gráficos ---------- */
+  .gSub{font-size:12.5px;color:var(--brown-soft);margin:-10px 0 12px;}
+  .grafico{position:relative;min-height:60px;}
+  .grafico svg{display:block;width:100%;overflow:visible;}
+  .gEje{font-size:11px;fill:#8A847D;font-variant-numeric:tabular-nums;}
+  .gEtiquetaValor{font-size:12px;fill:var(--brown);font-weight:600;}
+  .gCol rect.gHit{cursor:default;outline:none;}
+  .gCol .gMarca{transition:opacity .12s;}
+  .grafico.gHover .gCol:not(.activa) .gMarca{opacity:.45;}
+  .gCol rect.gHit:focus-visible{stroke:var(--brown);stroke-width:1;}
+  .gLeyenda{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--brown-soft);margin:0 0 8px;}
+  .gLeyenda span{display:inline-flex;align-items:center;gap:6px;}
+  .gLeyenda i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .gTooltip{
+    position:absolute;z-index:20;pointer-events:none;min-width:150px;
+    background:#fff;border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);padding:8px 10px;font-size:12.5px;
+  }
+  .gTooltip .gtTitulo{color:var(--brown-soft);margin-bottom:5px;}
+  .gTooltip .gtFila{display:flex;align-items:center;gap:7px;padding:1px 0;}
+  .gTooltip .gtFila b{font-weight:600;color:var(--brown);font-variant-numeric:tabular-nums;}
+  .gTooltip .gtFila span{color:var(--brown-soft);}
+  .gTooltip .gtLinea{width:10px;height:2px;border-radius:1px;flex:0 0 auto;}
+  .gTabla{margin-top:8px;font-size:12.5px;}
+  .gTabla summary{cursor:pointer;color:var(--brown-soft);width:max-content;}
+  .gTabla table{margin-top:6px;font-size:12.5px;}
+  .gTabla th, .gTabla td{padding:6px 8px;}
+  .gBarras{display:flex;flex-direction:column;gap:9px;}
+  .gFila{display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr);gap:10px;align-items:center;font-size:13px;}
+  .gFila .gEtiq{min-width:0;overflow-wrap:anywhere;line-height:1.3;color:var(--brown);}
+  .gFila .gPista{display:flex;align-items:center;gap:7px;min-width:0;}
+  .gFila .gBarra{height:12px;border-radius:0 4px 4px 0;min-width:2px;flex:0 0 auto;}
+  .gFila .gValor{font-variant-numeric:tabular-nums;color:var(--brown);white-space:nowrap;font-size:12.5px;}
+  .gFila .gValor small{color:var(--brown-soft);font-size:11.5px;margin-left:4px;}
+  .gDosCol{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;}
+  .gDosCol .panel{margin-bottom:20px;}
+
   .formulario{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
@@ -500,6 +537,11 @@
         <div class="tarjeta"><p class="etiqueta">Clientes</p><p class="valor" id="rClientes">0</p></div>
       </div>
       <div class="panel">
+        <h2>Ventas por semana</h2>
+        <p class="gSub">Últimas 10 semanas · lo vendido, sin envíos ni regalías</p>
+        <div id="gResumenSemanas" class="grafico"></div>
+      </div>
+      <div class="panel">
         <h2>Punto de equilibrio</h2>
         <p style="font-size:13px;color:var(--brown-soft);margin:0 0 10px;" id="peTexto"></p>
         <div style="background:var(--bg);border-radius:20px;height:20px;overflow:hidden;">
@@ -536,6 +578,11 @@
           <div class="tarjeta"><p class="etiqueta">Costo total</p><p class="valor" id="tCostoTotal">₡0</p></div>
           <div class="tarjeta"><p class="etiqueta">Ganancia total</p><p class="valor" style="color:var(--sage);" id="tGananciaTotal">₡0</p></div>
         </div>
+      </div>
+      <div class="panel">
+        <h2>Lo que entró: costo y ganancia</h2>
+        <p class="gSub" id="gTendSub">Cada columna es lo vendido; la parte verde es lo que ganaste</p>
+        <div id="gTendIngreso" class="grafico"></div>
       </div>
       <div class="panel">
         <h2 style="margin:0 0 2px;">Estimación de ingresos por inventario disponible</h2>
@@ -808,6 +855,18 @@
 
     <!-- ---------- VENTAS ---------- -->
     <section id="tab-ventas" class="oculto">
+      <div class="gDosCol">
+        <div class="panel">
+          <h2>Por canal</h2>
+          <p class="gSub">Lo vendido desde el inicio</p>
+          <div id="gVentasCanal"></div>
+        </div>
+        <div class="panel">
+          <h2>Por forma de pago</h2>
+          <p class="gSub">Lo vendido desde el inicio</p>
+          <div id="gVentasPago"></div>
+        </div>
+      </div>
       <div class="panel">
         <div class="filaBotones">
           <h2 style="margin:0">Ventas</h2>
@@ -936,6 +995,16 @@
         <div class="tarjeta"><p class="etiqueta">Saldo</p><p class="valor" id="fSaldo">₡0</p></div>
       </div>
       <div class="panel">
+        <h2>Plata que entró por mes</h2>
+        <p class="gSub">Ventas de contado más abonos de las ventas a pagos</p>
+        <div id="gFinEntradas" class="grafico"></div>
+      </div>
+      <div class="panel">
+        <h2>Por cobrar</h2>
+        <p class="gSub" id="gFinCobrarSub">Saldo pendiente de cada clienta (ventas a pagos menos abonos)</p>
+        <div id="gFinCobrar"></div>
+      </div>
+      <div class="panel">
         <div class="filaBotones">
           <h2 style="margin:0">Movimientos</h2>
           <button onclick="nuevoMovimiento()">+ Nuevo movimiento</button>
@@ -1025,7 +1094,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-05c · registrar pago y ventas de varios productos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-06 · gráficos</p>
         </div>
       </div>
     </section>
@@ -1321,6 +1390,8 @@ function mostrarTab(nombre) {
   document.getElementById('tab-' + nombre).classList.remove('oculto');
   document.querySelectorAll('nav.tabs .tab').forEach(b => b.classList.remove('activo'));
   document.querySelector(`nav.tabs .tab[data-tab="${nombre}"]`).classList.add('activo');
+  // Con la pestaña oculta no se puede medir el ancho: se redibuja al mostrarla
+  redibujarGraficosVisibles();
 }
 
 function alternar(idFormulario) {
@@ -1424,6 +1495,19 @@ function renderResumen() {
 
   renderPuntoEquilibrio();
 
+  const semanas = ventasPorPeriodo(estado.ventas, 'semana', new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 7 * 9));
+  graficoColumnas('gResumenSemanas', {
+    etiquetas: semanas.map(c => c.etiqueta),
+    titulos: semanas.map(c => c.titulo),
+    series: [{ nombre: 'vendido', color: G_COLOR.entra, valores: semanas.map(c => c.ingreso) }],
+    detalle: i => [
+      ['ganancia', formatoColones(semanas[i].ingreso - semanas[i].costo)],
+      ['unidades', String(semanas[i].unidades)]
+    ],
+    descripcion: 'Ventas por semana, últimas 10 semanas',
+    vacio: 'Todavía no hay ventas en las últimas 10 semanas.'
+  });
+
   const bajos = estado.productos.filter(p => (Number(p.stock) || 0) <= 5);
   const cajaBajo = document.getElementById('rStockBajo');
   cajaBajo.innerHTML = bajos.length
@@ -1434,7 +1518,7 @@ function renderResumen() {
   const cajaVentas = document.getElementById('rVentasRecientes');
   cajaVentas.innerHTML = recientes.length
     ? tablaSimple(['Fecha', 'Producto', 'Monto'], recientes.map(v => [
-        escaparHtml(v.fecha), escaparHtml(nombreProducto(v.productoId)), formatoColones(v.precioVenta)
+        fechaVentaTexto(v.fecha), escaparHtml(nombreProducto(v.productoId)), formatoColones(v.precioVenta)
       ]))
     : '<div class="vacio">Todavía no hay ventas registradas.</div>';
 }
@@ -1512,34 +1596,273 @@ function botonesAccion(fnEditar, fnEliminar, id) {
   </div>`;
 }
 
-// ---------- Tendencias ----------
+// ---------- Gráficos ----------
+// Dibujados a mano (SVG y HTML, sin librerías). Columnas para ver la plata en
+// el tiempo; barras horizontales para rankings. El color siempre significa lo
+// mismo: verde = plata que entra, gris = costo, ámbar = lo que deben,
+// coral = unidades. Rojo y verde nunca van juntos en un mismo gráfico.
+const G_COLOR = { entra: '#1E8A5A', entraSuave: '#8CC5A5', costo: '#9C958D', debe: '#B0741F', marca: '#D24558' };
+const G_TINTA = { grilla: '#EEEBE7', base: '#CFC9C2' };
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 
-const PALETA_TONOS = ['#D24558', '#61A07D', '#FAC977', '#8a5a3a', '#A5323F', '#5D300E', '#FDA6AB'];
+// Cada gráfico se guarda para redibujarlo al cambiar de pestaña o de ancho
+// (con la pestaña oculta no se puede medir cuánto espacio tiene).
+const graficosRegistrados = {};
+
+function redibujarGraficosVisibles() {
+  Object.keys(graficosRegistrados).forEach(id => {
+    const caja = document.getElementById(id);
+    if (caja && caja.offsetParent !== null) graficosRegistrados[id]();
+  });
+}
+let temporizadorGraficos = null;
+window.addEventListener('resize', () => {
+  clearTimeout(temporizadorGraficos);
+  temporizadorGraficos = setTimeout(redibujarGraficosVisibles, 150);
+});
+
+// Fecha de una venta como día local: "2026-10-05T06:00:00Z" es el 5 de
+// octubre en Costa Rica, no el 4.
+function fechaDeVenta(valor) {
+  const m = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+
+// "2026-10-06T06:00:00.000Z" → "6 oct 2026"
+function fechaVentaTexto(valor) {
+  const d = fechaDeVenta(valor);
+  return d ? `${d.getDate()} ${MESES_CORTOS[d.getMonth()]} ${d.getFullYear()}` : escaparHtml(valor);
+}
+
+function colonesCorto(n) {
+  const v = Math.round(Number(n) || 0);
+  const a = Math.abs(v);
+  if (a >= 1e6) return '₡' + (v / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' M';
+  if (a >= 1e3) return '₡' + Math.round(v / 1e3) + ' mil';
+  return '₡' + v;
+}
+
+// Tope y paso "redondos" para el eje (0, 10 mil, 20 mil…)
+function escalaLimpia(max, divisiones) {
+  if (!(max > 0)) return { tope: 1, paso: 1 };
+  const bruto = max / (divisiones || 4);
+  const mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+  const paso = [1, 2, 2.5, 5, 10].map(f => f * mag).find(p => p >= bruto);
+  return { tope: paso * Math.ceil(max / paso), paso };
+}
+
+// Columna con las esquinas de arriba redondeadas y la base recta
+function caminoColumna(x, y, w, h, r) {
+  if (r <= 0) return `M${x},${y}H${x + w}V${y + h}H${x}Z`;
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+function tablaDeGrafico(encabezados, filas) {
+  return `<details class="gTabla"><summary>Ver como tabla</summary>${tablaSimple(encabezados, filas)}</details>`;
+}
+
+// Columnas (apiladas si hay más de una serie).
+// cfg: { etiquetas, titulos?, series: [{ nombre, color, valores }], detalle?(i) → [[texto, valor]],
+//        formato?, vacio?, alto? }
+function graficoColumnas(id, cfg) {
+  graficosRegistrados[id] = () => graficoColumnas(id, cfg);
+  const caja = document.getElementById(id);
+  if (!caja) return;
+  const { etiquetas, series } = cfg;
+  const titulos = cfg.titulos || etiquetas;
+  const formato = cfg.formato || formatoColones;
+  const n = etiquetas.length;
+  const totales = etiquetas.map((_, i) => series.reduce((s, se) => s + Math.max(Number(se.valores[i]) || 0, 0), 0));
+  if (!n || totales.every(t => t === 0)) {
+    caja.innerHTML = `<div class="vacio">${cfg.vacio || 'Todavía no hay datos para graficar.'}</div>`;
+    return;
+  }
+
+  const ancho = Math.max(caja.clientWidth || 0, 280);
+  const alto = cfg.alto || 220;
+  const m = { izq: 54, der: 10, arr: 22, aba: 26 };
+  const w = ancho - m.izq - m.der, h = alto - m.arr - m.aba;
+  const { tope, paso } = escalaLimpia(Math.max(...totales));
+  const y = v => m.arr + h - (v / tope) * h;
+  const banda = w / n;
+  const grosor = Math.max(4, Math.min(24, banda * 0.62));
+
+  let svg = '';
+  for (let v = 0; v <= tope + paso / 1000; v += paso) {
+    const yy = Math.round(y(v)) + 0.5;
+    svg += `<line x1="${m.izq}" x2="${ancho - m.der}" y1="${yy}" y2="${yy}" stroke="${v === 0 ? G_TINTA.base : G_TINTA.grilla}" stroke-width="1"/>`;
+    svg += `<text x="${m.izq - 8}" y="${yy}" dy="0.32em" text-anchor="end" class="gEje">${colonesCorto(v)}</text>`;
+  }
+  // Etiquetas de abajo: si no caben todas, una cada tanto (siempre la última)
+  const cada = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(w / 48))));
+  etiquetas.forEach((et, i) => {
+    if ((n - 1 - i) % cada) return;
+    svg += `<text x="${m.izq + banda * i + banda / 2}" y="${alto - 8}" text-anchor="middle" class="gEje">${escaparHtml(et)}</text>`;
+  });
+
+  etiquetas.forEach((_, i) => {
+    const x0 = m.izq + banda * i + banda / 2 - grosor / 2;
+    const visibles = series.map(se => ({ se, v: Math.max(Number(se.valores[i]) || 0, 0) })).filter(o => o.v > 0);
+    let acum = 0, marcas = '';
+    visibles.forEach((o, j) => {
+      // 2px de aire entre segmentos apilados
+      const yBase = y(acum) - (j > 0 ? 2 : 0);
+      const alt = Math.max(1, y(acum) - y(acum + o.v) - (j > 0 ? 2 : 0));
+      const r = j === visibles.length - 1 ? Math.min(4, alt, grosor / 2) : 0;
+      marcas += `<path class="gMarca" d="${caminoColumna(x0, yBase - alt, grosor, alt, r)}" fill="${o.se.color}"/>`;
+      acum += o.v;
+    });
+    svg += `<g class="gCol" data-i="${i}">${marcas}<rect class="gHit" data-i="${i}" x="${m.izq + banda * i}" y="${m.arr}" width="${banda}" height="${h}" fill="transparent" tabindex="0"/></g>`;
+  });
+
+  // Un solo valor escrito: el de la última columna con datos (lo más reciente)
+  let ultima = -1;
+  totales.forEach((t, i) => { if (t > 0) ultima = i; });
+  if (ultima >= 0) {
+    svg += `<text x="${m.izq + banda * ultima + banda / 2}" y="${y(totales[ultima]) - 7}" text-anchor="middle" class="gEtiquetaValor">${colonesCorto(totales[ultima])}</text>`;
+  }
+
+  const leyenda = series.length > 1
+    ? `<div class="gLeyenda">${series.slice().reverse().map(se => `<span><i style="background:${se.color}"></i>${escaparHtml(se.nombre)}</span>`).join('')}</div>`
+    : '';
+  const tabla = tablaDeGrafico(
+    ['', ...series.map(se => escaparHtml(se.nombre)), ...(series.length > 1 ? ['Total'] : [])],
+    etiquetas.map((_, i) => [
+      escaparHtml(titulos[i]),
+      ...series.map(se => formato(se.valores[i] || 0)),
+      ...(series.length > 1 ? [formato(totales[i])] : [])
+    ])
+  );
+  caja.innerHTML = `${leyenda}<svg viewBox="0 0 ${ancho} ${alto}" height="${alto}" role="img" aria-label="${escaparHtml(cfg.descripcion || '')}">${svg}</svg>${tabla}`;
+
+  // Tooltip: el valor primero, el nombre después; textos con textContent
+  const tip = document.createElement('div');
+  tip.className = 'gTooltip oculto';
+  caja.appendChild(tip);
+  const mostrar = i => {
+    tip.textContent = '';
+    const t = document.createElement('div');
+    t.className = 'gtTitulo';
+    t.textContent = titulos[i];
+    tip.appendChild(t);
+    const fila = (color, valor, nombre) => {
+      const f = document.createElement('div');
+      f.className = 'gtFila';
+      if (color) { const l = document.createElement('i'); l.className = 'gtLinea'; l.style.background = color; f.appendChild(l); }
+      const b = document.createElement('b'); b.textContent = valor; f.appendChild(b);
+      const s = document.createElement('span'); s.textContent = nombre; f.appendChild(s);
+      tip.appendChild(f);
+    };
+    series.slice().reverse().forEach(se => fila(se.color, formato(se.valores[i] || 0), se.nombre));
+    if (cfg.detalle) cfg.detalle(i).forEach(([nombre, valor]) => fila('', valor, nombre));
+    tip.classList.remove('oculto');
+    const cx = (m.izq + banda * i + banda / 2) * (caja.clientWidth / ancho);
+    const izq = Math.min(Math.max(cx - tip.offsetWidth / 2, 0), caja.clientWidth - tip.offsetWidth);
+    tip.style.left = izq + 'px';
+    tip.style.top = (leyenda ? 26 : 0) + 'px';
+    caja.classList.add('gHover');
+    caja.querySelectorAll('.gCol').forEach(g => g.classList.toggle('activa', g.dataset.i === String(i)));
+  };
+  const ocultar = () => {
+    tip.classList.add('oculto');
+    caja.classList.remove('gHover');
+  };
+  caja.querySelectorAll('rect.gHit').forEach(r => {
+    const i = Number(r.dataset.i);
+    r.addEventListener('pointerenter', () => mostrar(i));
+    r.addEventListener('focus', () => mostrar(i));
+    r.addEventListener('pointerleave', ocultar);
+    r.addEventListener('blur', ocultar);
+  });
+}
+
+// Barras horizontales con el valor en la punta (para rankings).
+// filas: [{ etiqueta, valor, nota? }]; cfg: { color, formato, vacio }
+function graficoBarras(id, filas, cfg) {
+  const caja = document.getElementById(id);
+  if (!caja) return;
+  const opciones = cfg || {};
+  const formato = opciones.formato || (v => String(v));
+  const conValor = filas.filter(f => f.valor > 0);
+  if (!conValor.length) {
+    caja.innerHTML = `<div class="vacio">${opciones.vacio || 'Todavía no hay datos.'}</div>`;
+    return;
+  }
+  const max = Math.max(...conValor.map(f => f.valor));
+  caja.innerHTML = `<div class="gBarras">${conValor.map(f => {
+    // La barra más larga ocupa todo menos el espacio reservado para su valor
+    const frac = Math.max(0.005, f.valor / max);
+    return `<div class="gFila">
+      <div class="gEtiq">${escaparHtml(f.etiqueta)}</div>
+      <div class="gPista"><div class="gBarra" style="width:calc((100% - 92px) * ${frac.toFixed(4)});background:${opciones.color || G_COLOR.marca}"></div><span class="gValor">${formato(f.valor)}${f.nota ? `<small>${escaparHtml(f.nota)}</small>` : ''}</span></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// Junta las ventas por semana (lunes a domingo) o por mes, de "desde" a hoy.
+// Lo vendido y lo regalado van aparte: una regalía no es ingreso.
+function ventasPorPeriodo(ventas, unidad, desde) {
+  const hoy = new Date();
+  const inicioDe = d => unidad === 'mes'
+    ? new Date(d.getFullYear(), d.getMonth(), 1)
+    : new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  const siguiente = d => unidad === 'mes'
+    ? new Date(d.getFullYear(), d.getMonth() + 1, 1)
+    : new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
+
+  const cubetas = [];
+  for (let d = inicioDe(desde); d <= hoy; d = siguiente(d)) {
+    cubetas.push({ inicio: d, ingreso: 0, costo: 0, unidades: 0, costoRegalias: 0, ventas: 0 });
+  }
+  const indice = new Map(cubetas.map((c, i) => [c.inicio.getTime(), i]));
+  ventas.forEach(v => {
+    const f = fechaDeVenta(v.fecha);
+    if (!f) return;
+    const i = indice.get(inicioDe(f).getTime());
+    if (i === undefined) return;
+    const c = cubetas[i];
+    const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
+    if (v.formaPago === 'Regalía') { c.costoRegalias += costo; return; }
+    c.ingreso += Number(v.precioVenta) || 0;
+    c.costo += costo;
+    c.unidades += Number(v.cantidad) || 0;
+    c.ventas += 1;
+  });
+
+  const variosAnios = cubetas.length && cubetas[0].inicio.getFullYear() !== hoy.getFullYear();
+  cubetas.forEach(c => {
+    const d = c.inicio;
+    if (unidad === 'mes') {
+      c.etiqueta = MESES_CORTOS[d.getMonth()] + (variosAnios ? ' ' + String(d.getFullYear()).slice(2) : '');
+      c.titulo = MESES_CORTOS[d.getMonth()] + ' ' + d.getFullYear();
+    } else {
+      c.etiqueta = d.getDate() + ' ' + MESES_CORTOS[d.getMonth()];
+      c.titulo = 'Semana del ' + d.getDate() + ' ' + MESES_CORTOS[d.getMonth()];
+    }
+  });
+  return cubetas;
+}
+
+function primeraFechaDeVenta() {
+  let primera = null;
+  estado.ventas.forEach(v => { const f = fechaDeVenta(v.fecha); if (f && (!primera || f < primera)) primera = f; });
+  return primera || new Date();
+}
+
+// ---------- Tendencias ----------
 
 function ventasEnPeriodo(periodo) {
   if (periodo === 'historico') return estado.ventas;
   const hoy = new Date();
   return estado.ventas.filter(v => {
-    const fecha = new Date(v.fecha);
-    if (isNaN(fecha)) return false;
+    const fecha = fechaDeVenta(v.fecha);
+    if (!fecha) return false;
     if (periodo === 'mes') return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
     if (periodo === 'anio') return fecha.getFullYear() === hoy.getFullYear();
     const limite = new Date(hoy);
     limite.setDate(limite.getDate() - Number(periodo));
     return fecha >= limite;
   });
-}
-
-function barraTendencia(etiqueta, valor, maximo, color) {
-  const porcentaje = maximo > 0 ? Math.round((valor / maximo) * 100) : 0;
-  return `<div style="margin-bottom:8px;">
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
-      <span>${escaparHtml(etiqueta)}</span><span style="color:var(--brown-soft);">${valor}</span>
-    </div>
-    <div style="background:var(--bg);border-radius:6px;height:8px;">
-      <div style="background:${color};width:${porcentaje}%;height:100%;border-radius:6px;"></div>
-    </div>
-  </div>`;
 }
 
 function renderEstimacionInventario() {
@@ -1595,26 +1918,54 @@ function renderTendencias() {
   document.getElementById('tCostoTotal').textContent = formatoColones(costoTotal);
   document.getElementById('tGananciaTotal').textContent = formatoColones(ingresoTotal - costoTotal);
 
+  // Por semana si el periodo es corto; por mes si es largo
+  const unidad = ['mes', '30'].includes(periodo) ? 'semana' : 'mes';
+  const hoy = new Date();
+  const desde = periodo === 'mes' ? new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    : periodo === 'anio' ? new Date(hoy.getFullYear(), 0, 1)
+    : periodo === 'historico' ? primeraFechaDeVenta()
+    : new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - Number(periodo));
+  const cubetas = ventasPorPeriodo(ventas, unidad, desde);
+  document.getElementById('gTendSub').textContent =
+    `Por ${unidad}: cada columna es lo vendido, y la parte verde es lo que ganaste`;
+  graficoColumnas('gTendIngreso', {
+    etiquetas: cubetas.map(c => c.etiqueta),
+    titulos: cubetas.map(c => c.titulo),
+    series: [
+      { nombre: 'Costo', color: G_COLOR.costo, valores: cubetas.map(c => Math.min(c.costo, c.ingreso)) },
+      { nombre: 'Ganancia', color: G_COLOR.entra, valores: cubetas.map(c => Math.max(c.ingreso - c.costo, 0)) }
+    ],
+    detalle: i => {
+      const c = cubetas[i];
+      const filas = [['vendido', formatoColones(c.ingreso)], ['unidades', String(c.unidades)]];
+      if (c.ingreso < c.costo) filas.push(['se vendió bajo el costo', formatoColones(c.ingreso - c.costo)]);
+      if (c.costoRegalias) filas.push(['costo de regalías', formatoColones(c.costoRegalias)]);
+      return filas;
+    },
+    descripcion: 'Ingreso del periodo dividido en costo y ganancia',
+    vacio: 'Todavía no hay ventas en este periodo.'
+  });
+
   const topProductos = Object.entries(unidadesPorProducto).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const maxProducto = topProductos.length ? topProductos[0][1] : 0;
   document.getElementById('tProductoTop').textContent = topProductos.length ? nombreProducto(topProductos[0][0]) : '—';
-  document.getElementById('tTopProductos').innerHTML = topProductos.length
-    ? topProductos.map(([id, unidades]) => barraTendencia(nombreProducto(id), unidades, maxProducto, 'var(--coral)')).join('')
-    : '<div class="vacio">Todavía no hay ventas en este periodo.</div>';
+  graficoBarras('tTopProductos', topProductos.map(([id, unidades]) => {
+    const p = productoPorId(id);
+    return { etiqueta: p ? etiquetaProducto(p) : nombreProducto(id), valor: unidades };
+  }), { color: G_COLOR.marca, formato: unidadesTexto, vacio: 'Todavía no hay ventas en este periodo.' });
 
   const categorias = Object.entries(unidadesPorCategoria).sort((a, b) => b[1] - a[1]);
-  const maxCategoria = categorias.length ? categorias[0][1] : 0;
   document.getElementById('tCategoriaTop').textContent = categorias.length ? categorias[0][0] : '—';
-  document.getElementById('tCategorias').innerHTML = categorias.length
-    ? categorias.map(([nombre, unidades]) => barraTendencia(nombre, unidades, maxCategoria, 'var(--sage)')).join('')
-    : '<div class="vacio">Sin datos en este periodo.</div>';
+  graficoBarras('tCategorias', categorias.map(([etiqueta, valor]) => ({ etiqueta, valor })),
+    { color: G_COLOR.marca, formato: unidadesTexto, vacio: 'Sin datos en este periodo.' });
 
   const tonos = Object.entries(unidadesPorTono).sort((a, b) => b[1] - a[1]);
-  const maxTono = tonos.length ? tonos[0][1] : 0;
   document.getElementById('tTonoTop').textContent = tonos.length ? tonos[0][0] : '—';
-  document.getElementById('tTonos').innerHTML = tonos.length
-    ? tonos.map(([nombre, unidades], i) => barraTendencia(nombre, unidades, maxTono, PALETA_TONOS[i % PALETA_TONOS.length])).join('')
-    : '<div class="vacio">Todavía no hay productos con tono o color asignado.</div>';
+  // Los 8 tonos que más salen; el resto se junta en "Otros"
+  const filasTonos = tonos.slice(0, 8).map(([etiqueta, valor]) => ({ etiqueta, valor }));
+  const otrosTonos = tonos.slice(8).reduce((s, [, u]) => s + u, 0);
+  if (otrosTonos) filasTonos.push({ etiqueta: `Otros (${tonos.length - 8} tonos)`, valor: otrosTonos });
+  graficoBarras('tTonos', filasTonos,
+    { color: G_COLOR.marca, formato: unidadesTexto, vacio: 'Todavía no hay productos con tono o color asignado.' });
 
   const bajos = [...estado.productos]
     .map(p => ({ ...p, unidadesVendidas: unidadesPorProducto[p.id] || 0 }))
@@ -3675,6 +4026,20 @@ function nombreCliente(id) {
 }
 
 function renderVentas() {
+  // Lo vendido por canal y por forma de pago (las regalías no son ingreso)
+  const porCanal = {}, porPago = {};
+  estado.ventas.forEach(v => {
+    if (v.formaPago === 'Regalía') return;
+    const monto = Number(v.precioVenta) || 0;
+    const canal = v.canal || 'Sin canal';
+    const pago = v.formaPago === 'SINPE' ? 'SINPE Móvil' : (v.formaPago || 'Sin dato');
+    porCanal[canal] = (porCanal[canal] || 0) + monto;
+    porPago[pago] = (porPago[pago] || 0) + monto;
+  });
+  const aFilas = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([etiqueta, valor]) => ({ etiqueta, valor }));
+  graficoBarras('gVentasCanal', aFilas(porCanal), { color: G_COLOR.entra, formato: formatoColones, vacio: 'Todavía no hay ventas.' });
+  graficoBarras('gVentasPago', aFilas(porPago), { color: G_COLOR.entra, formato: formatoColones, vacio: 'Todavía no hay ventas.' });
+
   const caja = document.getElementById('listaVentas');
   if (!estado.ventas.length) { caja.innerHTML = '<div class="vacio">Todavía no hay ventas.</div>'; return; }
   const ordenadas = [...estado.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -3685,7 +4050,7 @@ function renderVentas() {
       const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
       const ganancia = (Number(v.precioVenta) || 0) - costo;
       return [
-        escaparHtml(v.fecha), escaparHtml(nombreCliente(v.clienteId)),
+        fechaVentaTexto(v.fecha), escaparHtml(nombreCliente(v.clienteId)),
         escaparHtml(nombreProducto(v.productoId)) + (v.tipoPrecio === 'Mayor' ? ' <span class="pastilla verde">Mayor</span>' : ''),
         v.cantidad,
         formatoColones(costo), formatoColones(v.precioVenta),
@@ -3881,6 +4246,7 @@ function renderMovimientos() {
   document.getElementById('fGastos').textContent = formatoColones(gastos);
   document.getElementById('fAportes').textContent = formatoColones(aportes);
   document.getElementById('fSaldo').textContent = formatoColones(calcularSaldo());
+  renderGraficosFinanzas();
 
   const caja = document.getElementById('listaMovimientos');
   if (!estado.movimientos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay movimientos.</div>'; return; }
@@ -3893,6 +4259,56 @@ function renderMovimientos() {
       botonesAccion('editarMovimiento', 'eliminarMovimiento', m.id)
     ])
   );
+}
+
+// Plata que de verdad entró (contado + abonos) y lo que falta cobrar
+function renderGraficosFinanzas() {
+  const hoy = new Date();
+  let primera = primeraFechaDeVenta();
+  estado.abonos.forEach(a => { const f = fechaDeVenta(a.fecha); if (f && f < primera) primera = f; });
+  const meses = [];
+  for (let d = new Date(primera.getFullYear(), primera.getMonth(), 1); d <= hoy; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+    meses.push({ inicio: d, contado: 0, abonos: 0 });
+  }
+  const mesDe = valor => {
+    const f = fechaDeVenta(valor);
+    return f ? meses.find(m => m.inicio.getFullYear() === f.getFullYear() && m.inicio.getMonth() === f.getMonth()) : null;
+  };
+  estado.ventas.forEach(v => {
+    if (v.formaPago === 'A pagos' || v.formaPago === 'Regalía') return;
+    const m = mesDe(v.fecha);
+    if (m) m.contado += Number(v.precioVenta) || 0;
+  });
+  estado.abonos.forEach(a => {
+    const m = mesDe(a.fecha);
+    if (m) m.abonos += Number(a.monto) || 0;
+  });
+  const variosAnios = meses.length && meses[0].inicio.getFullYear() !== hoy.getFullYear();
+  graficoColumnas('gFinEntradas', {
+    etiquetas: meses.map(m => MESES_CORTOS[m.inicio.getMonth()] + (variosAnios ? ' ' + String(m.inicio.getFullYear()).slice(2) : '')),
+    titulos: meses.map(m => MESES_CORTOS[m.inicio.getMonth()] + ' ' + m.inicio.getFullYear()),
+    series: [
+      { nombre: 'Ventas de contado', color: G_COLOR.entra, valores: meses.map(m => m.contado) },
+      { nombre: 'Abonos', color: G_COLOR.entraSuave, valores: meses.map(m => m.abonos) }
+    ],
+    detalle: i => [['en total', formatoColones(meses[i].contado + meses[i].abonos)]],
+    descripcion: 'Plata que entró por mes: ventas de contado y abonos',
+    vacio: 'Todavía no ha entrado plata.'
+  });
+
+  const deudas = estado.clientes
+    .map(c => ({ etiqueta: c.nombre, valor: Math.max(totalDebeCliente(c.id) - totalAbonadoCliente(c.id), 0) }))
+    .filter(x => x.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+  const totalCobrar = deudas.reduce((sum, x) => sum + x.valor, 0);
+  document.getElementById('gFinCobrarSub').textContent = deudas.length
+    ? `${formatoColones(totalCobrar)} en total, de ${deudas.length} ${deudas.length === 1 ? 'clienta' : 'clientas'}`
+    : 'Saldo pendiente de cada clienta (ventas a pagos menos abonos)';
+  graficoBarras('gFinCobrar', deudas, { color: G_COLOR.debe, formato: formatoColones, vacio: 'Nadie debe nada.' });
+}
+
+function unidadesTexto(n) {
+  return n + (n === 1 ? ' unidad' : ' unidades');
 }
 
 function nuevoMovimiento() {
