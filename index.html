@@ -977,7 +977,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-04 · editar sube al formulario</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-05 · aviso de pedidos solo con nuevos</p>
         </div>
       </div>
     </section>
@@ -1775,13 +1775,16 @@ function fechaCorta(v) {
 // Aviso permanente + número en la pestaña
 function renderAvisoPedidos() {
   const nuevos = pedidosPendientes().length;
-  const activos = pedidosActivos().length;
   const encargos = encargosPendientes().length;
 
+  // El número rojo cuenta solo lo que necesita que alguien haga algo YA:
+  // pedidos nuevos sin atender y encargos por confirmar. Antes contaba
+  // también los ya contactados y pagados, y un pedido pagado que se envía
+  // mañana seguía "avisando" aunque ya estaba visto y cobrado.
   const chivo = document.getElementById('chivoTab');
   if (chivo) {
-    chivo.textContent = activos + encargos;
-    chivo.classList.toggle('oculto', activos + encargos === 0);
+    chivo.textContent = nuevos + encargos;
+    chivo.classList.toggle('oculto', nuevos + encargos === 0);
   }
 
   const aviso = document.getElementById('avisoPedidos');
