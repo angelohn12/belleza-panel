@@ -794,6 +794,7 @@
               <option>WhatsApp</option>
               <option>Entrega personal</option>
               <option>Envío</option>
+              <option>Tienda web</option>
             </select>
           </div>
           <div><label>Forma de pago</label>
@@ -977,7 +978,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-05 · aviso de pedidos solo con nuevos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-05b · pedidos: cobro sin duplicar</p>
         </div>
       </div>
     </section>
@@ -1870,10 +1871,10 @@ function renderPedidos() {
       <div class="pedidoAcciones">
         <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
         ${siguiente
-          ? `<button class="btnPaso" onclick="avanzarPedido('${escaparHtml(p.id)}','${siguiente}')">Marcar ${siguiente}</button>`
+          ? `<button class="btnPaso" onclick="avanzarPedido('${escaparHtml(p.id)}','${siguiente}')">Marcar ${etiquetaPaso(p, siguiente)}</button>`
           : '<span class="pastilla verde">Entregado</span>'}
         <select class="selEstado" onchange="avanzarPedido('${escaparHtml(p.id)}', this.value)">
-          ${PASOS.concat(['Cancelado']).map(e => `<option value="${e}" ${e === est ? 'selected' : ''}>${e}</option>`).join('')}
+          ${PASOS.concat(['Cancelado']).map(e => `<option value="${e}" ${e === est ? 'selected' : ''}>${etiquetaPaso(p, e)}</option>`).join('')}
         </select>
         <button class="btnCancelar" onclick="eliminarPedido('${escaparHtml(p.id)}')">Borrar</button>
       </div>
@@ -1888,14 +1889,44 @@ async function avanzarPedido(id, nuevoEstado) {
   const anterior = String(p.estado || 'Nuevo').trim();
   if (anterior === nuevoEstado) return;
 
-  const yaCobrado = ['Pagado', 'Enviado'].includes(anterior);
+  // "Ya cobrado" se decide por las ventas que de verdad existen con el número
+  // del pedido, no por el estado anterior: antes, un pedido Pagado que se
+  // devolvía a Contactado y se volvía a marcar Pagado registraba la venta y
+  // descontaba el stock DOS veces.
+  // (El estado anterior también cuenta, por si algún pedido viejo se cobró
+  // antes de que las ventas guardaran el número del pedido.)
+  const ventasDelPedido = ventasDePedido(p);
+  const yaCobrado = ventasDelPedido.length > 0 || ['Pagado', 'Enviado'].includes(anterior);
   const vaACobrar = ['Pagado', 'Enviado'].includes(nuevoEstado);
+
+  // Un pedido cobrado no puede volver a "Nuevo" o "Contactado": quedaría
+  // diciendo que no está pagado mientras la venta sigue registrada.
+  if (yaCobrado && ['Nuevo', 'Contactado'].includes(nuevoEstado)) {
+    mostrarToast(`El pedido ${p.numero} ya está cobrado. Si no se va a concretar, pasalo a "Cancelado" (eso anula la venta y devuelve el stock).`);
+    renderPedidos();
+    return;
+  }
 
   // Todo lo que hay que escribir por este cambio de estado, para mandarlo junto
   const operacionesDelCobro = [];
   // Stocks que quedan distintos: se aplican en memoria para no tener que
   // rebajarse los 1.200+ productos después de cobrar.
   const stocksNuevos = [];
+
+  // Cancelar un pedido ya cobrado deshace el cobro: borra sus ventas y
+  // devuelve el stock. Antes la venta y el stock quedaban como si se hubiera
+  // vendido.
+  if (nuevoEstado === 'Cancelado' && yaCobrado) {
+    if (!confirm(`El pedido ${p.numero} de ${p.nombre} ya estaba cobrado.\n\nAl cancelarlo se anula la venta registrada y se devuelve el stock. ¿Seguir?`)) { renderPedidos(); return; }
+    operacionesDelCobro.push(...operacionesParaAnularCobro(ventasDelPedido, stocksNuevos));
+  }
+
+  // Al marcarlo enviado/entregado, sus ventas quedan como entregadas
+  if (nuevoEstado === 'Enviado' && yaCobrado) {
+    ventasDelPedido.filter(v => v.estadoEntrega !== 'Entregado').forEach(v => {
+      operacionesDelCobro.push({ accion: 'editar_fila', hoja: 'Ventas', id: v.id, fila: { ...v, estadoEntrega: 'Entregado' } });
+    });
+  }
 
   // El descuento de stock ocurre UNA sola vez: al cruzar a Pagado por primera vez
   if (vaACobrar && !yaCobrado) {
@@ -1908,7 +1939,7 @@ async function avanzarPedido(id, nuevoEstado) {
       const detalle = faltantes.map(f => '· ' + f.nombre).join('\n');
       if (!confirm(`Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Marcar como pagado de todas formas? El stock puede quedar en negativo.`)) return;
     }
-    if (!confirm(`Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)} por SINPE?\n\nEsto descuenta el stock y registra la venta.`)) return;
+    if (!confirm(`¿Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)}?\n\nEsto descuenta el stock y registra la venta.`)) { renderPedidos(); return; }
 
     const cliente = await asegurarCliente(p);
     const productosDelPedido = items
@@ -1932,11 +1963,17 @@ async function avanzarPedido(id, nuevoEstado) {
           id: '', fecha: new Date().toISOString().slice(0, 10),
           clienteId: cliente, productoId: prod.id, cantidad: item.cantidad,
           costoUnitarioCRC: Number(prod.costoTotalCRC) || 0,
-          precioVenta: item.precioUnitario, canal: 'Tienda web',
-          estadoEntrega: p.entrega === 'retiro' ? 'Retiro' : 'Por enviar',
+          // En Ventas, precioVenta es el TOTAL de la línea (así lo usan el
+          // formulario, Finanzas y la ganancia). Antes se guardaba el precio
+          // de UNA unidad: un pedido de 3 se registraba como si fuera de 1.
+          precioVenta: Number(item.subtotal) || (Number(item.precioUnitario) || 0) * item.cantidad,
+          canal: 'Tienda web',
+          // Los mismos dos valores que tiene el formulario de Ventas; al
+          // marcar el pedido como Enviado pasa a Entregado.
+          estadoEntrega: nuevoEstado === 'Enviado' ? 'Entregado' : 'Pendiente',
           // estado.usuario es un objeto { usuario, rol }: mandarlo entero
           // escribía "[object Object]" en la columna usuario de Ventas.
-          usuario: estado.usuario ? estado.usuario.usuario : '', formaPago: 'SINPE',
+          usuario: estado.usuario ? estado.usuario.usuario : '', formaPago: 'SINPE Móvil',
           // Las líneas de un mismo pedido quedan agrupadas por su número
           tipoPrecio: item.tipoPrecio === 'mayor' ? 'Mayor' : 'Detalle',
           grupo: p.numero || ''
@@ -1965,10 +2002,43 @@ async function avanzarPedido(id, nuevoEstado) {
   // Productos de verdad para no dejar la pantalla mintiendo sobre el stock.
   if (lote.ok) {
     stocksNuevos.forEach(s => ajustarStockLocal(s.id, s.stock));
-    await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`, ['Pedidos', 'Ventas', 'Clientes']);
+    await refrescarTrasGuardar(`Pedido ${p.numero} → ${etiquetaPaso(p, nuevoEstado)}.`, ['Pedidos', 'Ventas', 'Clientes']);
   } else {
     await refrescarTrasGuardar(`Pedido ${p.numero} → ${nuevoEstado}.`, ['Pedidos', 'Ventas', 'Clientes', 'Productos']);
   }
+}
+
+// Ventas que se registraron al cobrar este pedido (llevan su número en "grupo")
+function ventasDePedido(p) {
+  const numero = String(p.numero || '').trim();
+  if (!numero) return [];
+  return estado.ventas.filter(v => String(v.grupo || '').trim() === numero);
+}
+
+// Operaciones para deshacer el cobro de un pedido: borra cada venta y le
+// devuelve las unidades a su producto. Anota los stocks nuevos en stocksNuevos.
+function operacionesParaAnularCobro(ventas, stocksNuevos) {
+  const ops = [];
+  const devolver = {};
+  ventas.forEach(v => {
+    ops.push({ accion: 'eliminar_fila', hoja: 'Ventas', id: v.id });
+    const k = String(v.productoId);
+    devolver[k] = (devolver[k] || 0) + (Number(v.cantidad) || 0);
+  });
+  Object.keys(devolver).forEach(k => {
+    const prod = estado.productos.find(x => String(x.id) === k);
+    if (!prod) return;
+    const stock = (Number(prod.stock) || 0) + devolver[k];
+    ops.push({ accion: 'editar_fila', hoja: 'Productos', id: prod.id, fila: filaProductoConStock(prod, stock) });
+    stocksNuevos.push({ id: prod.id, stock });
+  });
+  return ops;
+}
+
+// "Enviado" es el último paso para todos, pero si la clienta retira en
+// persona se lee mejor "Entregado".
+function etiquetaPaso(p, paso) {
+  return paso === 'Enviado' && p.entrega === 'retiro' ? 'Entregado' : paso;
 }
 
 // Reutiliza el cliente si ya existe (por teléfono); si no, lo crea.
@@ -1991,7 +2061,13 @@ async function asegurarCliente(p) {
 async function eliminarPedido(id) {
   const p = estado.pedidos.find(x => String(x.id) === String(id));
   if (!p) return;
-  if (!confirm(`Borrar el pedido ${p.numero} de ${p.nombre}?\n\nNo se puede deshacer. Si ya lo cobraste, la venta registrada NO se borra.`)) return;
+  // Si ya se cobró, la venta queda registrada (era una venta real). Para
+  // anularla también, primero se cancela el pedido.
+  const ventas = ventasDePedido(p);
+  const aviso = ventas.length
+    ? `\n\nYa está cobrado: su venta y el stock descontado se QUEDAN como están. Si la venta no se concretó, cancelá el pedido en vez de borrarlo.`
+    : '';
+  if (!confirm(`¿Borrar el pedido ${p.numero} de ${p.nombre}?\n\nNo se puede deshacer.${aviso}`)) return;
   const res = await apiPost({ accion: 'eliminar_fila', hoja: 'Pedidos', id: p.id });
   if (res.ok) { mostrarToast('Pedido borrado.'); await cargarDatos(true, ['Pedidos']); }
   else mostrarToast('Error: ' + res.error);
@@ -3178,15 +3254,27 @@ function editarVenta(id) {
   alternarClienteNuevo();
   document.getElementById('vProducto').value = String(v.productoId);
   document.getElementById('vCantidad').value = v.cantidad || 1;
-  document.getElementById('vCanal').value = v.canal || 'Instagram';
-  document.getElementById('vFormaPago').value = v.formaPago || 'Efectivo';
+  // Las ventas que vienen de la tienda traían valores que estos selectores no
+  // tenían ("Tienda web", "SINPE", "Por enviar"): el selector quedaba en blanco
+  // y al guardar se borraba ese dato de la venta.
+  ponerEnSelector('vCanal', v.canal, 'Instagram');
+  ponerEnSelector('vFormaPago', v.formaPago === 'SINPE' ? 'SINPE Móvil' : v.formaPago, 'Efectivo');
   alternarRegalia();
   document.getElementById('vPrecio').value = v.precioVenta || 0;
-  document.getElementById('vEstado').value = v.estadoEntrega || 'Pendiente';
+  ponerEnSelector('vEstado', v.estadoEntrega === 'Entregado' ? 'Entregado' : 'Pendiente', 'Pendiente');
   document.getElementById('vTieneRegalo').checked = false;
   alternarRegaloVenta();
   document.getElementById('btnGuardarVenta').textContent = 'Guardar cambios';
   abrirFormulario('formVenta');
+}
+
+// Elige un valor en un selector; si no está entre las opciones, la agrega
+// en vez de dejar el selector vacío.
+function ponerEnSelector(id, valor, porDefecto) {
+  const sel = document.getElementById(id);
+  const v = String(valor || '').trim() || porDefecto;
+  if (![...sel.options].some(o => o.value === v)) sel.add(new Option(v, v));
+  sel.value = v;
 }
 
 function nombreProducto(id) {
