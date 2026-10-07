@@ -1,0 +1,11 @@
+# Cabeceras de seguridad para todas las páginas (Cloudflare Pages las aplica solas).
+# - Nadie puede meter esta página dentro de otra (evita engaños tipo "clickjacking").
+# - El navegador no adivina tipos de archivo y siempre usa HTTPS.
+# - La página no pide cámara, micrófono, ubicación ni pagos.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()

@@ -381,6 +381,8 @@
   }
   .tarjeta .etiqueta{font-size:13px;color:var(--brown-soft);margin:0 0 6px;}
   .tarjeta .valor{font-size:24px;font-weight:500;margin:0;font-variant-numeric:tabular-nums;}
+  .tarjeta .fNota{font-size:11.5px;color:var(--brown-soft);margin:5px 0 0;line-height:1.4;}
+  .tarjeta .fNota:empty{display:none;}
 
   .panel{
     background:var(--surface);
@@ -531,7 +533,7 @@
     <!-- ---------- RESUMEN ---------- -->
     <section id="tab-resumen">
       <div class="tarjetas">
-        <div class="tarjeta"><p class="etiqueta">Saldo actual</p><p class="valor" id="rSaldo">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Plata en caja</p><p class="valor" id="rSaldo">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Productos en stock</p><p class="valor" id="rStock">0</p></div>
         <div class="tarjeta"><p class="etiqueta">Ventas del mes</p><p class="valor" id="rVentasMes">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Clientes</p><p class="valor" id="rClientes">0</p></div>
@@ -650,6 +652,14 @@
             </select>
           </div>
           <div id="eTipoCambioWrap" class="oculto"><label>Tipo de cambio</label><input id="eTipoCambio" type="text" inputmode="decimal" oninput="renderEntrada()" /></div>
+          <div><label>¿Cómo se pagó?</label>
+            <select id="ePago" onchange="renderEntrada()">
+              <option value="caja">Con plata del negocio</option>
+              <option value="socio">Lo pagó un socio con su plata</option>
+              <option value="no">No registrar en Finanzas</option>
+            </select>
+          </div>
+          <div id="eSocioWrap" class="oculto"><label>¿Quién?</label><select id="eSocio"></select></div>
           <div class="campoAncho" id="eResumen"></div>
           <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
             <button id="btnGuardarEntrada" onclick="ejecutarConBoton('btnGuardarEntrada', guardarEntrada)">Guardar entrada</button>
@@ -759,6 +769,14 @@
             <input id="pStock" type="number" step="1" min="0" value="1" oninput="actualizarCamposPorModalidad()" />
             <p class="ayudaTienda" id="pAyudaStock" style="margin:6px 0 0"></p>
           </div>
+          <div id="pPagoWrap"><label>¿Cómo se pagó?</label>
+            <select id="pPago" onchange="actualizarCamposPorModalidad()">
+              <option value="caja">Con plata del negocio</option>
+              <option value="socio">Lo pagó un socio con su plata</option>
+              <option value="no">No registrar en Finanzas</option>
+            </select>
+          </div>
+          <div id="pSocioWrap" class="oculto"><label>¿Quién?</label><select id="pSocio"></select></div>
           <div><label>Contenido / medida (opcional)</label><input id="pMedida" placeholder="10 ml, 50 g, 1 unidad…" /></div>
           <div class="campoAncho">
             <label>Qué es y para qué sirve (opcional)</label>
@@ -1017,10 +1035,12 @@
     <!-- ---------- FINANZAS ---------- -->
     <section id="tab-finanzas" class="oculto">
       <div class="tarjetas">
-        <div class="tarjeta"><p class="etiqueta">Ingresos totales</p><p class="valor" id="fIngresos">₡0</p></div>
-        <div class="tarjeta"><p class="etiqueta">Gastos totales</p><p class="valor" id="fGastos">₡0</p></div>
-        <div class="tarjeta"><p class="etiqueta">Aportes de capital</p><p class="valor" id="fAportes">₡0</p></div>
-        <div class="tarjeta"><p class="etiqueta">Saldo</p><p class="valor" id="fSaldo">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Plata en caja</p><p class="valor" id="fCaja">₡0</p><p class="fNota" id="fCajaNota"></p></div>
+        <div class="tarjeta"><p class="etiqueta">Te deben</p><p class="valor" id="fPorCobrar">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Mercadería (al costo)</p><p class="valor" id="fInventario">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Lo que vale el negocio</p><p class="valor" id="fVale">₡0</p><p class="fNota">caja + te deben + mercadería</p></div>
+        <div class="tarjeta"><p class="etiqueta">Pusieron los socios</p><p class="valor" id="fPuesto">₡0</p><p class="fNota" id="fPuestoNota"></p></div>
+        <div class="tarjeta"><p class="etiqueta">Ganancia hasta hoy</p><p class="valor" id="fGanancia">₡0</p><p class="fNota">lo que vale menos lo que pusieron</p></div>
       </div>
       <div class="panel">
         <h2>Plata que entró por mes</h2>
@@ -1039,14 +1059,24 @@
         </div>
         <div class="formulario oculto" id="formMovimiento">
           <div><label>Tipo</label>
-            <select id="mTipo">
-              <option value="ingreso">Ingreso</option>
-              <option value="gasto">Gasto</option>
-              <option value="aporte">Aporte de capital</option>
+            <select id="mTipo" onchange="alternarCamposMovimiento()">
+              <option value="aporte">Plata que pusieron los socios</option>
+              <option value="compra">Compra de mercadería</option>
+              <option value="gasto">Gasto (empaques, publicidad, envíos…)</option>
+              <option value="retiro">Plata que sacaron los socios</option>
+              <option value="ingreso">Otro ingreso (que no sea venta)</option>
             </select>
           </div>
           <div><label>Monto (₡)</label><input id="mMonto" type="text" inputmode="decimal" /></div>
-          <div><label>Categoría</label><input id="mCategoria" placeholder="Compra inventario, envío, etc." /></div>
+          <div><label>Fecha</label><input id="mFecha" type="date" /></div>
+          <div id="mPagoWrap"><label>¿Cómo se pagó?</label>
+            <select id="mPago" onchange="alternarCamposMovimiento()">
+              <option value="caja">Con plata del negocio</option>
+              <option value="socio">Lo pagó un socio con su plata</option>
+            </select>
+          </div>
+          <div id="mSocioWrap"><label>¿Quién?</label><select id="mSocio"></select></div>
+          <div><label>Categoría</label><input id="mCategoria" placeholder="Opcional" /></div>
           <div class="campoAncho"><label>Descripción</label><input id="mDescripcion" placeholder="Opcional" /></div>
           <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
             <button id="btnGuardarMovimiento" onclick="ejecutarConBoton('btnGuardarMovimiento', guardarMovimiento)">Guardar movimiento</button>
@@ -1122,7 +1152,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-06b · entrada de inventario</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07 · finanzas y seguridad</p>
         </div>
       </div>
     </section>
@@ -1551,11 +1581,39 @@ function renderResumen() {
     : '<div class="vacio">Todavía no hay ventas registradas.</div>';
 }
 
+// ---------- Finanzas: la foto del negocio ----------
+// Tipos de movimiento (hoja Movimientos):
+//   aporte  → plata que los socios pusieron de su bolsa: entra a la caja
+//   compra  → compra de mercadería: sale de la caja, pero NO es gasto (se
+//             vuelve costo recién cuando ese producto se vende)
+//   gasto   → empaques, publicidad, envíos que paga el negocio: sale de la
+//             caja y baja la ganancia
+//   retiro  → plata que los socios sacan para ellos: sale de la caja
+//   ingreso → otra plata que entra y que no es una venta
+// Antes solo existían ingreso/gasto/aporte, y una compra de mercadería
+// registrada como "gasto" se contaba dos veces como inversión.
+const SOCIOS = ['Anyelo', 'Belén'];
+const TIPOS_MOVIMIENTO = {
+  aporte:  'Pusieron los socios',
+  compra:  'Compra de mercadería',
+  gasto:   'Gasto',
+  retiro:  'Sacaron los socios',
+  ingreso: 'Otro ingreso'
+};
+const SALE_DE_CAJA = ['compra', 'gasto', 'retiro'];
+
+const sumaMovimientos = tipo => estado.movimientos
+  .filter(m => m.tipo === tipo)
+  .reduce((s, m) => s + (Number(m.monto) || 0), 0);
+
+// Plata que de verdad tiene el negocio: lo que entró (aportes, ventas de
+// contado, abonos, otros ingresos) menos lo que salió (compras, gastos,
+// retiros).
 function calcularSaldo() {
   let saldo = 0;
   estado.movimientos.forEach(m => {
     const monto = Number(m.monto) || 0;
-    if (m.tipo === 'gasto') saldo -= monto; else saldo += monto;
+    if (SALE_DE_CAJA.includes(m.tipo)) saldo -= monto; else saldo += monto;
   });
   // Ventas de contado: el efectivo entra completo en el momento de la venta.
   // Ventas "A pagos": el efectivo NO entra por el precio de venta, sino poco a poco
@@ -1568,41 +1626,53 @@ function calcularSaldo() {
   return saldo;
 }
 
-function calcularInversionTotal() {
-  let total = 0;
-  estado.movimientos.forEach(m => {
-    if (m.tipo === 'aporte' || m.tipo === 'gasto') total += Number(m.monto) || 0;
-  });
-  return total;
+function totalPorCobrar() {
+  return estado.clientes.reduce((s, c) => s + Math.max(totalDebeCliente(c.id) - totalAbonadoCliente(c.id), 0), 0);
 }
 
-function calcularGananciaAcumulada() {
-  return estado.ventas.reduce((suma, v) => {
-    const costo = (Number(v.costoUnitarioCRC) || 0) * (Number(v.cantidad) || 1);
-    return suma + ((Number(v.precioVenta) || 0) - costo);
+function valorInventarioAlCosto() {
+  return estado.productos.reduce((s, p) => {
+    const stock = Number(p.stock) || 0;
+    return s + (stock > 0 ? stock * (Number(p.costoTotalCRC) || 0) : 0);
   }, 0);
 }
 
+// Todo junto: cuánto vale hoy el negocio, cuánto pusieron los socios y la
+// diferencia (la ganancia de verdad, ya restados gastos y regalías).
+function resumenFinanciero() {
+  const caja = calcularSaldo();
+  const porCobrar = totalPorCobrar();
+  const inventario = valorInventarioAlCosto();
+  const vale = caja + porCobrar + inventario;
+  const puesto = sumaMovimientos('aporte') - sumaMovimientos('retiro');
+  const porSocio = {};
+  estado.movimientos.forEach(m => {
+    if (m.tipo !== 'aporte' && m.tipo !== 'retiro') return;
+    const quien = String(m.socio || '').trim() || 'Sin indicar';
+    porSocio[quien] = (porSocio[quien] || 0) + (m.tipo === 'aporte' ? 1 : -1) * (Number(m.monto) || 0);
+  });
+  return { caja, porCobrar, inventario, vale, puesto, porSocio, ganancia: vale - puesto };
+}
+
 function renderPuntoEquilibrio() {
-  const inversion = calcularInversionTotal();
-  const ganancia = calcularGananciaAcumulada();
+  const f = resumenFinanciero();
   const texto = document.getElementById('peTexto');
   const barra = document.getElementById('peBarra');
 
-  if (inversion <= 0) {
-    texto.textContent = 'Registrá el aporte de capital inicial en Finanzas para calcular el punto de equilibrio.';
+  if (f.puesto <= 0) {
+    texto.textContent = 'Registrá en Finanzas la plata que pusieron los socios para ver cuánto lleva ganado el negocio.';
     barra.style.width = '0%';
     return;
   }
 
-  const porcentaje = Math.max(0, Math.min(100, (ganancia / inversion) * 100));
+  const porcentaje = Math.max(0, Math.min(100, (f.ganancia / f.puesto) * 100));
   barra.style.width = porcentaje.toFixed(0) + '%';
 
-  if (ganancia >= inversion) {
-    texto.textContent = `Superaste el punto de equilibrio. Ganancia neta hasta ahora: ${formatoColones(ganancia - inversion)}.`;
+  if (f.ganancia >= f.puesto) {
+    texto.textContent = `El negocio ya ganó más de lo que pusieron: ${formatoColones(f.ganancia)} de ganancia sobre ${formatoColones(f.puesto)} puestos.`;
     barra.style.background = 'var(--sage)';
   } else {
-    texto.textContent = `Llevás recuperado ${formatoColones(ganancia)} de ${formatoColones(inversion)} invertidos (${porcentaje.toFixed(0)}%). Te faltan ${formatoColones(inversion - ganancia)} para el punto de equilibrio.`;
+    texto.textContent = `El negocio lleva ganados ${formatoColones(f.ganancia)} de los ${formatoColones(f.puesto)} que pusieron (${porcentaje.toFixed(0)}%). Al llegar al 100%, la inversión se pagó sola.`;
     barra.style.background = 'var(--coral)';
   }
 }
@@ -3255,6 +3325,12 @@ function actualizarCamposPorModalidad() {
   // encargo: así queda listo para cuando llegue. (En la tienda solo se cobra
   // al por mayor lo que está en stock — eso lo decide el servidor.)
   document.getElementById('pLabelPrecio').textContent = esEncargo ? 'Precio de venta estimado (₡)' : 'Precio de venta (₡)';
+  // Un producto nuevo que entra con unidades es una compra de mercadería:
+  // se pregunta cómo se pagó para que quede en Finanzas. Al editar no, para
+  // no registrar dos veces la misma compra.
+  const conPago = !productoEditando && !esEncargo;
+  document.getElementById('pPagoWrap').classList.toggle('oculto', !conPago);
+  document.getElementById('pSocioWrap').classList.toggle('oculto', !(conPago && document.getElementById('pPago').value === 'socio'));
 }
 
 function nuevoProducto() {
@@ -3275,6 +3351,8 @@ function nuevoProducto() {
   document.getElementById('pTipoCambio').value = 520;
   document.getElementById('pPrecioVenta').value = '';
   document.getElementById('pStock').value = 1;
+  document.getElementById('pPago').value = 'caja';
+  llenarSelectorSocios('pSocio');
   actualizarCamposPorModalidad();
   document.getElementById('pDescuento').value = '0';
   document.getElementById('pPrecioMayorista').value = '';
@@ -3375,6 +3453,8 @@ function nuevaEntrada() {
   document.getElementById('eCosto').value = '';
   document.getElementById('eMoneda').value = 'CRC';
   document.getElementById('eTipoCambio').value = valorConfig('tipoCambio', 520);
+  document.getElementById('ePago').value = 'caja';
+  llenarSelectorSocios('eSocio');
   renderEntrada();
   abrirFormulario('formEntrada');
 }
@@ -3406,6 +3486,8 @@ function calculoEntrada() {
 function renderEntrada() {
   const usd = document.getElementById('eMoneda').value === 'USD';
   document.getElementById('eTipoCambioWrap').classList.toggle('oculto', !usd);
+  const pago = document.getElementById('ePago').value;
+  document.getElementById('eSocioWrap').classList.toggle('oculto', pago !== 'socio');
   const caja = document.getElementById('eProductoElegido');
   const resumen = document.getElementById('eResumen');
   const c = calculoEntrada();
@@ -3433,6 +3515,9 @@ function renderEntrada() {
         ? `${c.stockAntes} a ${formatoColones(c.costoAntes)} + ${c.cantidad} a ${formatoColones(c.costoNuevo)} →
            <b>quedan ${c.stockDespues} a ${formatoColones(c.promedio)} c/u</b>`
         : `<b>Quedan ${c.stockDespues} a ${formatoColones(c.promedio)} c/u</b>`}
+      <div style="color:var(--brown-soft);margin-top:4px">${pago === 'no'
+        ? 'No se anota nada en Finanzas.'
+        : `En Finanzas queda una compra de ${formatoColones(c.cantidad * c.costoNuevo)}${pago === 'socio' ? ' pagada por un socio' : ' con plata del negocio'}.`}</div>
       ${avisos.map(a => `<div style="color:var(--coral-dark);font-weight:600;margin-top:4px">${escaparHtml(a)}</div>`).join('')}
     </div></div>`;
 }
@@ -3453,12 +3538,20 @@ async function guardarEntrada() {
     costoTotalCRC: c.promedio,
     modalidad: 'stock'
   };
-  const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: c.p.id, fila });
+  // El producto y la compra en Finanzas viajan juntos, en un solo envío
+  const ops = [{ accion: 'editar_fila', hoja: 'Productos', id: c.p.id, fila }].concat(
+    movimientosDeCompra(c.cantidad * c.costoNuevo, document.getElementById('ePago').value,
+      document.getElementById('eSocio').value, c.cantidad + ' × ' + etiquetaProducto(c.p))
+  );
+  const lote = await apiLote(ops);
+  const res = (lote.resultados || [])[0] || { ok: false, error: lote.error };
   if (!res.ok) { mostrarToast('No se pudo guardar: ' + (res.error || '')); return; }
+  if (!lote.ok) mostrarToast('La entrada se guardó, pero la compra no quedó en Finanzas. Anotala a mano ahí.');
 
   Object.assign(c.p, fila);
   entradaProductoId = null;
   document.getElementById('formEntrada').classList.add('oculto');
+  if (ops.length > 1) await cargarDatos(true, ['Movimientos']);
   renderTodo();
   mostrarToast(`Entrada guardada: ${c.p.nombre} queda con ${c.stockDespues} en stock a ${formatoColones(c.promedio)} c/u.`);
 }
@@ -3580,6 +3673,19 @@ async function guardarProducto() {
   if (resultado.ok) {
     mostrarToast(productoEditando ? 'Producto actualizado.' : 'Producto guardado.');
     document.getElementById('formProducto').classList.add('oculto');
+
+    // Producto nuevo con unidades: la compra queda registrada en Finanzas
+    if (!productoEditando && Number(fila.stock) > 0) {
+      const ops = movimientosDeCompra(
+        Number(fila.stock) * (Number(fila.costoTotalCRC) || 0),
+        document.getElementById('pPago').value, document.getElementById('pSocio').value,
+        fila.stock + ' × ' + etiquetaProducto(fila)
+      );
+      if (ops.length) {
+        const lote = await apiLote(ops);
+        if (!lote.ok) mostrarToast('El producto se guardó, pero la compra no quedó registrada en Finanzas. Anotala a mano ahí.');
+      }
+    }
 
     // Costo y precio en cascada: si este producto tiene más tonos (mismo
     // nombre + marca), se les pone el mismo costo/precio de una — así no
@@ -4374,27 +4480,42 @@ async function guardarVenta() {
 // ---------- Finanzas ----------
 
 function renderMovimientos() {
-  const ingresos = estado.movimientos.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + (Number(m.monto) || 0), 0)
-    + estado.ventas.reduce((s, v) => s + (Number(v.precioVenta) || 0), 0);
-  const gastos = estado.movimientos.filter(m => m.tipo === 'gasto').reduce((s, m) => s + (Number(m.monto) || 0), 0);
-  const aportes = estado.movimientos.filter(m => m.tipo === 'aporte').reduce((s, m) => s + (Number(m.monto) || 0), 0);
-
-  document.getElementById('fIngresos').textContent = formatoColones(ingresos);
-  document.getElementById('fGastos').textContent = formatoColones(gastos);
-  document.getElementById('fAportes').textContent = formatoColones(aportes);
-  document.getElementById('fSaldo').textContent = formatoColones(calcularSaldo());
+  const f = resumenFinanciero();
+  const poner = (id, valor, color) => {
+    const el = document.getElementById(id);
+    el.textContent = formatoColones(valor);
+    el.style.color = color || '';
+  };
+  poner('fCaja', f.caja, f.caja < 0 ? 'var(--coral-dark)' : '');
+  poner('fPorCobrar', f.porCobrar, f.porCobrar > 0 ? 'var(--debe)' : '');
+  poner('fInventario', f.inventario);
+  poner('fVale', f.vale);
+  poner('fPuesto', f.puesto);
+  poner('fGanancia', f.ganancia, f.ganancia >= 0 ? 'var(--entra)' : 'var(--coral-dark)');
+  // Caja negativa = salió más plata de la que el sistema sabe que entró:
+  // falta registrar algo (un aporte, una venta de contado…)
+  document.getElementById('fCajaNota').textContent = f.caja < 0
+    ? 'Negativo: falta registrar alguna plata que entró (un aporte, una venta).'
+    : '';
+  document.getElementById('fPuestoNota').textContent = Object.keys(f.porSocio).length
+    ? Object.entries(f.porSocio).map(([quien, monto]) => quien + ' ' + formatoColones(monto)).join(' · ')
+    : '';
   renderGraficosFinanzas();
 
   const caja = document.getElementById('listaMovimientos');
   if (!estado.movimientos.length) { caja.innerHTML = '<div class="vacio">Todavía no hay movimientos.</div>'; return; }
   const ordenados = [...estado.movimientos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   caja.innerHTML = tablaSimple(
-    ['Fecha', 'Tipo', 'Categoría', 'Monto', 'Descripción', 'Usuario', 'Acciones'],
-    ordenados.map(m => [
-      escaparHtml(m.fecha), escaparHtml(m.tipo), escaparHtml(m.categoria), formatoColones(m.monto),
-      escaparHtml(m.descripcion), escaparHtml(m.usuario),
-      botonesAccion('editarMovimiento', 'eliminarMovimiento', m.id)
-    ])
+    ['Fecha', 'Tipo', 'Monto', 'Socio', 'Categoría', 'Descripción', 'Acciones'],
+    ordenados.map(m => {
+      const sale = SALE_DE_CAJA.includes(m.tipo);
+      return [
+        fechaVentaTexto(m.fecha), escaparHtml(TIPOS_MOVIMIENTO[m.tipo] || m.tipo),
+        `<span style="font-weight:600;color:${sale ? 'var(--brown)' : 'var(--entra)'}">${sale ? '−' : '+'}${formatoColones(m.monto)}</span>`,
+        escaparHtml(m.socio || ''), escaparHtml(m.categoria), escaparHtml(m.descripcion),
+        botonesAccion('editarMovimiento', 'eliminarMovimiento', m.id)
+      ];
+    })
   );
 }
 
@@ -4448,12 +4569,39 @@ function unidadesTexto(n) {
   return n + (n === 1 ? ' unidad' : ' unidades');
 }
 
+function hoyISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function llenarSelectorSocios(id, valor) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = SOCIOS.map(n => `<option>${escaparHtml(n)}</option>`).join('');
+  if (valor) ponerEnSelector(id, valor, SOCIOS[0]);
+}
+
+// Qué campos tienen sentido según el tipo: el socio solo cuando pusieron o
+// sacaron plata (o pagaron una compra/gasto de su bolsa).
+function alternarCamposMovimiento() {
+  const tipo = document.getElementById('mTipo').value;
+  const conPago = (tipo === 'compra' || tipo === 'gasto') && !movimientoEditando;
+  document.getElementById('mPagoWrap').classList.toggle('oculto', !conPago);
+  const pagoSocio = conPago && document.getElementById('mPago').value === 'socio';
+  document.getElementById('mSocioWrap').classList.toggle('oculto', !(tipo === 'aporte' || tipo === 'retiro' || pagoSocio));
+  const ejemplos = { aporte: 'Ej. primera compra', compra: 'Ej. Sephora, Amazon', gasto: 'Ej. empaques, publicidad', retiro: 'Ej. reparto de ganancias', ingreso: 'Opcional' };
+  document.getElementById('mCategoria').placeholder = ejemplos[tipo] || 'Opcional';
+}
+
 function nuevoMovimiento() {
   movimientoEditando = null;
-  document.getElementById('mTipo').value = 'ingreso';
+  document.getElementById('mTipo').value = 'aporte';
   document.getElementById('mMonto').value = '';
+  document.getElementById('mFecha').value = hoyISO();
+  document.getElementById('mPago').value = 'caja';
+  llenarSelectorSocios('mSocio');
   document.getElementById('mCategoria').value = '';
   document.getElementById('mDescripcion').value = '';
+  alternarCamposMovimiento();
   document.getElementById('btnGuardarMovimiento').textContent = 'Guardar movimiento';
   abrirFormulario('formMovimiento');
 }
@@ -4462,12 +4610,37 @@ function editarMovimiento(id) {
   const m = estado.movimientos.find(x => String(x.id) === String(id));
   if (!m) return;
   movimientoEditando = id;
-  document.getElementById('mTipo').value = m.tipo || 'ingreso';
+  ponerEnSelector('mTipo', m.tipo, 'aporte');
   document.getElementById('mMonto').value = m.monto || '';
+  document.getElementById('mFecha').value = String(m.fecha || '').slice(0, 10) || hoyISO();
+  llenarSelectorSocios('mSocio', m.socio || SOCIOS[0]);
   document.getElementById('mCategoria').value = m.categoria || '';
   document.getElementById('mDescripcion').value = m.descripcion || '';
+  alternarCamposMovimiento();
   document.getElementById('btnGuardarMovimiento').textContent = 'Guardar cambios';
   abrirFormulario('formMovimiento');
+}
+
+// Movimientos que deja una compra de mercadería en Finanzas, según cómo se
+// pagó: con plata del negocio = una compra (baja la caja); la pagó un
+// socio = lo que puso ese socio + la compra (la caja queda igual y sube lo
+// que puso). 'no' = no se registra (ej. una corrección de inventario).
+function movimientosDeCompra(monto, pago, socio, descripcion, tipo) {
+  monto = Math.round(Number(monto) || 0);
+  if (!(monto > 0) || pago === 'no') return [];
+  const fecha = hoyISO();
+  const usuario = estado.usuario ? estado.usuario.usuario : '';
+  const ops = [];
+  if (pago === 'socio') {
+    ops.push({ accion: 'agregar_fila', hoja: 'Movimientos', fila: {
+      id: '', fecha, tipo: 'aporte', monto, socio, categoria: 'Pagó con su plata', descripcion, usuario
+    } });
+  }
+  ops.push({ accion: 'agregar_fila', hoja: 'Movimientos', fila: {
+    id: '', fecha, tipo: tipo || 'compra', monto, socio: pago === 'socio' ? socio : '',
+    categoria: tipo === 'gasto' ? '' : 'Mercadería', descripcion, usuario
+  } });
+  return ops;
 }
 
 async function eliminarMovimiento(id) {
@@ -4478,23 +4651,47 @@ async function eliminarMovimiento(id) {
 }
 
 async function guardarMovimiento() {
+  const tipo = document.getElementById('mTipo').value;
+  const monto = Math.round(parseMonto(document.getElementById('mMonto').value));
+  if (!(monto > 0)) { mostrarToast('Poné el monto.'); return; }
+  const fecha = document.getElementById('mFecha').value || hoyISO();
+  const usaSocio = !document.getElementById('mSocioWrap').classList.contains('oculto');
+  const socio = usaSocio ? document.getElementById('mSocio').value : '';
+  const original = movimientoEditando ? (estado.movimientos.find(x => String(x.id) === String(movimientoEditando)) || {}) : {};
   const fila = {
+    ...original,
     id: movimientoEditando || '',
-    fecha: new Date().toISOString().slice(0, 10),
-    tipo: document.getElementById('mTipo').value,
-    monto: parseMonto(document.getElementById('mMonto').value),
+    // Al editar se respeta la fecha elegida (antes se cambiaba a la de hoy)
+    fecha,
+    tipo,
+    monto,
+    socio: (tipo === 'aporte' || tipo === 'retiro') ? socio : (original.socio || ''),
     categoria: document.getElementById('mCategoria').value,
     descripcion: document.getElementById('mDescripcion').value,
-    usuario: estado.usuario.usuario
+    usuario: original.usuario || estado.usuario.usuario
   };
-  const accion = movimientoEditando ? 'editar_fila' : 'agregar_fila';
-  const resultado = await apiPost({ accion, hoja: 'Movimientos', id: movimientoEditando, fila });
-  if (resultado.ok) {
+
+  let ok, error;
+  const pagoSocio = !movimientoEditando && (tipo === 'compra' || tipo === 'gasto') && document.getElementById('mPago').value === 'socio';
+  if (pagoSocio) {
+    // Lo pagó un socio de su bolsa: queda lo que puso + la compra/gasto
+    const ops = movimientosDeCompra(monto, 'socio', socio, fila.descripcion, tipo);
+    ops.forEach(o => { o.fila.fecha = fecha; if (fila.categoria) o.fila.categoria = o.fila.tipo === 'aporte' ? o.fila.categoria : fila.categoria; });
+    const lote = await apiLote(ops);
+    ok = lote.ok;
+    error = lote.error || ((lote.resultados || []).find(x => x && !x.ok) || {}).error;
+  } else {
+    const resultado = await apiPost({ accion: movimientoEditando ? 'editar_fila' : 'agregar_fila', hoja: 'Movimientos', id: movimientoEditando, fila });
+    ok = resultado.ok;
+    error = resultado.error;
+  }
+
+  if (ok) {
     mostrarToast(movimientoEditando ? 'Movimiento actualizado.' : 'Movimiento guardado.');
     document.getElementById('formMovimiento').classList.add('oculto');
     movimientoEditando = null;
     await cargarDatos(true, ['Movimientos']);
-  } else mostrarToast('Error: ' + resultado.error);
+  } else mostrarToast('Error: ' + (error || 'no se pudo guardar'));
 }
 
 // ---------- Publicaciones ----------
