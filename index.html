@@ -626,7 +626,35 @@
       <div class="panel">
         <div class="filaBotones">
           <h2 style="margin:0">Productos</h2>
-          <button onclick="nuevoProducto()">+ Nuevo producto</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="secundario" onclick="nuevaEntrada()">+ Entrada de inventario</button>
+            <button onclick="nuevoProducto()">+ Nuevo producto</button>
+          </div>
+        </div>
+        <div class="formulario oculto" id="formEntrada">
+          <div class="campoAncho">
+            <label>Producto que entró</label>
+            <div class="buscadorProd">
+              <input id="busq-entrada" placeholder="Buscar por nombre, marca o tono…" autocomplete="off"
+                     oninput="buscarEnBuscador('entrada')" onfocus="buscarEnBuscador('entrada')" />
+              <div class="resultadosProd oculto" id="res-entrada"></div>
+            </div>
+            <div id="eProductoElegido" class="lineasVenta"></div>
+          </div>
+          <div><label>Cuántas entraron</label><input id="eCantidad" type="number" min="1" value="1" oninput="renderEntrada()" /></div>
+          <div><label>Costo de cada una (con envío)</label><input id="eCosto" type="text" inputmode="decimal" oninput="renderEntrada()" /></div>
+          <div><label>Moneda</label>
+            <select id="eMoneda" onchange="renderEntrada()">
+              <option value="CRC">Colones</option>
+              <option value="USD">Dólares</option>
+            </select>
+          </div>
+          <div id="eTipoCambioWrap" class="oculto"><label>Tipo de cambio</label><input id="eTipoCambio" type="text" inputmode="decimal" oninput="renderEntrada()" /></div>
+          <div class="campoAncho" id="eResumen"></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarEntrada" onclick="ejecutarConBoton('btnGuardarEntrada', guardarEntrada)">Guardar entrada</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formEntrada')">Cancelar</button>
+          </div>
         </div>
         <div class="formulario oculto" id="formProducto">
           <div>
@@ -1094,7 +1122,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-06 · gráficos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-06b · entrada de inventario</p>
         </div>
       </div>
     </section>
@@ -3298,6 +3326,7 @@ function editarProducto(id) {
 // editando, para que el siguiente "Guardar" no lo pise por error.
 const SOLTAR_EDICION = {
   formProducto:   () => { productoEditando = null; },
+  formEntrada:    () => { entradaProductoId = null; },
   formVenta:      () => { ventaEditando = null; lineasVenta = []; },
   formCliente:    () => { clienteEditando = null; },
   formMovimiento: () => { movimientoEditando = null; },
@@ -3327,6 +3356,111 @@ function abrirFormulario(idFormulario) {
 function cancelarFormulario(idFormulario) {
   if (SOLTAR_EDICION[idFormulario]) SOLTAR_EDICION[idFormulario]();
   document.getElementById(idFormulario).classList.add('oculto');
+}
+
+// ---------- Entrada de inventario ----------
+// Cuando entra mercadería de un producto que ya existe, a otro costo (ej.
+// NYX a ₡6.000 traídos de Amazon y después a ₡5.000 comprados acá), el costo
+// nuevo se mezcla con el de las unidades que quedan: costo promedio
+// ponderado. Antes, cambiar el costo en "Editar" borraba el viejo aunque
+// todavía quedaran unidades compradas a ese precio. Las ventas pasadas no
+// cambian: cada una guardó el costo que tenía el día que se vendió.
+let entradaProductoId = null;
+
+function nuevaEntrada() {
+  entradaProductoId = null;
+  document.getElementById('busq-entrada').value = '';
+  cerrarBuscador('entrada');
+  document.getElementById('eCantidad').value = 1;
+  document.getElementById('eCosto').value = '';
+  document.getElementById('eMoneda').value = 'CRC';
+  document.getElementById('eTipoCambio').value = valorConfig('tipoCambio', 520);
+  renderEntrada();
+  abrirFormulario('formEntrada');
+}
+
+function elegirProductoEntrada(id) {
+  entradaProductoId = id;
+  renderEntrada();
+  document.getElementById('eCantidad').focus();
+}
+
+function calculoEntrada() {
+  const p = productoPorId(entradaProductoId);
+  if (!p) return null;
+  const cantidad = Math.max(0, Math.floor(Number(document.getElementById('eCantidad').value) || 0));
+  const moneda = document.getElementById('eMoneda').value;
+  const tipoCambio = parseMonto(document.getElementById('eTipoCambio').value);
+  const costoEscrito = parseMonto(document.getElementById('eCosto').value);
+  const costoNuevo = Math.round(moneda === 'USD' ? costoEscrito * tipoCambio : costoEscrito);
+  const stockAntes = Math.max(Number(p.stock) || 0, 0);
+  const costoAntes = Number(p.costoTotalCRC) || 0;
+  const stockDespues = stockAntes + cantidad;
+  // Si no quedaba ninguna (o no tenía costo), el costo es el de esta compra
+  const promedio = stockAntes > 0 && costoAntes > 0
+    ? Math.round((stockAntes * costoAntes + cantidad * costoNuevo) / stockDespues)
+    : costoNuevo;
+  return { p, cantidad, costoNuevo, stockAntes, costoAntes, stockDespues, promedio };
+}
+
+function renderEntrada() {
+  const usd = document.getElementById('eMoneda').value === 'USD';
+  document.getElementById('eTipoCambioWrap').classList.toggle('oculto', !usd);
+  const caja = document.getElementById('eProductoElegido');
+  const resumen = document.getElementById('eResumen');
+  const c = calculoEntrada();
+  if (!c) {
+    caja.innerHTML = '';
+    resumen.innerHTML = '';
+    return;
+  }
+  caja.innerHTML = `<div class="lineaVenta"><span class="lvNombre">${escaparHtml(etiquetaProducto(c.p))}
+    <span class="lvSub">Hoy: ${c.stockAntes} en stock${c.costoAntes ? ' a ' + formatoColones(c.costoAntes) + ' c/u' : ''}</span></span></div>`;
+  if (!(c.cantidad > 0) || !(c.costoNuevo > 0)) {
+    resumen.innerHTML = '';
+    return;
+  }
+
+  const avisos = [];
+  const normal = precioConDescuento(c.p.precioVenta, c.p.descuento);
+  const mayor = precioMayoristaDe(c.p);
+  if (normal > 0 && c.promedio >= normal) avisos.push(`El costo nuevo (${formatoColones(c.promedio)}) queda igual o por encima del precio de venta (${formatoColones(normal)}).`);
+  if (mayor && c.promedio > mayor) avisos.push(`El precio mayorista (${formatoColones(mayor)}) queda por debajo del costo nuevo: la tienda lo va a dejar de mostrar hasta que lo subas.`);
+
+  const mezcla = c.stockAntes > 0 && c.costoAntes > 0;
+  resumen.innerHTML = `<div class="lineasVenta"><div class="lineaVenta" style="display:block;line-height:1.6">
+      ${mezcla
+        ? `${c.stockAntes} a ${formatoColones(c.costoAntes)} + ${c.cantidad} a ${formatoColones(c.costoNuevo)} →
+           <b>quedan ${c.stockDespues} a ${formatoColones(c.promedio)} c/u</b>`
+        : `<b>Quedan ${c.stockDespues} a ${formatoColones(c.promedio)} c/u</b>`}
+      ${avisos.map(a => `<div style="color:var(--coral-dark);font-weight:600;margin-top:4px">${escaparHtml(a)}</div>`).join('')}
+    </div></div>`;
+}
+
+async function guardarEntrada() {
+  const c = calculoEntrada();
+  if (!c) { mostrarToast('Elegí el producto que entró.'); return; }
+  if (!(c.cantidad > 0)) { mostrarToast('Poné cuántas entraron.'); return; }
+  if (!(c.costoNuevo > 0)) { mostrarToast('Poné cuánto costó cada una.'); return; }
+
+  // Se guarda el producto entero con el stock sumado y el costo promedio (en
+  // colones). Si estaba por encargo, ahora que hay stock pasa a disponible.
+  const fila = {
+    ...filaProductoConStock(c.p, c.stockDespues),
+    costoCompra: c.promedio,
+    moneda: 'CRC',
+    tipoCambio: '',
+    costoTotalCRC: c.promedio,
+    modalidad: 'stock'
+  };
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Productos', id: c.p.id, fila });
+  if (!res.ok) { mostrarToast('No se pudo guardar: ' + (res.error || '')); return; }
+
+  Object.assign(c.p, fila);
+  entradaProductoId = null;
+  document.getElementById('formEntrada').classList.add('oculto');
+  renderTodo();
+  mostrarToast(`Entrada guardada: ${c.p.nombre} queda con ${c.stockDespues} en stock a ${formatoColones(c.promedio)} c/u.`);
 }
 
 async function eliminarProducto(id) {
@@ -3734,7 +3868,9 @@ function alternarClienteNuevo() {
 // hacer con el producto elegido.
 const BUSCADORES = {
   venta: { alElegir: id => agregarLineaVenta(id) },
-  pago:  { alElegir: id => agregarRegaloPago(id) }
+  pago:  { alElegir: id => agregarRegaloPago(id) },
+  // Una entrada de inventario puede ser de un producto sin stock (o por encargo)
+  entrada: { alElegir: id => elegirProductoEntrada(id), todos: true }
 };
 
 function productoPorId(id) {
@@ -3753,9 +3889,9 @@ function textoBuscable(s) {
   return normalizaTexto(s).replace(/[.'’\-]/g, '');
 }
 
-function productosQueCoinciden(texto, limite) {
+function productosQueCoinciden(texto, limite, incluirSinStock) {
   const palabras = textoBuscable(texto).split(/\s+/).filter(Boolean);
-  const conStock = estado.productos.filter(p => (Number(p.stock) || 0) > 0);
+  const conStock = incluirSinStock ? estado.productos : estado.productos.filter(p => (Number(p.stock) || 0) > 0);
   const hallados = palabras.length
     ? conStock.filter(p => {
         const t = textoBuscable([p.nombre, p.marca, p.tono, p.categoria].join(' '));
@@ -3769,14 +3905,15 @@ function buscarEnBuscador(clave) {
   const input = document.getElementById('busq-' + clave);
   const caja = document.getElementById('res-' + clave);
   if (!input || !caja) return;
-  const hallados = productosQueCoinciden(input.value, 40);
+  const todos = BUSCADORES[clave].todos;
+  const hallados = productosQueCoinciden(input.value, 40, todos);
   caja.classList.remove('oculto');
   caja.innerHTML = hallados.length
     ? hallados.map(p => `<button type="button" class="resultadoProd" onclick="elegirEnBuscador('${clave}', '${escaparHtml(p.id)}')">
         <span class="rpNombre">${escaparHtml(etiquetaProducto(p))}</span>
-        <span class="rpDato">${p.stock} en stock · ${formatoColones(precioConDescuento(p.precioVenta, p.descuento))}</span>
+        <span class="rpDato">${p.stock} en stock · ${formatoColones(todos ? p.costoTotalCRC : precioConDescuento(p.precioVenta, p.descuento))}${todos ? ' costo' : ''}</span>
       </button>`).join('')
-    : `<div class="vacio">${input.value.trim() ? 'Ningún producto con stock coincide.' : 'No hay productos con stock.'}</div>`;
+    : `<div class="vacio">${todos ? 'Ningún producto coincide.' : (input.value.trim() ? 'Ningún producto con stock coincide.' : 'No hay productos con stock.')}</div>`;
 }
 
 function elegirEnBuscador(clave, id) {
