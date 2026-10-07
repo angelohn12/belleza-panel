@@ -1152,8 +1152,17 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07 · finanzas y seguridad</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07b · avisos al celular</p>
         </div>
+      </div>
+      <div class="panel">
+        <h2>Avisos al celular</h2>
+        <p class="ayudaTienda">Cada pedido o encargo nuevo te llega como notificación al celular, con la app gratis <b>ntfy</b>. El aviso dice solo el número y el monto, nunca los datos de la clienta.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="btnVerAvisos" class="secundario" onclick="ejecutarConBoton('btnVerAvisos', () => verAvisosCelular(false))">Ver mi canal</button>
+          <button id="btnProbarAvisos" onclick="ejecutarConBoton('btnProbarAvisos', () => verAvisosCelular(true))">Mandar aviso de prueba</button>
+        </div>
+        <div id="avisosCanal" style="margin-top:14px"></div>
       </div>
     </section>
 
@@ -4774,6 +4783,35 @@ async function guardarPublicacion() {
 }
 
 // ---------- Configuración ----------
+
+// Avisos al celular: el servidor dice cuál es el canal secreto de ntfy (se
+// crea solo la primera vez) y, si se pide, manda un aviso de prueba.
+async function verAvisosCelular(probar) {
+  const res = await apiPost({ accion: 'avisos', probar: !!probar });
+  const caja = document.getElementById('avisosCanal');
+  if (!res || !res.ok || !res.tema) {
+    caja.innerHTML = '<div class="vacio" style="text-align:left;padding:8px 0">No se pudo leer el canal. Revisá que el Code.gs nuevo esté publicado.</div>';
+    return;
+  }
+  caja.innerHTML = `<ol style="margin:0;padding-left:20px;line-height:1.9;font-size:14px">
+      <li>Instalá <b>ntfy</b> en el celular (App Store o Play Store, es gratis).</li>
+      <li>En ntfy tocá <b>+</b>, escribí este canal y tocá <b>Subscribe</b>:
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0">
+          <code id="avisosTema" style="font-size:15px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 9px;user-select:all">${escaparHtml(res.tema)}</code>
+          <button type="button" class="secundario" style="padding:5px 12px;font-size:13px" onclick="copiarTemaAvisos()">Copiar</button>
+        </div>
+      </li>
+      <li>Tocá <b>Mandar aviso de prueba</b>: te tiene que llegar en unos segundos.</li>
+    </ol>`;
+  if (probar) mostrarToast(res.enviado ? 'Aviso de prueba enviado. Revisá el celular.' : 'No se pudo mandar el aviso. Probá de nuevo en un rato.');
+}
+
+function copiarTemaAvisos() {
+  const tema = document.getElementById('avisosTema').textContent;
+  (navigator.clipboard ? navigator.clipboard.writeText(tema) : Promise.reject())
+    .then(() => mostrarToast('Canal copiado.'))
+    .catch(() => mostrarToast('Mantené presionado el canal para copiarlo.'));
+}
 
 async function guardarConfig() {
   const minimo = Math.floor(Number(document.getElementById('cfgMinimoMayorista').value) || 0);
