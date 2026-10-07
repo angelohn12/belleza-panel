@@ -1152,17 +1152,18 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07b · avisos al celular</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07c · app Avellana Avisos</p>
         </div>
       </div>
       <div class="panel">
         <h2>Avisos al celular</h2>
-        <p class="ayudaTienda">Cada pedido o encargo nuevo te llega como notificación al celular, con la app gratis <b>ntfy</b>. El aviso dice solo el número y el monto, nunca los datos de la clienta.</p>
+        <p class="ayudaTienda">Cada pedido o encargo nuevo te llega como notificación al celular, en la app <b>Avellana Avisos</b>. El aviso dice solo el número y el monto, nunca los datos de la clienta.</p>
+        <div id="avisosCelulares" style="margin-bottom:14px"><p class="ayudaTienda" style="margin:0">Cargando celulares conectados…</p></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button id="btnVerAvisos" class="secundario" onclick="ejecutarConBoton('btnVerAvisos', () => verAvisosCelular(false))">Ver mi canal</button>
+          <button id="btnConectarCelular" class="secundario" onclick="ejecutarConBoton('btnConectarCelular', conectarCelular)">Conectar un celular</button>
           <button id="btnProbarAvisos" onclick="ejecutarConBoton('btnProbarAvisos', () => verAvisosCelular(true))">Mandar aviso de prueba</button>
         </div>
-        <div id="avisosCanal" style="margin-top:14px"></div>
+        <div id="avisosConectar" style="margin-top:14px"></div>
       </div>
     </section>
 
@@ -1459,6 +1460,8 @@ function mostrarTab(nombre) {
   document.querySelector(`nav.tabs .tab[data-tab="${nombre}"]`).classList.add('activo');
   // Con la pestaña oculta no se puede medir el ancho: se redibuja al mostrarla
   redibujarGraficosVisibles();
+  // La lista de celulares conectados se pide recién al abrir Configuración
+  if (nombre === 'config' && !avisosCargados) verAvisosCelular(false).catch(() => {});
 }
 
 function alternar(idFormulario) {
@@ -4784,33 +4787,65 @@ async function guardarPublicacion() {
 
 // ---------- Configuración ----------
 
-// Avisos al celular: el servidor dice cuál es el canal secreto de ntfy (se
-// crea solo la primera vez) y, si se pide, manda un aviso de prueba.
+// Avisos al celular: los celulares conectados a la app "Avellana Avisos"
+// (avellana-studio.pages.dev/avisos/) y, si se pide, un aviso de prueba.
+const AVISOS_APP_URL = 'https://avellana-studio.pages.dev/avisos/';
+let avisosCargados = false;
+
 async function verAvisosCelular(probar) {
   const res = await apiPost({ accion: 'avisos', probar: !!probar });
-  const caja = document.getElementById('avisosCanal');
-  if (!res || !res.ok || !res.tema) {
-    caja.innerHTML = '<div class="vacio" style="text-align:left;padding:8px 0">No se pudo leer el canal. Revisá que el Code.gs nuevo esté publicado.</div>';
+  if (!res || !res.ok || !Array.isArray(res.celulares)) {
+    document.getElementById('avisosCelulares').innerHTML = '<div class="vacio" style="text-align:left;padding:8px 0">No se pudieron leer los celulares. Revisá que el Code.gs nuevo esté publicado.</div>';
     return;
   }
-  caja.innerHTML = `<ol style="margin:0;padding-left:20px;line-height:1.9;font-size:14px">
-      <li>Instalá <b>ntfy</b> en el celular (App Store o Play Store, es gratis).</li>
-      <li>En ntfy tocá <b>+</b>, escribí este canal y tocá <b>Subscribe</b>:
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0">
-          <code id="avisosTema" style="font-size:15px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 9px;user-select:all">${escaparHtml(res.tema)}</code>
-          <button type="button" class="secundario" style="padding:5px 12px;font-size:13px" onclick="copiarTemaAvisos()">Copiar</button>
-        </div>
-      </li>
-      <li>Tocá <b>Mandar aviso de prueba</b>: te tiene que llegar en unos segundos.</li>
-    </ol>`;
-  if (probar) mostrarToast(res.enviado ? 'Aviso de prueba enviado. Revisá el celular.' : 'No se pudo mandar el aviso. Probá de nuevo en un rato.');
+  avisosCargados = true;
+  pintarCelulares(res.celulares);
+  if (!probar) return;
+  const p = res.prueba || { enviados: 0, total: 0, errores: [] };
+  if (!p.total) mostrarToast('Todavía no hay ningún celular conectado.');
+  else if (p.enviados === p.total) mostrarToast(p.total === 1 ? 'Aviso enviado. Revisá el celular.' : `Aviso enviado a los ${p.total} celulares.`);
+  else mostrarToast(`Llegó a ${p.enviados} de ${p.total}. ${p.errores.join(' · ')}`);
 }
 
-function copiarTemaAvisos() {
-  const tema = document.getElementById('avisosTema').textContent;
-  (navigator.clipboard ? navigator.clipboard.writeText(tema) : Promise.reject())
-    .then(() => mostrarToast('Canal copiado.'))
-    .catch(() => mostrarToast('Mantené presionado el canal para copiarlo.'));
+function pintarCelulares(lista) {
+  const caja = document.getElementById('avisosCelulares');
+  if (!lista.length) {
+    caja.innerHTML = '<p class="ayudaTienda" style="margin:0">Todavía no hay ningún celular conectado.</p>';
+    return;
+  }
+  caja.innerHTML = lista.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span><b>${escaparHtml(c.nombre)}</b> · ${escaparHtml(c.tipo)} <span style="color:var(--brown-soft)">· conectado ${escaparHtml(fechaCorta(c.fecha))}</span></span>
+      <button type="button" class="secundario" style="padding:5px 12px;font-size:13px" onclick="ejecutarConBotonElemento(this, () => quitarCelular('${escaparHtml(c.id)}'))">Quitar</button>
+    </div>`).join('');
+}
+
+// Quien pide el código queda como nombre del celular en la lista.
+function nombreParaCelular() {
+  const u = String(estado.usuario ? estado.usuario.usuario : '').trim();
+  const socio = SOCIOS.find(s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === u.toLowerCase());
+  return socio || (u ? u.charAt(0).toUpperCase() + u.slice(1) : 'Celular');
+}
+
+async function conectarCelular() {
+  const res = await apiPost({ accion: 'avisos_codigo', nombre: nombreParaCelular() });
+  if (!res || !res.ok) { mostrarToast('No se pudo crear el código: ' + ((res && res.error) || 'probá de nuevo')); return; }
+  document.getElementById('avisosConectar').innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:var(--bg)">
+      <div style="font-size:13px;color:var(--brown-soft)">Código para conectar · vence en ${res.minutos} minutos</div>
+      <div style="font-size:30px;font-weight:600;letter-spacing:.18em;font-variant-numeric:tabular-nums;margin:2px 0 10px">${escaparHtml(res.codigo.slice(0, 3) + ' ' + res.codigo.slice(3))}</div>
+      <ol style="margin:0;padding-left:20px;line-height:1.8;font-size:14px">
+        <li>En el celular abrí <a href="${AVISOS_APP_URL}" target="_blank" rel="noopener"><b>avellana-studio.pages.dev/avisos</b></a> en Safari o Chrome.</li>
+        <li>Tocá <b>Compartir → Agregar a pantalla de inicio</b>.</li>
+        <li>Abrí <b>Avisos</b> desde la pantalla de inicio, escribí este código y tocá <b>Activar avisos</b>.</li>
+      </ol>
+    </div>`;
+}
+
+async function quitarCelular(id) {
+  const res = await apiPost({ accion: 'avisos_quitar', id });
+  if (res && res.ok) { pintarCelulares(res.celulares); mostrarToast('Celular quitado.'); }
+  else mostrarToast('No se pudo quitar: ' + ((res && res.error) || 'probá de nuevo'));
 }
 
 async function guardarConfig() {
