@@ -1204,7 +1204,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07h · cajas sin restos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07i · cajas desde la tienda</p>
         </div>
       </div>
       <div class="panel">
@@ -2402,7 +2402,12 @@ function renderPedidos() {
     const est = String(p.estado || 'Nuevo').trim();
     const items = itemsDe(p);
     const tel = String(p.telefono || '').replace(/\D/g, '');
-    const revisar = String(p.notas || '').trim();
+    // Una caja armada en la tienda trae una nota informativa (qué hay que
+    // mandar a traer). Eso no es un problema que revisar: solo se muestra.
+    const esCaja = p.caja === 'Sí';
+    const notaPedido = String(p.notas || '').trim();
+    const revisar = esCaja && !/REVISAR/.test(notaPedido) ? '' : notaPedido;
+    const notaCaja = esCaja && !revisar ? notaPedido : '';
     const id = escaparHtml(p.id);
 
     // Un botón por paso, con lo que de verdad se hizo
@@ -2438,7 +2443,7 @@ function renderPedidos() {
 
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
-        <span class="pedidoNombre">${escaparHtml(p.nombre)}${p.mayoreo === 'Sí' ? ' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : ''}</span>
+        <span class="pedidoNombre">${escaparHtml(p.nombre)}${esCaja ? ' <span class="pastilla verde" title="Caja armada por la clienta en la tienda, al por mayor: se cobra completa antes de enviar o de pedir lo que va por encargo">CAJA</span>' : (p.mayoreo === 'Sí' ? ' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : '')}</span>
         <span class="pedidoNum">${escaparHtml(p.numero)} · ${fechaCorta(p.fecha)}</span>
         <span class="pedidoTotal">${formatoColones(p.total)}</span>
       </div>
@@ -2448,8 +2453,9 @@ function renderPedidos() {
         ${p.correo ? '<br>' + escaparHtml(p.correo) : ''}
       </div>
       ${revisar ? `<div class="pedidoAlerta">${escaparHtml(revisar)}</div>` : ''}
+      ${notaCaja ? `<div class="pedidoMeta" style="color:#1f4a30;font-weight:600">${escaparHtml(notaCaja)}</div>` : ''}
       <div class="pedidoItems">
-        ${items.map(i => `<div><span>${escaparHtml(i.nombre)}${i.tono ? ' · ' + escaparHtml(i.tono) : ''} × ${i.cantidad}${i.tipoPrecio === 'mayor' ? ` <span style="color:#1f4a30;font-weight:600">· mayoreo ${formatoColones(i.precioUnitario)} c/u</span>` : ''}</span><span>${formatoColones(i.subtotal)}</span></div>`).join('')}
+        ${items.map(i => `<div><span>${escaparHtml(i.nombre)}${i.tono ? ' · ' + escaparHtml(i.tono) : ''} × ${i.cantidad}${i.tipoPrecio === 'mayor' ? ` <span style="color:#1f4a30;font-weight:600">· mayoreo ${formatoColones(i.precioUnitario)} c/u</span>` : ''}${Number(i.porEncargo) > 0 ? ` <span style="color:#A5323F;font-weight:600">· ${Number(i.porEncargo)} por encargo</span>` : ''}</span><span>${formatoColones(i.subtotal)}</span></div>`).join('')}
       </div>
       <div class="pedidoAcciones">
         <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
@@ -2533,7 +2539,10 @@ async function avanzarPedido(id, nuevoEstado, opciones = {}) {
     });
     if (faltantes.length) {
       const detalle = faltantes.map(n => '· ' + n).join('\n');
-      if (!confirm(`Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Registrar el pago de todas formas? El stock puede quedar en negativo.`)) { renderPedidos(); return; }
+      const aviso = p.caja === 'Sí'
+        ? `Esta caja trae piezas por encargo (no hay stock de):\n${detalle}\n\nAl registrar el pago el stock de esos productos queda en negativo: son las piezas que hay que pedir. ¿Seguir?`
+        : `Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Registrar el pago de todas formas? El stock puede quedar en negativo.`;
+      if (!confirm(aviso)) { renderPedidos(); return; }
     }
     if (!opciones.sinConfirmar &&
         !confirm(`¿Confirmás que ${p.nombre} ya pagó ${formatoColones(p.total)}?\n\nEsto descuenta el stock y registra la venta.`)) { renderPedidos(); return; }
