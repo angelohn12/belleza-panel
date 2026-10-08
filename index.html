@@ -1003,9 +1003,9 @@
         </div>
         <div class="formulario">
           <div><label>Nombre de la caja</label><input id="cjNombre" placeholder="Emprende" value="Emprende" oninput="cajaNombreEditado()"></div>
-          <div class="cjSug"><label>Piezas premium</label><input id="cjPremium" type="number" min="0" max="80" value="0"></div>
-          <div class="cjSug"><label>Piezas promedio</label><input id="cjPromedio" type="number" min="0" max="80" value="0"></div>
-          <div class="cjSug"><label>Piezas básicas</label><input id="cjBasico" type="number" min="0" max="80" value="24"></div>
+          <div class="cjSug"><label>Piezas premium</label><input id="cjPremium" type="number" min="0" max="80" value="0" oninput="cajaConteosEditados()"></div>
+          <div class="cjSug"><label>Piezas promedio</label><input id="cjPromedio" type="number" min="0" max="80" value="0" oninput="cajaConteosEditados()"></div>
+          <div class="cjSug"><label>Piezas básicas</label><input id="cjBasico" type="number" min="0" max="80" value="24" oninput="cajaConteosEditados()"></div>
           <div class="campoAncho cjMan oculto">
             <label>Agregar productos a la caja</label>
             <div class="buscadorProd">
@@ -1204,7 +1204,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07g · gama por costo</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07h · cajas sin restos</p>
         </div>
       </div>
       <div class="panel">
@@ -5267,12 +5267,13 @@ function cajaOtra() {
 function cajaPreset(clave) {
   const p = CAJA_PRESETS[clave];
   if (!p) return;
+  cajaLimpiar();
   document.getElementById('cjNombre').value = p.nombre;
   document.getElementById('cjPremium').value = p.premium;
   document.getElementById('cjPromedio').value = p.promedio;
   document.getElementById('cjBasico').value = p.basico;
   document.querySelectorAll('#cajaPresets .chipT').forEach(b => b.classList.toggle('activo', b.dataset.preset === clave));
-  // al tocar un tamaño ya se arma la caja, para que no quede la anterior en pantalla
+  // al tocar un tamaño ya se arma la caja nueva, sin restos de la anterior
   cajaSugerir();
 }
 
@@ -5676,15 +5677,33 @@ function cajaModoAplicar(modo) {
   document.getElementById('cjNombre').placeholder = modo === 'manual' ? 'Ej: de María' : 'Emprende';
 }
 
+// Deja todo como recién abierto: sin la caja anterior, sin avisos, sin el
+// tamaño rápido marcado, sin el nombre que puso un tamaño y sin búsqueda.
+// Lo que se escribió a mano en las cantidades se queda, para poder probar
+// la misma mezcla en otro modo.
+function cajaLimpiar() {
+  cajaActual = null;
+  cajaAvisoFaltan = '';
+  const res = document.getElementById('cajaResultado');
+  if (res) res.innerHTML = '';
+  document.querySelectorAll('#cajaPresets .chipT').forEach(b => b.classList.remove('activo'));
+  const nom = document.getElementById('cjNombre');
+  if (nom && Object.values(CAJA_PRESETS).some(p => p.nombre === nom.value)) nom.value = '';
+  const busq = document.getElementById('busq-caja');
+  if (busq) busq.value = '';
+  cerrarBuscador('caja');
+}
+
+// Cada vez que se elige un modo se parte de cero (en "a mano", de una caja vacía)
 function cajaModoElegir(modo) {
+  cajaLimpiar();
   cajaModoAplicar(modo);
-  if (modo === 'manual') {
-    // el nombre de un tamaño rápido no sirve para una caja a medida
-    const nom = document.getElementById('cjNombre');
-    if (Object.values(CAJA_PRESETS).some(p => p.nombre === nom.value)) nom.value = '';
-    if (!cajaActual || cajaActual.vendida) cajaNueva();
-    else { cajaActual.manual = true; cajaActual.tipo = 'lista'; cajaRender(); }
-  }
+  if (modo === 'manual') cajaNueva();
+}
+
+// Si se cambian las cantidades a mano, ya no es el tamaño rápido que estaba marcado
+function cajaConteosEditados() {
+  document.querySelectorAll('#cajaPresets .chipT').forEach(b => b.classList.remove('activo'));
 }
 
 function cajaNueva() {
