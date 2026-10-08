@@ -1204,7 +1204,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07f · cajas a mano</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07g · gama por costo</p>
         </div>
       </div>
       <div class="panel">
@@ -4935,8 +4935,11 @@ async function guardarConfig() {
 // productos reales (test_cajas.js).
 
 // ===== CAJAS: lógica =====
-const CAJA_PREMIUM_DESDE = 20000;   // detalle desde el que una pieza es premium
-const CAJA_PROMEDIO_DESDE = 12000;  // de acá hasta premium es promedio; menos, básico
+const CAJA_PREMIUM_DESDE = 14000;   // COSTO (lo que te costó) desde el que una pieza es premium
+const CAJA_PROMEDIO_DESDE = 9000;   // de acá hasta premium es promedio; menos, básico
+// Las cajas sugeridas son solo de maquillaje: categoría Maquillaje y, por si alguna
+// crema quedó mal clasificada, sin nombres de skincare. A mano se puede agregar cualquiera.
+const CAJA_NO_ES_MAKEUP = /crema (hidratante|facial|antiedad|gel|de manos|corporal)|moisturizing gel|magic cream|limpiador|t[oó]nico|mascarilla|loci[oó]n (corporal|hidratante)|body lotion|cleanser|toner|retinol/i;
 const CAJA_GANANCIA_DEFECTO = 15;   // % sobre el costo
 const CAJA_ELLA_MIN = 20;           // % que debería ganar ella revendiendo al detalle (verde)
 const CAJA_ELLA_AVISO = 15;         // por debajo de esto, rojo
@@ -4949,8 +4952,13 @@ const CAJA_PRESETS = {
   prestige: { nombre: 'Prestige', premium: 6, promedio: 6, basico: 6 }
 };
 
-function cajaGamaDe(detalle) {
-  return detalle >= CAJA_PREMIUM_DESDE ? 'premium' : (detalle >= CAJA_PROMEDIO_DESDE ? 'promedio' : 'basico');
+// La gama se decide por el COSTO de adquisición: no cambia si se mueve el precio de venta o hay descuentos.
+function cajaGamaDe(costo) {
+  return costo >= CAJA_PREMIUM_DESDE ? 'premium' : (costo >= CAJA_PROMEDIO_DESDE ? 'promedio' : 'basico');
+}
+
+function cajaEsMakeup(p) {
+  return String(p.categoria || '').trim().toLowerCase() === 'maquillaje' && !CAJA_NO_ES_MAKEUP.test(String(p.nombre || ''));
 }
 
 // Las piezas que se pueden meter en una caja: tienen costo y precio, no están
@@ -4960,6 +4968,7 @@ function cajaCandidatos(productos, soloStock) {
   (productos || []).forEach(function (p) {
     const pub = String(p.publicado == null ? '' : p.publicado).trim().toLowerCase();
     if (['no', 'false', '0', 'oculto'].indexOf(pub) !== -1) return;
+    if (!cajaEsMakeup(p)) return;
     const c = cajaCandidatoDe(p);
     if (!c) return;
     if (soloStock && !c.enStock) return;
@@ -5179,7 +5188,7 @@ function cajaCandidatoDe(p) {
   return {
     id: p.id, nombre: nombre, marca: marca, tono: String(p.tono == null ? '' : p.tono).trim(),
     categoria: String(p.categoria || '').trim(), costo: costo, detalle: detalle,
-    gama: cajaGamaDe(detalle), enStock: enStock, stock: enStock ? stock : 0,
+    gama: cajaGamaDe(costo), enStock: enStock, stock: enStock ? stock : 0,
     familia: marca.toLowerCase() + '|' + nombre.toLowerCase(), ratio: detalle / costo
   };
 }
@@ -5653,9 +5662,9 @@ async function cajaVentaConfirmar() {
 }
 
 const CAJA_AYUDA_MODO = {
-  sugerida: 'El sistema arma la caja con tu inventario según cuántas piezas premium, promedio y básicas pidas. La clienta ve cada producto. Todo producto es nuevo y sellado, con máximo 2 iguales. Premium: detalle de ₡20.000 o más · Promedio: de ₡12.000 a ₡19.999 · Básicos: menos de ₡12.000.',
-  manual: 'Vos elegís cada producto (los que pidió la clienta) con el buscador. Podés poner varias unidades del mismo producto. Lo que pasa del stock queda por encargo.',
-  misteriosa: 'El sistema arma la caja, pero la clienta solo ve la promesa: cuántas piezas de cada gama y un valor mínimo. Todo producto es nuevo y sellado, con máximo 2 iguales.'
+  sugerida: 'El sistema arma la caja con tu inventario según cuántas piezas premium, promedio y básicas pidas. La clienta ve cada producto. Solo maquillaje, nuevo y sellado, con máximo 2 iguales. La gama sale de lo que te costó cada pieza: Premium desde ₡14.000 · Promedio de ₡9.000 a ₡13.999 · Básicos menos de ₡9.000.',
+  manual: 'Vos elegís cada producto (los que pidió la clienta) con el buscador, el que sea. Podés poner varias unidades del mismo producto. Lo que pasa del stock queda por encargo.',
+  misteriosa: 'El sistema arma la caja, pero la clienta solo ve la promesa: cuántas piezas de cada gama y un valor mínimo. Solo maquillaje, nuevo y sellado, con máximo 2 iguales. La gama sale de lo que te costó cada pieza: Premium desde ₡14.000 · Promedio de ₡9.000 a ₡13.999 · Básicos menos de ₡9.000.'
 };
 
 function cajaModoAplicar(modo) {
