@@ -986,30 +986,45 @@
     <section id="tab-cajas" class="oculto">
       <div class="panel">
         <h2>Armar caja</h2>
-        <p class="ayudaTienda">Sugiere una caja con tu inventario. Todo producto es nuevo y sellado, con máximo 2 iguales. Premium: detalle de ₡20.000 o más · Promedio: de ₡12.000 a ₡19.999 · Básicos: menos de ₡12.000.</p>
-        <div class="filtrosTienda" id="cajaPresets" style="margin-bottom:14px">
-          <button class="chipT" data-preset="emprende" onclick="cajaPreset('emprende')">Emprende · 24 básicos</button>
-          <button class="chipT" data-preset="selecta" onclick="cajaPreset('selecta')">Selecta · 2 premium, 6 promedio, 14 básicos</button>
-          <button class="chipT" data-preset="prestige" onclick="cajaPreset('prestige')">Prestige · 6 premium, 6 promedio, 6 básicos</button>
+        <p class="ayudaTienda" style="margin:0 0 8px">¿Cómo la querés armar?</p>
+        <div class="filtrosTienda" id="cajaModos" style="margin-bottom:12px">
+          <button class="chipT activo" data-modo="sugerida" onclick="cajaModoElegir('sugerida')">Sugerida por el sistema</button>
+          <button class="chipT" data-modo="manual" onclick="cajaModoElegir('manual')">A mano (la clienta pide productos)</button>
+          <button class="chipT" data-modo="misteriosa" onclick="cajaModoElegir('misteriosa')">Misteriosa</button>
+        </div>
+        <p class="ayudaTienda" id="cajaAyudaModo"></p>
+        <div class="cjSug" style="margin-bottom:14px">
+          <p class="ayudaTienda" style="margin:0 0 6px">Tamaños rápidos (solo llenan las cantidades y arman la caja)</p>
+          <div class="filtrosTienda" id="cajaPresets">
+            <button class="chipT" data-preset="emprende" onclick="cajaPreset('emprende')">Emprende · 24 básicos</button>
+            <button class="chipT" data-preset="selecta" onclick="cajaPreset('selecta')">Selecta · 2 premium, 6 promedio, 14 básicos</button>
+            <button class="chipT" data-preset="prestige" onclick="cajaPreset('prestige')">Prestige · 6 premium, 6 promedio, 6 básicos</button>
+          </div>
         </div>
         <div class="formulario">
-          <div><label>Tipo de caja</label>
-            <select id="cjTipo"><option value="lista">Lista exacta (la clienta ve cada producto)</option><option value="misteriosa">Misteriosa (solo ve la promesa)</option></select></div>
-          <div><label>Nombre</label><input id="cjNombre" placeholder="Emprende" value="Emprende"></div>
-          <div><label>Piezas premium</label><input id="cjPremium" type="number" min="0" max="80" value="0"></div>
-          <div><label>Piezas promedio</label><input id="cjPromedio" type="number" min="0" max="80" value="0"></div>
-          <div><label>Piezas básicas</label><input id="cjBasico" type="number" min="0" max="80" value="24"></div>
-          <div><label>Tu ganancia sobre el costo (%)</label><input id="cjGanancia" type="number" min="0" max="100" value="15"></div>
-          <div><label>Ella gana como mínimo (%)</label><input id="cjElla" type="number" min="0" max="100" value="20"></div>
-          <div><label>Inventario a usar</label>
+          <div><label>Nombre de la caja</label><input id="cjNombre" placeholder="Emprende" value="Emprende" oninput="cajaNombreEditado()"></div>
+          <div class="cjSug"><label>Piezas premium</label><input id="cjPremium" type="number" min="0" max="80" value="0"></div>
+          <div class="cjSug"><label>Piezas promedio</label><input id="cjPromedio" type="number" min="0" max="80" value="0"></div>
+          <div class="cjSug"><label>Piezas básicas</label><input id="cjBasico" type="number" min="0" max="80" value="24"></div>
+          <div class="campoAncho cjMan oculto">
+            <label>Agregar productos a la caja</label>
+            <div class="buscadorProd">
+              <input id="busq-caja" placeholder="Buscar por nombre, marca o tono…" autocomplete="off"
+                     oninput="buscarEnBuscador('caja')" onfocus="buscarEnBuscador('caja')" />
+              <div class="resultadosProd oculto" id="res-caja"></div>
+            </div>
+          </div>
+          <div><label>Tu ganancia sobre el costo (%)</label><input id="cjGanancia" type="number" min="0" max="100" value="15" oninput="cajaGananciaEditada()"></div>
+          <div><label>Ella gana como mínimo (%)</label><input id="cjElla" type="number" min="0" max="100" value="20" oninput="cajaEllaEditada()"></div>
+          <div class="cjSug"><label>Inventario a usar</label>
             <select id="cjInventario"><option value="ambos">Stock y por encargo</option><option value="stock">Solo lo que hay en stock</option></select></div>
-          <div><label>Mínimo de marcas</label><input id="cjMinMarcas" type="number" min="1" max="20" value="5"></div>
-          <div class="campoAncho" style="display:flex;gap:18px;flex-wrap:wrap">
+          <div class="cjSug"><label>Mínimo de marcas</label><input id="cjMinMarcas" type="number" min="1" max="20" value="5"></div>
+          <div class="campoAncho cjSug" style="display:flex;gap:18px;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjStockPrimero" checked style="width:auto"> Usar primero lo que hay en stock</label>
             <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjMejorMargen" checked style="width:auto"> Priorizar lo que deja más margen</label>
           </div>
         </div>
-        <button onclick="cajaSugerir()">Sugerir caja</button>
+        <button class="cjSug" onclick="cajaSugerir()">Sugerir caja</button>
       </div>
       <div id="cajaResultado"></div>
       <div class="panel">
@@ -1189,7 +1204,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07e · venta de cajas</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07f · cajas a mano</p>
         </div>
       </div>
       <div class="panel">
@@ -1578,6 +1593,7 @@ function renderTodo() {
   renderAbonos();
   renderContenido();
   renderCajasGuardadas();
+  cajaModoAplicar(cajaModo);
   llenarSelectoresVenta();
   llenarSelectorMarcas();
   llenarSelectorClientesAbono();
@@ -4029,7 +4045,10 @@ const BUSCADORES = {
   venta: { alElegir: id => agregarLineaVenta(id) },
   pago:  { alElegir: id => agregarRegaloPago(id) },
   // Una entrada de inventario puede ser de un producto sin stock (o por encargo)
-  entrada: { alElegir: id => elegirProductoEntrada(id), todos: true }
+  entrada: { alElegir: id => elegirProductoEntrada(id), todos: true },
+  // Armar una caja a mano: busca en todo el inventario y deja la lista abierta
+  // para ir sumando varios productos
+  caja: { alElegir: id => cajaAgregarProducto(id), todos: true, conservar: true, dato: p => cajaDatoBuscador(p) }
 };
 
 function productoPorId(id) {
@@ -4064,22 +4083,26 @@ function buscarEnBuscador(clave) {
   const input = document.getElementById('busq-' + clave);
   const caja = document.getElementById('res-' + clave);
   if (!input || !caja) return;
-  const todos = BUSCADORES[clave].todos;
+  const cfg = BUSCADORES[clave];
+  const todos = cfg.todos;
   const hallados = productosQueCoinciden(input.value, 40, todos);
   caja.classList.remove('oculto');
   caja.innerHTML = hallados.length
     ? hallados.map(p => `<button type="button" class="resultadoProd" onclick="elegirEnBuscador('${clave}', '${escaparHtml(p.id)}')">
         <span class="rpNombre">${escaparHtml(etiquetaProducto(p))}</span>
-        <span class="rpDato">${p.stock} en stock · ${formatoColones(todos ? p.costoTotalCRC : precioConDescuento(p.precioVenta, p.descuento))}${todos ? ' costo' : ''}</span>
+        <span class="rpDato">${cfg.dato ? cfg.dato(p) : `${p.stock} en stock · ${formatoColones(todos ? p.costoTotalCRC : precioConDescuento(p.precioVenta, p.descuento))}${todos ? ' costo' : ''}`}</span>
       </button>`).join('')
     : `<div class="vacio">${todos ? 'Ningún producto coincide.' : (input.value.trim() ? 'Ningún producto con stock coincide.' : 'No hay productos con stock.')}</div>`;
 }
 
 function elegirEnBuscador(clave, id) {
+  const cfg = BUSCADORES[clave];
+  // Algunos buscadores (cajas) dejan la lista abierta para ir sumando varios productos
+  if (cfg.conservar) { cfg.alElegir(id); return; }
   const input = document.getElementById('busq-' + clave);
   if (input) input.value = '';
   cerrarBuscador(clave);
-  BUSCADORES[clave].alElegir(id);
+  cfg.alElegir(id);
 }
 
 function cerrarBuscador(clave) {
@@ -4091,7 +4114,9 @@ function cerrarBuscador(clave) {
 document.addEventListener('click', e => {
   Object.keys(BUSCADORES).forEach(clave => {
     const input = document.getElementById('busq-' + clave);
-    if (input && !input.closest('.buscadorProd').contains(e.target)) cerrarBuscador(clave);
+    // composedPath: aunque el botón tocado ya se haya borrado al redibujar la lista
+    // (caso de cajas), el toque cuenta como "dentro" del buscador
+    if (input && !e.composedPath().includes(input.closest('.buscadorProd'))) cerrarBuscador(clave);
   });
 });
 document.addEventListener('keydown', e => {
@@ -4932,23 +4957,13 @@ function cajaGamaDe(detalle) {
 // ocultas de la tienda y, si se pide, hay stock hoy.
 function cajaCandidatos(productos, soloStock) {
   const sal = [];
-  (productos || []).forEach(p => {
-    const costo = Number(p.costoTotalCRC) || 0;
-    const detalle = precioConDescuento(p.precioVenta, p.descuento);
-    const nombre = String(p.nombre || '').trim();
-    if (!(costo > 0) || !(detalle > 0) || !nombre) return;
+  (productos || []).forEach(function (p) {
     const pub = String(p.publicado == null ? '' : p.publicado).trim().toLowerCase();
     if (['no', 'false', '0', 'oculto'].indexOf(pub) !== -1) return;
-    const stock = Number(p.stock) || 0;
-    const enStock = p.modalidad !== 'encargo' && stock > 0;
-    if (soloStock && !enStock) return;
-    const marca = String(p.marca || '').trim();
-    sal.push({
-      id: p.id, nombre: nombre, marca: marca, tono: String(p.tono == null ? '' : p.tono).trim(),
-      categoria: String(p.categoria || '').trim(), costo: costo, detalle: detalle,
-      gama: cajaGamaDe(detalle), enStock: enStock,
-      familia: marca.toLowerCase() + '|' + nombre.toLowerCase(), ratio: detalle / costo
-    });
+    const c = cajaCandidatoDe(p);
+    if (!c) return;
+    if (soloStock && !c.enStock) return;
+    sal.push(c);
   });
   return sal;
 }
@@ -5079,8 +5094,9 @@ function cajaTexto(tipo, nombre, items, precio, opciones) {
     lineas.push('Valor al detalle garantizado: ' + f(Math.floor(nums.valor / 5000) * 5000) + ' o más.');
   } else {
     lineas.push('Caja ' + nombre + ' — ' + nums.n + ' piezas nuevas y selladas');
-    items.forEach((i, k) => {
-      lineas.push((k + 1) + '. ' + [i.marca, i.nombre, i.tono ? 'tono ' + i.tono : ''].filter(Boolean).join(' · '));
+    cajaGrupos(items).forEach((g, k) => {
+      const i = g.item;
+      lineas.push((k + 1) + '. ' + [i.marca, i.nombre, i.tono ? 'tono ' + i.tono : ''].filter(Boolean).join(' · ') + (g.cantidad > 1 ? ' (×' + g.cantidad + ')' : ''));
     });
     lineas.push('Valor al detalle: ' + f(nums.valor) + '.');
   }
@@ -5128,13 +5144,15 @@ function cajaOperacionesVenta(items, precio, datos, productoDe) {
     salen[p.id] = (salen[p.id] || 0) + 1;
   });
   const stock = [], stocksNuevos = [];
+  let porEncargo = 0;
   Object.keys(salen).forEach(function (id) {
     const p = productoDe(id);
-    const nuevo = (Number(p.stock) || 0) - salen[id];
+    const hay = Number(p.stock) || 0;
+    const nuevo = hay - salen[id];
     stock.push({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: filaProductoConStock(p, nuevo) });
     stocksNuevos.push({ id: p.id, stock: nuevo });
+    porEncargo += Math.max(0, salen[id] - Math.max(hay, 0));
   });
-  const porEncargo = Object.keys(salen).filter(function (id) { return (Number(productoDe(id).stock) || 0) < salen[id]; }).length;
   return { operaciones: ventas.concat(stock), nVentas: ventas.length, stocksNuevos: stocksNuevos, porEncargo: porEncargo };
 }
 
@@ -5150,16 +5168,73 @@ function cajaTrocear(operaciones, maximo) {
 function stockTrasEntrada(stockActual, cantidad) {
   return (Number(stockActual) || 0) + (Number(cantidad) || 0);
 }
+function cajaCandidatoDe(p) {
+  const costo = Number(p.costoTotalCRC) || 0;
+  const detalle = precioConDescuento(p.precioVenta, p.descuento);
+  const nombre = String(p.nombre || '').trim();
+  if (!(costo > 0) || !(detalle > 0) || !nombre) return null;
+  const stock = Number(p.stock) || 0;
+  const enStock = p.modalidad !== 'encargo' && stock > 0;
+  const marca = String(p.marca || '').trim();
+  return {
+    id: p.id, nombre: nombre, marca: marca, tono: String(p.tono == null ? '' : p.tono).trim(),
+    categoria: String(p.categoria || '').trim(), costo: costo, detalle: detalle,
+    gama: cajaGamaDe(detalle), enStock: enStock, stock: enStock ? stock : 0,
+    familia: marca.toLowerCase() + '|' + nombre.toLowerCase(), ratio: detalle / costo
+  };
+}
+
+function cajaMarcarDisponibilidad(items) {
+  const usadas = {};
+  items.forEach(function (i) {
+    const k = String(i.id);
+    const n = usadas[k] || 0;
+    i.enStock = n < (Number(i.stock) || 0);
+    usadas[k] = n + 1;
+  });
+}
+
+function cajaGrupos(items) {
+  const orden = [], porId = {};
+  items.forEach(function (i, k) {
+    const id = String(i.id);
+    if (!porId[id]) { porId[id] = { id: i.id, item: i, indices: [], cantidad: 0, enStock: 0 }; orden.push(porId[id]); }
+    const g = porId[id];
+    g.indices.push(k);
+    g.cantidad++;
+    if (i.enStock) g.enStock++;
+  });
+  return orden;
+}
+
+function cajaDisponibilidad(items, productoDe) {
+  const necesarias = {};
+  items.forEach(function (i) { necesarias[i.id] = (necesarias[i.id] || 0) + 1; });
+  let conStock = 0, sinStock = 0;
+  const faltan = [];
+  Object.keys(necesarias).forEach(function (id) {
+    const p = productoDe(id);
+    if (!p) { faltan.push(id); return; }
+    const hay = Math.max(Number(p.stock) || 0, 0);
+    const con = Math.min(necesarias[id], hay);
+    conStock += con;
+    sinStock += necesarias[id] - con;
+  });
+  return { conStock: conStock, sinStock: sinStock, faltan: faltan };
+}
+
 // ===== /CAJAS: lógica =====
 
 // ----- Pantalla -----
 let cajaActual = null; // { tipo, nombre, items, candidatos, precio, guardadaId }
 let cajaAvisoFaltan = '';
+let cajaModo = 'sugerida'; // 'sugerida' | 'manual' | 'misteriosa'
 
 function cajaLeerFormulario() {
   const num = (id, def) => { const v = Number(document.getElementById(id).value); return isFinite(v) && v >= 0 ? v : def; };
   return {
-    tipo: document.getElementById('cjTipo').value,
+    modo: cajaModo,
+    tipo: cajaModo === 'misteriosa' ? 'misteriosa' : 'lista',
     nombre: document.getElementById('cjNombre').value.trim() || 'Sin nombre',
     plan: { premium: num('cjPremium', 0), promedio: num('cjPromedio', 0), basico: num('cjBasico', 0) },
     ganancia: num('cjGanancia', CAJA_GANANCIA_DEFECTO),
@@ -5173,6 +5248,13 @@ function cajaLeerFormulario() {
   };
 }
 
+// Después de vender una caja: empezar otra desde cero
+function cajaOtra() {
+  if (cajaModo === 'manual') { document.getElementById('cjNombre').value = ''; cajaNueva(); return; }
+  cajaActual = null;
+  document.getElementById('cajaResultado').innerHTML = '';
+}
+
 function cajaPreset(clave) {
   const p = CAJA_PRESETS[clave];
   if (!p) return;
@@ -5181,6 +5263,8 @@ function cajaPreset(clave) {
   document.getElementById('cjPromedio').value = p.promedio;
   document.getElementById('cjBasico').value = p.basico;
   document.querySelectorAll('#cajaPresets .chipT').forEach(b => b.classList.toggle('activo', b.dataset.preset === clave));
+  // al tocar un tamaño ya se arma la caja, para que no quede la anterior en pantalla
+  cajaSugerir();
 }
 
 function cajaSugerir() {
@@ -5197,9 +5281,10 @@ function cajaSugerir() {
     : '';
   if (!r.items.length) { cajaActual = null; document.getElementById('cajaResultado').innerHTML = `<div class="panel"><div class="vacio">${escaparHtml(cajaAvisoFaltan || 'No hay piezas para armar esta caja.')}</div></div>`; return; }
   const costo = r.items.reduce((s, i) => s + i.costo, 0);
+  cajaMarcarDisponibilidad(r.items);
   cajaActual = {
-    tipo: f.tipo, nombre: f.nombre, items: r.items, candidatos, opciones: f.opciones,
-    ella: f.ella, precio: cajaPrecioPorGanancia(costo, f.ganancia), guardadaId: null
+    tipo: f.tipo, manual: false, nombre: f.nombre, items: r.items, candidatos, opciones: f.opciones,
+    ella: f.ella, precio: cajaPrecioPorGanancia(costo, f.ganancia), precioManual: false, guardadaId: null, vendida: null
   };
   cajaRender();
 }
@@ -5211,45 +5296,74 @@ function cajaTextoActual() {
   });
 }
 
-function cajaTablaPiezas(conCambiar) {
-  const partes = cajaReparto(cajaActual.items, cajaActual.precio);
-  const suma = (campo) => cajaActual.items.reduce((s, i) => s + i[campo], 0);
-  const filas = cajaActual.items.map((i, k) => [
-    escaparHtml([i.marca, i.nombre].filter(Boolean).join(' · ')) + (i.tono ? `<br><span style="color:var(--brown-soft);font-size:12px">tono ${escaparHtml(i.tono)}</span>` : ''),
-    `<span class="badge ${i.gama === 'premium' ? 'pink' : (i.gama === 'promedio' ? 'peach' : 'mint')}" style="white-space:nowrap">${i.gama === 'basico' ? 'básico' : i.gama}</span>`,
-    i.enStock ? '<span class="badge mint" style="white-space:nowrap">En stock</span>' : '<span class="badge peach" style="white-space:nowrap">Por encargo</span>',
-    formatoColones(i.costo), formatoColones(i.detalle),
-    `<b id="cjParte${k}">${formatoColones(partes[k])}</b>`,
-    conCambiar ? `<button class="secundario" style="padding:4px 10px;font-size:12px" onclick="cajaCambiarPieza(${k})">Cambiar</button>` : ''
-  ]);
-  const total = ['<b>Total</b>', '', '', '<b>' + formatoColones(suma('costo')) + '</b>', '<b>' + formatoColones(suma('detalle')) + '</b>',
-    '<b id="cjParteTotal">' + formatoColones(cajaActual.precio) + '</b>', ''];
-  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th><th>Tu costo</th><th>Detalle (suelta)</th><th>En la caja (mayor)</th><th></th></tr></thead>
-    <tbody>${filas.concat([total]).map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+function cajaTablaPiezas() {
+  const c = cajaActual;
+  const grupos = cajaGrupos(c.items);
+  const partes = cajaReparto(c.items, c.precio);
+  const suma = (campo) => c.items.reduce((s, i) => s + i[campo], 0);
+  const manual = !!c.manual;
+  const conCant = manual || grupos.some(g => g.cantidad > 1);
+  const boton = 'padding:2px 9px;font-size:13px';
+  const filas = grupos.map((g, k) => {
+    const i = g.item;
+    const linea = g.indices.reduce((s, idx) => s + partes[idx], 0);
+    const dispon = g.enStock === g.cantidad ? '<span class="badge mint" style="white-space:nowrap">En stock</span>'
+      : (g.enStock === 0 ? '<span class="badge peach" style="white-space:nowrap">Por encargo</span>'
+        : `<span class="badge peach" style="white-space:nowrap">${g.enStock} en stock, ${g.cantidad - g.enStock} por encargo</span>`);
+    const cant = manual
+      ? `<span style="white-space:nowrap"><button class="secundario" style="${boton}" onclick="cajaMenosUno(${k})" ${g.cantidad <= 1 ? 'disabled' : ''}>−</button> <b>${g.cantidad}</b> <button class="secundario" style="${boton}" onclick="cajaMasUno(${k})">+</button></span>`
+      : '×' + g.cantidad;
+    const accion = manual
+      ? `<button class="secundario" style="padding:4px 10px;font-size:12px;color:#A5323F;border-color:#A5323F" onclick="cajaQuitarLinea(${k})">Quitar</button>`
+      : `<button class="secundario" style="padding:4px 10px;font-size:12px" onclick="cajaCambiarPieza(${g.indices[0]})">Cambiar</button>`;
+    return [
+      escaparHtml([i.marca, i.nombre].filter(Boolean).join(' · ')) + (i.tono ? `<br><span style="color:var(--brown-soft);font-size:12px">tono ${escaparHtml(i.tono)}</span>` : ''),
+      `<span class="badge ${i.gama === 'premium' ? 'pink' : (i.gama === 'promedio' ? 'peach' : 'mint')}" style="white-space:nowrap">${i.gama === 'basico' ? 'básico' : i.gama}</span>`,
+      dispon
+    ].concat(conCant ? [cant] : []).concat([
+      formatoColones(i.costo), formatoColones(i.detalle),
+      `<b id="cjParte${k}">${formatoColones(linea)}</b>` + (g.cantidad > 1 ? `<br><span id="cjParteU${k}" style="color:var(--brown-soft);font-size:12px">${formatoColones(Math.round(linea / g.cantidad))} c/u</span>` : ''),
+      accion
+    ]);
+  });
+  const total = ['<b>Total</b>', '', ''].concat(conCant ? [''] : []).concat([
+    '<b>' + formatoColones(suma('costo')) + '</b>', '<b>' + formatoColones(suma('detalle')) + '</b>',
+    '<b id="cjParteTotal">' + formatoColones(c.precio) + '</b>', '']);
+  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th>${conCant ? '<th>Cantidad</th>' : ''}<th>Costo c/u</th><th>Detalle c/u (suelta)</th><th>En la caja (mayor)</th><th></th></tr></thead>
+    <tbody>${filas.concat([total]).map(f => `<tr>${f.map(x => `<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 function cajaRender() {
   const c = cajaActual;
   if (!c) return;
   const esMist = c.tipo === 'misteriosa';
+  const tipoTexto = esMist ? 'misteriosa' : (c.manual ? 'lista exacta · a mano' : 'lista exacta');
+  if (!c.items.length) {
+    document.getElementById('cajaResultado').innerHTML = `<div class="panel">
+      <div class="filaBotones"><h2 style="margin:0">Caja <span id="cajaTituloNombre">${escaparHtml(c.nombre)}</span> · ${tipoTexto}</h2></div>
+      <div class="vacio">Todavía no agregaste productos. Buscá arriba por nombre, marca o tono y tocá el que pidió la clienta.</div></div>`;
+    return;
+  }
   const conteo = cajaConteos(c.items);
+  const grupos = cajaGrupos(c.items);
   const resumen = CAJA_GAMAS.filter(g => conteo[g]).map(g => `${conteo[g]} ${CAJA_GAMA_TEXTO[g]}`).join(' · ');
   const opcionesClientes = estado.clientes.map(x => `<option value="${escaparHtml(x.id)}">${escaparHtml(x.nombre)}</option>`).join('');
   document.getElementById('cajaResultado').innerHTML = `
     <div class="panel">
       <div class="filaBotones">
-        <h2 style="margin:0">Caja ${escaparHtml(c.nombre)} · ${esMist ? 'misteriosa' : 'lista exacta'}</h2>
+        <h2 style="margin:0">Caja <span id="cajaTituloNombre">${escaparHtml(c.nombre)}</span> · ${tipoTexto}</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="secundario" onclick="cajaSugerir()">Regenerar</button>
+          ${c.manual ? '' : '<button class="secundario" onclick="cajaSugerir()">Regenerar</button>'}
           <button class="secundario" id="btnCajaGuardar" onclick="ejecutarConBoton('btnCajaGuardar', cajaGuardar)">${c.guardadaId ? 'Guardar cambios' : 'Guardar caja'}</button>
           <button id="btnCajaAbrirVenta" onclick="cajaVentaAbrir()" ${c.vendida ? 'disabled' : ''}>${c.vendida ? 'Venta registrada · ' + escaparHtml(c.vendida) : 'Registrar venta'}</button>
+          ${c.vendida ? '<button class="secundario" onclick="cajaOtra()">Armar otra caja</button>' : ''}
         </div>
       </div>
-      <p class="ayudaTienda" style="margin:0 0 12px">${c.items.length} piezas: ${escaparHtml(resumen)} · ${cajaMarcas(c.items)} marcas</p>
+      <p class="ayudaTienda" style="margin:0 0 12px">${c.items.length} piezas${grupos.length !== c.items.length ? ` (${grupos.length} productos distintos)` : ''}: ${escaparHtml(resumen)} · ${cajaMarcas(c.items)} marcas</p>
       ${cajaAvisoFaltan ? `<p class="ayudaTienda" style="color:#A5323F;margin:0 0 12px">${escaparHtml(cajaAvisoFaltan)}</p>` : ''}
       ${esMist
-        ? `<details><summary style="cursor:pointer;font-size:13px;color:var(--brown-soft)">Contenido real (solo para vos, la clienta no lo ve)</summary><div style="margin-top:10px">${cajaTablaPiezas(true)}</div></details>`
-        : cajaTablaPiezas(true)}
+        ? `<details><summary style="cursor:pointer;font-size:13px;color:var(--brown-soft)">Contenido real (solo para vos, la clienta no lo ve)</summary><div style="margin-top:10px">${cajaTablaPiezas()}</div></details>`
+        : cajaTablaPiezas()}
     </div>
     <div class="tarjetas">
       <div class="tarjeta"><p class="etiqueta">Tu costo</p><p class="valor" id="cjCosto"></p></div>
@@ -5282,7 +5396,7 @@ function cajaRender() {
         <h2 style="margin:0">Texto para la clienta</h2>
         <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjIncluirElla" checked style="width:auto" onchange="cajaActualizarNumeros()"> Incluir cuánto gana ella</label>
       </div>
-      <textarea id="cjTexto" readonly rows="${esMist ? 8 : Math.min(18, c.items.length + 8)}" style="margin-bottom:10px"></textarea>
+      <textarea id="cjTexto" readonly rows="${esMist ? 8 : Math.min(18, grupos.length + 8)}" style="margin-bottom:10px"></textarea>
       <button onclick="cajaCopiarTexto()">Copiar texto</button>
     </div>`;
   document.getElementById('cjPrecio').value = c.precio;
@@ -5296,7 +5410,7 @@ const CAJA_ETIQUETA_TU = { verde: 'Buen margen', amarillo: 'Margen justo', rojo:
 
 function cajaActualizarNumeros() {
   const c = cajaActual;
-  if (!c || !document.getElementById('cjCosto')) return;
+  if (!c || !c.items.length || !document.getElementById('cjCosto')) return;
   const n = cajaNumeros(c.items, c.precio);
   const sElla = cajaSemaforoElla(n.ellaPct, c.ella), sTu = cajaSemaforoTu(n.gananciaPct);
   const pct = x => (Math.round(x * 10) / 10).toString().replace('.', ',') + ' %';
@@ -5308,9 +5422,15 @@ function cajaActualizarNumeros() {
   document.getElementById('cjGanElla').textContent = formatoColones(n.ellaGana);
   document.getElementById('cjGanEllaNota').innerHTML = `${pct(n.ellaPct)} sobre lo que paga, si vende todo al detalle <span class="badge ${CAJA_COLOR[sElla]}">${CAJA_ETIQUETA_ELLA[sElla]}</span>`;
   document.getElementById('cjTexto').value = cajaTextoActual();
-  // lo que paga por cada pieza dentro de la caja
+  // lo que paga por cada línea dentro de la caja
   const partes = cajaReparto(c.items, c.precio);
-  partes.forEach((v, k) => { const el = document.getElementById('cjParte' + k); if (el) el.textContent = formatoColones(v); });
+  cajaGrupos(c.items).forEach((g, k) => {
+    const linea = g.indices.reduce((s, idx) => s + partes[idx], 0);
+    const el = document.getElementById('cjParte' + k);
+    if (el) el.textContent = formatoColones(linea);
+    const u = document.getElementById('cjParteU' + k);
+    if (u) u.textContent = formatoColones(Math.round(linea / g.cantidad)) + ' c/u';
+  });
   const tot = document.getElementById('cjParteTotal');
   if (tot) tot.textContent = formatoColones(c.precio);
 }
@@ -5318,12 +5438,14 @@ function cajaActualizarNumeros() {
 function cajaPrecioEditado() {
   const v = Math.round(Number(document.getElementById('cjPrecio').value) || 0);
   cajaActual.precio = v;
+  cajaActual.precioManual = true;
   cajaActualizarNumeros();
 }
 
 function cajaUsarPrecioJusto() {
   const n = cajaNumeros(cajaActual.items, 0);
   cajaActual.precio = cajaPrecioJusto(n.valor, cajaActual.ella);
+  cajaActual.precioManual = true;
   document.getElementById('cjPrecio').value = cajaActual.precio;
   cajaActualizarNumeros();
 }
@@ -5332,7 +5454,7 @@ function cajaCambiarPieza(indice) {
   const nueva = cajaCambiar(cajaActual.items, indice, cajaActual.candidatos, cajaActual.opciones);
   if (!nueva) { mostrarToast('No hay otra pieza de esa gama que cumpla las reglas.'); return; }
   cajaActual.items[indice] = nueva;
-  cajaRender();
+  cajaCambioComposicion();
 }
 
 function cajaCopiarTexto() {
@@ -5359,7 +5481,7 @@ async function cajaGuardarFilas(filasCaja, quitarClave) {
 
 function cajaValorGuardado(c) {
   return JSON.stringify({
-    v: 1, tipo: c.tipo, nombre: c.nombre, precio: c.precio, ella: c.ella,
+    v: 2, tipo: c.tipo, manual: !!c.manual, nombre: c.nombre, precio: c.precio, precioManual: !!c.precioManual, ella: c.ella,
     fecha: new Date().toISOString(), ids: c.items.map(i => i.id), vendida: c.vendida || null
   });
 }
@@ -5379,15 +5501,18 @@ function cajaAbrir(clave) {
   const g = cajasGuardadas().find(x => x.clave === clave);
   if (!g) return;
   const todos = cajaCandidatos(estado.productos, false);
-  const porId = new Map(todos.map(p => [String(p.id), p]));
-  const items = (g.ids || []).map(id => porId.get(String(id))).filter(Boolean);
+  // también las piezas ocultas de la tienda, por si la caja se armó a mano con alguna
+  const porId = new Map(estado.productos.map(p => [String(p.id), cajaCandidatoDe(p)]).filter(x => x[1]));
+  const items = (g.ids || []).map(id => porId.get(String(id))).filter(Boolean).map(x => Object.assign({}, x));
   const perdidas = (g.ids || []).length - items.length;
   if (!items.length) { mostrarToast('Los productos de esa caja ya no están disponibles.'); return; }
-  cajaActual = { tipo: g.tipo, nombre: g.nombre, items, candidatos: todos, opciones: cajaLeerFormulario().opciones,
-    ella: Number(g.ella) || CAJA_ELLA_MIN, precio: Number(g.precio) || cajaPrecioPorGanancia(items.reduce((s, i) => s + i.costo, 0), CAJA_GANANCIA_DEFECTO),
-    guardadaId: clave, vendida: g.vendida || null };
+  cajaMarcarDisponibilidad(items);
+  const costo = items.reduce((s, i) => s + i.costo, 0);
+  cajaActual = { tipo: g.tipo, manual: !!g.manual, nombre: g.nombre, items, candidatos: todos, opciones: cajaLeerFormulario().opciones,
+    ella: Number(g.ella) || CAJA_ELLA_MIN, precio: Number(g.precio) || cajaPrecioPorGanancia(costo, CAJA_GANANCIA_DEFECTO),
+    precioManual: g.precioManual !== undefined ? !!g.precioManual : true, guardadaId: clave, vendida: g.vendida || null };
   cajaAvisoFaltan = perdidas ? `${perdidas} pieza(s) de esta caja ya no están en el inventario. Cambialas o regenerá la caja.` : '';
-  document.getElementById('cjTipo').value = g.tipo;
+  cajaModoAplicar(g.tipo === 'misteriosa' ? 'misteriosa' : (g.manual ? 'manual' : 'sugerida'));
   document.getElementById('cjNombre').value = g.nombre;
   cajaRender();
   document.getElementById('cajaResultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -5426,7 +5551,7 @@ function cajaVentaClienteCambio() {
 }
 
 function cajaVentaAbrir() {
-  if (!cajaActual || cajaActual.vendida) return;
+  if (!cajaActual || cajaActual.vendida || !cajaActual.items.length) return;
   document.getElementById('cajaVentaForm').classList.remove('oculto');
   cajaVentaResumen();
   document.getElementById('cajaVentaForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -5439,9 +5564,7 @@ function cajaVentaCancelar() {
 
 // Ve el stock de HOY de cada pieza (pudo cambiar desde que se armó la caja)
 function cajaVentaEstado() {
-  const faltan = cajaActual.items.filter(i => !productoPorId(i.id));
-  const sinStock = cajaActual.items.filter(i => productoPorId(i.id) && (Number(productoPorId(i.id).stock) || 0) < 1).length;
-  return { faltan, sinStock, conStock: cajaActual.items.length - faltan.length - sinStock };
+  return cajaDisponibilidad(cajaActual.items, productoPorId);
 }
 
 function cajaVentaResumen() {
@@ -5449,13 +5572,13 @@ function cajaVentaResumen() {
   if (!caja || !cajaActual) return;
   const e = cajaVentaEstado();
   if (e.faltan.length) {
-    caja.innerHTML = `<span style="color:var(--coral-dark);font-weight:600">${e.faltan.length} pieza(s) de la caja ya no existen en el inventario. Cambialas antes de registrar la venta.</span>`;
+    caja.innerHTML = `<span style="color:var(--coral-dark);font-weight:600">${e.faltan.length} producto(s) de la caja ya no existen en el inventario. Quitalos o cambialos antes de registrar la venta.</span>`;
     return;
   }
   caja.innerHTML = `<div style="font-weight:500;margin-bottom:2px">Qué se va a registrar</div>
     <div>${cajaActual.items.length} ventas al por mayor por un total de <b>${formatoColones(cajaActual.precio)}</b>, agrupadas con un mismo código de caja. El precio se reparte entre las piezas según su valor al detalle.</div>
     <div><span class="badge mint">${e.conStock} en stock</span> se descuentan del inventario.</div>
-    ${e.sinStock ? `<div><span class="badge peach">${e.sinStock} por encargo</span> todavía no están: su stock queda en −1 hasta que lleguen. Cuando lleguen, registralas en Entrada de inventario y vuelve a 0.</div>` : ''}`;
+    ${e.sinStock ? `<div><span class="badge peach">${e.sinStock} por encargo</span> todavía no están: su stock queda en negativo (lo que debés traer). Cuando lleguen, registralas en Entrada de inventario y vuelve a 0.</div>` : ''}`;
 }
 
 async function cajaEnviarEnTrozos(operaciones) {
@@ -5470,9 +5593,9 @@ async function cajaEnviarEnTrozos(operaciones) {
 
 async function cajaVentaConfirmar() {
   const c = cajaActual;
-  if (!c || c.vendida) return;
+  if (!c || c.vendida || !c.items.length) return;
   const e = cajaVentaEstado();
-  if (e.faltan.length) { mostrarToast('Hay piezas que ya no existen. Cambialas primero.'); cajaVentaResumen(); return; }
+  if (e.faltan.length) { mostrarToast('Hay productos que ya no existen. Quitalos o cambialos primero.'); cajaVentaResumen(); return; }
   if (!(Number(c.precio) > 0)) { mostrarToast('Poné el precio de la caja.'); return; }
 
   // Cliente: existente o nuevo (se crea en el mismo paso)
@@ -5486,7 +5609,7 @@ async function cajaVentaConfirmar() {
     nombreCliente = cli ? cli.nombre : '';
   }
   const formaPago = document.getElementById('cvPago').value;
-  if (!confirm(`¿Confirmás que ${nombreCliente} ya pagó ${formatoColones(c.precio)} por la caja ${c.nombre}?\n\nEsto registra ${c.items.length} ventas y descuenta el stock${e.sinStock ? ` (${e.sinStock} pieza(s) por encargo quedan en -1 hasta que lleguen)` : ''}.`)) return;
+  if (!confirm(`¿Confirmás que ${nombreCliente} ya pagó ${formatoColones(c.precio)} por la caja ${c.nombre}?\n\nEsto registra ${c.items.length} ventas y descuenta el stock${e.sinStock ? ` (${e.sinStock} pieza(s) por encargo dejan el stock en negativo hasta que lleguen)` : ''}.`)) return;
 
   if (clienteId === '__nuevo__') {
     const resCliente = await apiPost({ accion: 'agregar_fila', hoja: 'Clientes', fila: {
@@ -5527,6 +5650,126 @@ async function cajaVentaConfirmar() {
     await refrescarTrasGuardar(`Venta de la caja ${c.nombre} registrada (${grupo}).`, ['Ventas', 'Clientes', 'Productos']);
   }
   cajaRender();
+}
+
+const CAJA_AYUDA_MODO = {
+  sugerida: 'El sistema arma la caja con tu inventario según cuántas piezas premium, promedio y básicas pidas. La clienta ve cada producto. Todo producto es nuevo y sellado, con máximo 2 iguales. Premium: detalle de ₡20.000 o más · Promedio: de ₡12.000 a ₡19.999 · Básicos: menos de ₡12.000.',
+  manual: 'Vos elegís cada producto (los que pidió la clienta) con el buscador. Podés poner varias unidades del mismo producto. Lo que pasa del stock queda por encargo.',
+  misteriosa: 'El sistema arma la caja, pero la clienta solo ve la promesa: cuántas piezas de cada gama y un valor mínimo. Todo producto es nuevo y sellado, con máximo 2 iguales.'
+};
+
+function cajaModoAplicar(modo) {
+  cajaModo = modo;
+  document.querySelectorAll('#cajaModos .chipT').forEach(b => b.classList.toggle('activo', b.dataset.modo === modo));
+  document.querySelectorAll('#tab-cajas .cjSug').forEach(el => el.classList.toggle('oculto', modo === 'manual'));
+  document.querySelectorAll('#tab-cajas .cjMan').forEach(el => el.classList.toggle('oculto', modo !== 'manual'));
+  document.getElementById('cajaAyudaModo').textContent = CAJA_AYUDA_MODO[modo];
+  document.getElementById('cjNombre').placeholder = modo === 'manual' ? 'Ej: de María' : 'Emprende';
+}
+
+function cajaModoElegir(modo) {
+  cajaModoAplicar(modo);
+  if (modo === 'manual') {
+    // el nombre de un tamaño rápido no sirve para una caja a medida
+    const nom = document.getElementById('cjNombre');
+    if (Object.values(CAJA_PRESETS).some(p => p.nombre === nom.value)) nom.value = '';
+    if (!cajaActual || cajaActual.vendida) cajaNueva();
+    else { cajaActual.manual = true; cajaActual.tipo = 'lista'; cajaRender(); }
+  }
+}
+
+function cajaNueva() {
+  cajaActual = {
+    tipo: 'lista', manual: true, nombre: document.getElementById('cjNombre').value.trim() || 'a medida',
+    items: [], candidatos: [], opciones: {}, ella: cajaLeerFormulario().ella, precio: 0, precioManual: false,
+    guardadaId: null, vendida: null
+  };
+  cajaAvisoFaltan = '';
+  cajaRender();
+}
+
+function cajaCambioComposicion() {
+  cajaMarcarDisponibilidad(cajaActual.items);
+  cajaRecalcularPrecio();
+  cajaAvisoFaltan = '';
+  cajaRender();
+  const res = document.getElementById('res-caja');
+  if (res && !res.classList.contains('oculto')) buscarEnBuscador('caja');
+}
+
+function cajaRecalcularPrecio() {
+  const c = cajaActual;
+  if (!c || c.precioManual) return;
+  const costo = c.items.reduce((s, i) => s + i.costo, 0);
+  const g = Number(document.getElementById('cjGanancia').value);
+  c.precio = costo > 0 ? cajaPrecioPorGanancia(costo, isFinite(g) && g >= 0 ? g : CAJA_GANANCIA_DEFECTO) : 0;
+}
+
+function cajaAgregarProducto(id) {
+  const p = productoPorId(id);
+  if (!p) return;
+  const c = cajaCandidatoDe(p);
+  if (!c) { mostrarToast('Ese producto no tiene costo o precio cargado. Completalo en Inventario.'); return; }
+  if (!cajaActual || cajaActual.vendida) cajaNueva();
+  cajaActual.manual = true;
+  cajaActual.tipo = 'lista';
+  cajaActual.items.push(Object.assign({}, c));
+  cajaCambioComposicion();
+}
+
+function cajaMasUno(k) {
+  const g = cajaGrupos(cajaActual.items)[k];
+  if (!g) return;
+  cajaActual.items.push(Object.assign({}, g.item));
+  cajaCambioComposicion();
+}
+
+function cajaMenosUno(k) {
+  const g = cajaGrupos(cajaActual.items)[k];
+  if (!g || g.cantidad <= 1) return;
+  cajaActual.items.splice(g.indices[g.indices.length - 1], 1);
+  cajaCambioComposicion();
+}
+
+function cajaQuitarLinea(k) {
+  const g = cajaGrupos(cajaActual.items)[k];
+  if (!g) return;
+  g.indices.slice().reverse().forEach(i => cajaActual.items.splice(i, 1));
+  cajaCambioComposicion();
+}
+
+function cajaNombreEditado() {
+  if (!cajaActual) return;
+  cajaActual.nombre = document.getElementById('cjNombre').value.trim() || (cajaActual.manual ? 'a medida' : 'Sin nombre');
+  const t = document.getElementById('cajaTituloNombre');
+  if (t) t.textContent = cajaActual.nombre;
+  cajaActualizarNumeros();
+}
+
+function cajaGananciaEditada() {
+  if (!cajaActual || !cajaActual.items.length) return;
+  cajaRecalcularPrecio();
+  const campo = document.getElementById('cjPrecio');
+  if (campo) campo.value = cajaActual.precio;
+  cajaActualizarNumeros();
+}
+
+function cajaEllaEditada() {
+  if (!cajaActual) return;
+  const v = Number(document.getElementById('cjElla').value);
+  cajaActual.ella = isFinite(v) && v >= 0 ? v : CAJA_ELLA_MIN;
+  cajaActualizarNumeros();
+}
+
+function cajaDatoBuscador(p) {
+  const c = cajaCandidatoDe(p);
+  if (!c) return '<span style="color:#A5323F">sin costo o precio: completalo en Inventario</span>';
+  const stock = Number(p.stock) || 0;
+  const hay = p.modalidad !== 'encargo' && stock > 0;
+  const may = precioMayoristaDe(p);
+  const yaEn = cajaActual ? cajaActual.items.filter(i => String(i.id) === String(p.id)).length : 0;
+  return (hay ? stock + ' en stock' : 'por encargo') + ' · costo ' + formatoColones(c.costo) + ' · detalle ' + formatoColones(c.detalle) +
+    (may ? ' · mayorista ' + formatoColones(may) : '') + (yaEn ? ' · en la caja ×' + yaEn : '');
 }
 
 // ---------- Arranque ----------
