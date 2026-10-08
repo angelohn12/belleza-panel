@@ -1189,7 +1189,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07d · cajas de mayoreo</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07e · venta de cajas</p>
         </div>
       </div>
       <div class="panel">
@@ -3526,12 +3526,13 @@ function calculoEntrada() {
   const costoNuevo = Math.round(moneda === 'USD' ? costoEscrito * tipoCambio : costoEscrito);
   const stockAntes = Math.max(Number(p.stock) || 0, 0);
   const costoAntes = Number(p.costoTotalCRC) || 0;
-  const stockDespues = stockAntes + cantidad;
+  const stockActual = Number(p.stock) || 0; // puede ser negativo: piezas vendidas por encargo que faltan por traer
+  const stockDespues = stockTrasEntrada(stockActual, cantidad);
   // Si no quedaba ninguna (o no tenía costo), el costo es el de esta compra
   const promedio = stockAntes > 0 && costoAntes > 0
     ? Math.round((stockAntes * costoAntes + cantidad * costoNuevo) / stockDespues)
     : costoNuevo;
-  return { p, cantidad, costoNuevo, stockAntes, costoAntes, stockDespues, promedio };
+  return { p, cantidad, costoNuevo, stockAntes, stockActual, costoAntes, stockDespues, promedio };
 }
 
 function renderEntrada() {
@@ -3548,7 +3549,7 @@ function renderEntrada() {
     return;
   }
   caja.innerHTML = `<div class="lineaVenta"><span class="lvNombre">${escaparHtml(etiquetaProducto(c.p))}
-    <span class="lvSub">Hoy: ${c.stockAntes} en stock${c.costoAntes ? ' a ' + formatoColones(c.costoAntes) + ' c/u' : ''}</span></span></div>`;
+    <span class="lvSub">Hoy: ${c.stockActual < 0 ? 'debés ' + (-c.stockActual) + ' vendida(s) por encargo' : c.stockAntes + ' en stock'}${c.costoAntes && c.stockActual >= 0 ? ' a ' + formatoColones(c.costoAntes) + ' c/u' : ''}</span></span></div>`;
   if (!(c.cantidad > 0) || !(c.costoNuevo > 0)) {
     resumen.innerHTML = '';
     return;
@@ -3566,6 +3567,7 @@ function renderEntrada() {
         ? `${c.stockAntes} a ${formatoColones(c.costoAntes)} + ${c.cantidad} a ${formatoColones(c.costoNuevo)} →
            <b>quedan ${c.stockDespues} a ${formatoColones(c.promedio)} c/u</b>`
         : `<b>Quedan ${c.stockDespues} a ${formatoColones(c.promedio)} c/u</b>`}
+      ${c.stockActual < 0 ? `<div style="color:var(--brown-soft);margin-top:4px">Ya tenías ${-c.stockActual} vendida(s) por encargo: lo que entra las cubre primero.</div>` : ''}
       <div style="color:var(--brown-soft);margin-top:4px">${pago === 'no'
         ? 'No se anota nada en Finanzas.'
         : `En Finanzas queda una compra de ${formatoColones(c.cantidad * c.costoNuevo)}${pago === 'socio' ? ' pagada por un socio' : ' con plata del negocio'}.`}</div>
@@ -5090,6 +5092,64 @@ function cajaTexto(tipo, nombre, items, precio, opciones) {
   lineas.push('Todo es original, nuevo y sellado. Pagás completo por SINPE antes de que armemos tu caja.');
   return lineas.filter(Boolean).join('\n');
 }
+// Reparte el precio de la caja entre las piezas, en proporción a lo que vale
+// cada una al detalle. Devuelve colones enteros que suman EXACTAMENTE el precio.
+function cajaReparto(items, precio) {
+  const total = Math.max(0, Math.round(Number(precio) || 0));
+  const valor = items.reduce((s, i) => s + i.detalle, 0);
+  if (!items.length || !(valor > 0) || !total) return items.map(() => 0);
+  const exactos = items.map(i => total * i.detalle / valor);
+  const partes = exactos.map(Math.floor);
+  let resto = total - partes.reduce((s, x) => s + x, 0);
+  const orden = exactos.map((x, k) => ({ k: k, f: x - Math.floor(x) })).sort((a, b) => b.f - a.f || a.k - b.k);
+  for (let j = 0; resto > 0; j = (j + 1) % orden.length, resto--) partes[orden[j].k]++;
+  return partes;
+}
+
+// Lo que hay que escribir en la hoja al vender una caja: una venta por pieza
+// (al por mayor, con el precio repartido) y un solo ajuste de stock por
+// producto. Si una pieza no tenía stock (por encargo), el stock queda en
+// negativo: es lo que debés traer. Al recibirla con Entrada de inventario
+// vuelve a 0.
+function cajaOperacionesVenta(items, precio, datos, productoDe) {
+  const partes = cajaReparto(items, precio);
+  const ventas = [];
+  const salen = {};
+  items.forEach(function (i, k) {
+    const p = productoDe(i.id);
+    ventas.push({ accion: 'agregar_fila', hoja: 'Ventas', fila: {
+      id: '', fecha: datos.fecha, clienteId: datos.clienteId, productoId: p.id, cantidad: 1,
+      costoUnitarioCRC: Number(p.costoTotalCRC) || 0,
+      // precioVenta es el TOTAL de la línea (igual que en el resto de Ventas)
+      precioVenta: partes[k],
+      canal: datos.canal, estadoEntrega: datos.estadoEntrega, usuario: datos.usuario,
+      formaPago: datos.formaPago, tipoPrecio: 'Mayor', grupo: datos.grupo
+    } });
+    salen[p.id] = (salen[p.id] || 0) + 1;
+  });
+  const stock = [], stocksNuevos = [];
+  Object.keys(salen).forEach(function (id) {
+    const p = productoDe(id);
+    const nuevo = (Number(p.stock) || 0) - salen[id];
+    stock.push({ accion: 'editar_fila', hoja: 'Productos', id: p.id, fila: filaProductoConStock(p, nuevo) });
+    stocksNuevos.push({ id: p.id, stock: nuevo });
+  });
+  const porEncargo = Object.keys(salen).filter(function (id) { return (Number(productoDe(id).stock) || 0) < salen[id]; }).length;
+  return { operaciones: ventas.concat(stock), nVentas: ventas.length, stocksNuevos: stocksNuevos, porEncargo: porEncargo };
+}
+
+// El servidor acepta hasta 60 operaciones por envío: se manda en trozos.
+function cajaTrocear(operaciones, maximo) {
+  const trozos = [];
+  for (let i = 0; i < operaciones.length; i += maximo) trozos.push(operaciones.slice(i, i + maximo));
+  return trozos;
+}
+
+// Stock que queda al registrar una entrada. Si había piezas vendidas por
+// encargo (stock negativo), lo que entra las cubre primero.
+function stockTrasEntrada(stockActual, cantidad) {
+  return (Number(stockActual) || 0) + (Number(cantidad) || 0);
+}
 // ===== /CAJAS: lógica =====
 
 // ----- Pantalla -----
@@ -5152,15 +5212,20 @@ function cajaTextoActual() {
 }
 
 function cajaTablaPiezas(conCambiar) {
+  const partes = cajaReparto(cajaActual.items, cajaActual.precio);
+  const suma = (campo) => cajaActual.items.reduce((s, i) => s + i[campo], 0);
   const filas = cajaActual.items.map((i, k) => [
     escaparHtml([i.marca, i.nombre].filter(Boolean).join(' · ')) + (i.tono ? `<br><span style="color:var(--brown-soft);font-size:12px">tono ${escaparHtml(i.tono)}</span>` : ''),
     `<span class="badge ${i.gama === 'premium' ? 'pink' : (i.gama === 'promedio' ? 'peach' : 'mint')}" style="white-space:nowrap">${i.gama === 'basico' ? 'básico' : i.gama}</span>`,
     i.enStock ? '<span class="badge mint" style="white-space:nowrap">En stock</span>' : '<span class="badge peach" style="white-space:nowrap">Por encargo</span>',
     formatoColones(i.costo), formatoColones(i.detalle),
+    `<b id="cjParte${k}">${formatoColones(partes[k])}</b>`,
     conCambiar ? `<button class="secundario" style="padding:4px 10px;font-size:12px" onclick="cajaCambiarPieza(${k})">Cambiar</button>` : ''
   ]);
-  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th><th>Costo</th><th>Detalle</th><th></th></tr></thead>
-    <tbody>${filas.map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const total = ['<b>Total</b>', '', '', '<b>' + formatoColones(suma('costo')) + '</b>', '<b>' + formatoColones(suma('detalle')) + '</b>',
+    '<b id="cjParteTotal">' + formatoColones(cajaActual.precio) + '</b>', ''];
+  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th><th>Tu costo</th><th>Detalle (suelta)</th><th>En la caja (mayor)</th><th></th></tr></thead>
+    <tbody>${filas.concat([total]).map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 function cajaRender() {
@@ -5169,13 +5234,15 @@ function cajaRender() {
   const esMist = c.tipo === 'misteriosa';
   const conteo = cajaConteos(c.items);
   const resumen = CAJA_GAMAS.filter(g => conteo[g]).map(g => `${conteo[g]} ${CAJA_GAMA_TEXTO[g]}`).join(' · ');
+  const opcionesClientes = estado.clientes.map(x => `<option value="${escaparHtml(x.id)}">${escaparHtml(x.nombre)}</option>`).join('');
   document.getElementById('cajaResultado').innerHTML = `
     <div class="panel">
       <div class="filaBotones">
         <h2 style="margin:0">Caja ${escaparHtml(c.nombre)} · ${esMist ? 'misteriosa' : 'lista exacta'}</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="secundario" onclick="cajaSugerir()">Regenerar</button>
-          <button id="btnCajaGuardar" onclick="ejecutarConBoton('btnCajaGuardar', cajaGuardar)">${c.guardadaId ? 'Guardar cambios' : 'Guardar caja'}</button>
+          <button class="secundario" id="btnCajaGuardar" onclick="ejecutarConBoton('btnCajaGuardar', cajaGuardar)">${c.guardadaId ? 'Guardar cambios' : 'Guardar caja'}</button>
+          <button id="btnCajaAbrirVenta" onclick="cajaVentaAbrir()" ${c.vendida ? 'disabled' : ''}>${c.vendida ? 'Venta registrada · ' + escaparHtml(c.vendida) : 'Registrar venta'}</button>
         </div>
       </div>
       <p class="ayudaTienda" style="margin:0 0 12px">${c.items.length} piezas: ${escaparHtml(resumen)} · ${cajaMarcas(c.items)} marcas</p>
@@ -5186,12 +5253,29 @@ function cajaRender() {
     </div>
     <div class="tarjetas">
       <div class="tarjeta"><p class="etiqueta">Tu costo</p><p class="valor" id="cjCosto"></p></div>
-      <div class="tarjeta"><p class="etiqueta">Precio de la caja</p>
+      <div class="tarjeta"><p class="etiqueta">Precio de la caja (mayor)</p>
         <input id="cjPrecio" type="number" min="0" step="500" style="font-size:22px;font-weight:500;padding:4px 8px" oninput="cajaPrecioEditado()">
         <p class="fNota"><a href="#" onclick="cajaUsarPrecioJusto();return false">Usar el precio justo para ella</a></p></div>
       <div class="tarjeta"><p class="etiqueta">Tu ganancia</p><p class="valor" id="cjGanTu"></p><p class="fNota" id="cjGanTuNota"></p></div>
-      <div class="tarjeta"><p class="etiqueta">Valor al detalle</p><p class="valor" id="cjValor"></p><p class="fNota" id="cjEntrega"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Valor al detalle (si se vendieran sueltas)</p><p class="valor" id="cjValor"></p><p class="fNota" id="cjEntrega"></p></div>
       <div class="tarjeta"><p class="etiqueta">Ella gana revendiendo</p><p class="valor" id="cjGanElla"></p><p class="fNota" id="cjGanEllaNota"></p></div>
+    </div>
+    <div class="panel oculto" id="cajaVentaForm">
+      <h2>Registrar venta de la caja</h2>
+      <div class="formulario">
+        <div><label>Cliente</label><select id="cvCliente" onchange="cajaVentaClienteCambio()"><option value="__nuevo__">+ Cliente nuevo…</option>${opcionesClientes}</select></div>
+        <div id="cvNombreWrap"><label>Nombre del cliente nuevo</label><input id="cvNombre" placeholder="María Pérez"></div>
+        <div id="cvTelefonoWrap"><label>Teléfono (opcional)</label><input id="cvTelefono" placeholder="8888-8888"></div>
+        <div><label>Canal</label><select id="cvCanal"><option>WhatsApp</option><option>Instagram</option><option>Facebook Marketplace</option><option>Entrega personal</option><option>Envío</option><option>Tienda web</option></select></div>
+        <div><label>Forma de pago</label><select id="cvPago"><option>SINPE Móvil</option><option>Efectivo</option></select></div>
+        <div><label>Estado de entrega</label><select id="cvEstado"><option>Pendiente</option><option>Entregado</option></select></div>
+      </div>
+      <p class="ayudaTienda" style="margin:0 0 12px">Solo Efectivo o SINPE: las cajas se pagan completas antes de armarse.</p>
+      <div id="cvResumen" style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.7;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="btnCajaVender" onclick="ejecutarConBoton('btnCajaVender', cajaVentaConfirmar)">Confirmar venta</button>
+        <button class="secundario" onclick="cajaVentaCancelar()">Cancelar</button>
+      </div>
     </div>
     <div class="panel">
       <div class="filaBotones">
@@ -5202,6 +5286,7 @@ function cajaRender() {
       <button onclick="cajaCopiarTexto()">Copiar texto</button>
     </div>`;
   document.getElementById('cjPrecio').value = c.precio;
+  cajaVentaClienteCambio();
   cajaActualizarNumeros();
 }
 
@@ -5223,6 +5308,11 @@ function cajaActualizarNumeros() {
   document.getElementById('cjGanElla').textContent = formatoColones(n.ellaGana);
   document.getElementById('cjGanEllaNota').innerHTML = `${pct(n.ellaPct)} sobre lo que paga, si vende todo al detalle <span class="badge ${CAJA_COLOR[sElla]}">${CAJA_ETIQUETA_ELLA[sElla]}</span>`;
   document.getElementById('cjTexto').value = cajaTextoActual();
+  // lo que paga por cada pieza dentro de la caja
+  const partes = cajaReparto(c.items, c.precio);
+  partes.forEach((v, k) => { const el = document.getElementById('cjParte' + k); if (el) el.textContent = formatoColones(v); });
+  const tot = document.getElementById('cjParteTotal');
+  if (tot) tot.textContent = formatoColones(c.precio);
 }
 
 function cajaPrecioEditado() {
@@ -5267,15 +5357,18 @@ async function cajaGuardarFilas(filasCaja, quitarClave) {
   return false;
 }
 
+function cajaValorGuardado(c) {
+  return JSON.stringify({
+    v: 1, tipo: c.tipo, nombre: c.nombre, precio: c.precio, ella: c.ella,
+    fecha: new Date().toISOString(), ids: c.items.map(i => i.id), vendida: c.vendida || null
+  });
+}
+
 async function cajaGuardar() {
   const c = cajaActual;
   if (!c) return;
   const clave = c.guardadaId || ('caja:' + Date.now().toString(36));
-  const valor = JSON.stringify({
-    v: 1, tipo: c.tipo, nombre: c.nombre, precio: c.precio, ella: c.ella,
-    fecha: new Date().toISOString(), ids: c.items.map(i => i.id)
-  });
-  if (await cajaGuardarFilas([[clave, valor]], clave)) {
+  if (await cajaGuardarFilas([[clave, cajaValorGuardado(c)]], clave)) {
     c.guardadaId = clave;
     mostrarToast('Caja guardada.');
     cajaRender();
@@ -5291,7 +5384,8 @@ function cajaAbrir(clave) {
   const perdidas = (g.ids || []).length - items.length;
   if (!items.length) { mostrarToast('Los productos de esa caja ya no están disponibles.'); return; }
   cajaActual = { tipo: g.tipo, nombre: g.nombre, items, candidatos: todos, opciones: cajaLeerFormulario().opciones,
-    ella: Number(g.ella) || CAJA_ELLA_MIN, precio: Number(g.precio) || cajaPrecioPorGanancia(items.reduce((s, i) => s + i.costo, 0), CAJA_GANANCIA_DEFECTO), guardadaId: clave };
+    ella: Number(g.ella) || CAJA_ELLA_MIN, precio: Number(g.precio) || cajaPrecioPorGanancia(items.reduce((s, i) => s + i.costo, 0), CAJA_GANANCIA_DEFECTO),
+    guardadaId: clave, vendida: g.vendida || null };
   cajaAvisoFaltan = perdidas ? `${perdidas} pieza(s) de esta caja ya no están en el inventario. Cambialas o regenerá la caja.` : '';
   document.getElementById('cjTipo').value = g.tipo;
   document.getElementById('cjNombre').value = g.nombre;
@@ -5313,13 +5407,126 @@ function renderCajasGuardadas() {
   const lista = cajasGuardadas();
   if (!lista.length) { caja.innerHTML = '<div class="vacio">Todavía no guardaste ninguna caja.</div>'; return; }
   const filas = lista.map(g => [
-    escaparHtml(g.nombre), g.tipo === 'misteriosa' ? '<span class="badge pink">Misteriosa</span>' : '<span class="badge mint">Lista exacta</span>',
+    escaparHtml(g.nombre) + (g.vendida ? ` <span class="badge peach">Vendida ${escaparHtml(g.vendida)}</span>` : ''),
+    g.tipo === 'misteriosa' ? '<span class="badge pink">Misteriosa</span>' : '<span class="badge mint">Lista exacta</span>',
     (g.ids || []).length + ' piezas', formatoColones(g.precio), escaparHtml(fechaCorta(g.fecha)),
     `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="secundario" style="padding:4px 10px;font-size:12px" onclick="cajaAbrir('${escaparHtml(g.clave)}')">Abrir</button>
      <button class="secundario" style="padding:4px 10px;font-size:12px;color:#A5323F;border-color:#A5323F" onclick="ejecutarConBotonElemento(this, () => cajaEliminar('${escaparHtml(g.clave)}'))">Eliminar</button></div>`
   ]);
   caja.innerHTML = `<div class="tablaScroll"><table><thead><tr><th>Caja</th><th>Tipo</th><th>Piezas</th><th>Precio</th><th>Guardada</th><th></th></tr></thead>
     <tbody>${filas.map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+// ----- Registrar la venta de una caja -----
+function cajaVentaClienteCambio() {
+  const sel = document.getElementById('cvCliente');
+  if (!sel) return;
+  const nuevo = sel.value === '__nuevo__';
+  ['cvNombreWrap', 'cvTelefonoWrap'].forEach(id => document.getElementById(id).classList.toggle('oculto', !nuevo));
+}
+
+function cajaVentaAbrir() {
+  if (!cajaActual || cajaActual.vendida) return;
+  document.getElementById('cajaVentaForm').classList.remove('oculto');
+  cajaVentaResumen();
+  document.getElementById('cajaVentaForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cajaVentaCancelar() {
+  const f = document.getElementById('cajaVentaForm');
+  if (f) f.classList.add('oculto');
+}
+
+// Ve el stock de HOY de cada pieza (pudo cambiar desde que se armó la caja)
+function cajaVentaEstado() {
+  const faltan = cajaActual.items.filter(i => !productoPorId(i.id));
+  const sinStock = cajaActual.items.filter(i => productoPorId(i.id) && (Number(productoPorId(i.id).stock) || 0) < 1).length;
+  return { faltan, sinStock, conStock: cajaActual.items.length - faltan.length - sinStock };
+}
+
+function cajaVentaResumen() {
+  const caja = document.getElementById('cvResumen');
+  if (!caja || !cajaActual) return;
+  const e = cajaVentaEstado();
+  if (e.faltan.length) {
+    caja.innerHTML = `<span style="color:var(--coral-dark);font-weight:600">${e.faltan.length} pieza(s) de la caja ya no existen en el inventario. Cambialas antes de registrar la venta.</span>`;
+    return;
+  }
+  caja.innerHTML = `<div style="font-weight:500;margin-bottom:2px">Qué se va a registrar</div>
+    <div>${cajaActual.items.length} ventas al por mayor por un total de <b>${formatoColones(cajaActual.precio)}</b>, agrupadas con un mismo código de caja. El precio se reparte entre las piezas según su valor al detalle.</div>
+    <div><span class="badge mint">${e.conStock} en stock</span> se descuentan del inventario.</div>
+    ${e.sinStock ? `<div><span class="badge peach">${e.sinStock} por encargo</span> todavía no están: su stock queda en −1 hasta que lleguen. Cuando lleguen, registralas en Entrada de inventario y vuelve a 0.</div>` : ''}`;
+}
+
+async function cajaEnviarEnTrozos(operaciones) {
+  const resultados = [];
+  for (const trozo of cajaTrocear(operaciones, 50)) {
+    const lote = await apiLote(trozo);
+    if (!lote.resultados || !lote.resultados.length) { resultados.push(...trozo.map(() => ({ ok: false, error: lote.error }))); continue; }
+    resultados.push(...lote.resultados);
+  }
+  return resultados;
+}
+
+async function cajaVentaConfirmar() {
+  const c = cajaActual;
+  if (!c || c.vendida) return;
+  const e = cajaVentaEstado();
+  if (e.faltan.length) { mostrarToast('Hay piezas que ya no existen. Cambialas primero.'); cajaVentaResumen(); return; }
+  if (!(Number(c.precio) > 0)) { mostrarToast('Poné el precio de la caja.'); return; }
+
+  // Cliente: existente o nuevo (se crea en el mismo paso)
+  let clienteId = document.getElementById('cvCliente').value;
+  let nombreCliente = '';
+  if (clienteId === '__nuevo__') {
+    nombreCliente = document.getElementById('cvNombre').value.trim();
+    if (!nombreCliente) { mostrarToast('Poné el nombre del cliente nuevo.'); return; }
+  } else {
+    const cli = estado.clientes.find(x => String(x.id) === String(clienteId));
+    nombreCliente = cli ? cli.nombre : '';
+  }
+  const formaPago = document.getElementById('cvPago').value;
+  if (!confirm(`¿Confirmás que ${nombreCliente} ya pagó ${formatoColones(c.precio)} por la caja ${c.nombre}?\n\nEsto registra ${c.items.length} ventas y descuenta el stock${e.sinStock ? ` (${e.sinStock} pieza(s) por encargo quedan en -1 hasta que lleguen)` : ''}.`)) return;
+
+  if (clienteId === '__nuevo__') {
+    const resCliente = await apiPost({ accion: 'agregar_fila', hoja: 'Clientes', fila: {
+      id: '', nombre: nombreCliente, telefono: document.getElementById('cvTelefono').value,
+      ubicacion: '', canalPreferido: 'WhatsApp', notas: ''
+    } });
+    if (!resCliente.ok) { mostrarToast('Error creando el cliente: ' + resCliente.error); return; }
+    clienteId = resCliente.id;
+  }
+
+  const grupo = 'C-' + Date.now().toString(36).toUpperCase();
+  const plan = cajaOperacionesVenta(c.items, c.precio, {
+    fecha: new Date().toISOString().slice(0, 10), clienteId,
+    canal: document.getElementById('cvCanal').value, estadoEntrega: document.getElementById('cvEstado').value,
+    usuario: estado.usuario ? estado.usuario.usuario : '', formaPago, grupo
+  }, productoPorId);
+
+  const resultados = await cajaEnviarEnTrozos(plan.operaciones);
+  const guardadas = resultados.slice(0, plan.nVentas).filter(r => r && r.ok).length;
+  const todoBien = resultados.length === plan.operaciones.length && resultados.every(r => r && r.ok);
+  if (!guardadas) {
+    const r = resultados.find(x => x && x.error);
+    mostrarToast('Error: ' + ((r && r.error) || 'no se pudo guardar la venta'));
+    return;
+  }
+  if (!todoBien) {
+    mostrarToast(guardadas < plan.nVentas
+      ? `Solo se guardaron ${guardadas} de ${plan.nVentas} ventas. Revisá Ventas e Inventario.`
+      : 'La venta se guardó, pero algún ajuste de stock falló. Revisá el inventario.');
+  }
+
+  c.vendida = grupo;
+  if (c.guardadaId) await cajaGuardarFilas([[c.guardadaId, cajaValorGuardado(c)]], c.guardadaId);
+  if (todoBien) {
+    plan.stocksNuevos.forEach(s => ajustarStockLocal(s.id, s.stock));
+    await refrescarTrasGuardar(`Venta de la caja ${c.nombre} registrada (${grupo}).`, ['Ventas', 'Clientes']);
+  } else {
+    await refrescarTrasGuardar(`Venta de la caja ${c.nombre} registrada (${grupo}).`, ['Ventas', 'Clientes', 'Productos']);
+  }
+  cajaRender();
 }
 
 // ---------- Arranque ----------
