@@ -522,6 +522,7 @@
     <button class="tab" data-tab="inventario" onclick="mostrarTab('inventario')">Inventario</button>
     <button class="tab" data-tab="tienda" onclick="mostrarTab('tienda')">Tienda</button>
     <button class="tab" data-tab="ventas" onclick="mostrarTab('ventas')">Ventas</button>
+    <button class="tab" data-tab="cajas" onclick="mostrarTab('cajas')">Cajas</button>
     <button class="tab" data-tab="clientes" onclick="mostrarTab('clientes')">Clientes</button>
     <button class="tab" data-tab="finanzas" onclick="mostrarTab('finanzas')">Finanzas</button>
     <button class="tab" data-tab="contenido" onclick="mostrarTab('contenido')">Publicaciones</button>
@@ -981,6 +982,42 @@
     </section>
 
     <!-- ---------- CLIENTES ---------- -->
+    <!-- ---------- CAJAS ---------- -->
+    <section id="tab-cajas" class="oculto">
+      <div class="panel">
+        <h2>Armar caja</h2>
+        <p class="ayudaTienda">Sugiere una caja con tu inventario. Todo producto es nuevo y sellado, con máximo 2 iguales. Premium: detalle de ₡20.000 o más · Promedio: de ₡12.000 a ₡19.999 · Básicos: menos de ₡12.000.</p>
+        <div class="filtrosTienda" id="cajaPresets" style="margin-bottom:14px">
+          <button class="chipT" data-preset="emprende" onclick="cajaPreset('emprende')">Emprende · 24 básicos</button>
+          <button class="chipT" data-preset="selecta" onclick="cajaPreset('selecta')">Selecta · 2 premium, 6 promedio, 14 básicos</button>
+          <button class="chipT" data-preset="prestige" onclick="cajaPreset('prestige')">Prestige · 6 premium, 6 promedio, 6 básicos</button>
+        </div>
+        <div class="formulario">
+          <div><label>Tipo de caja</label>
+            <select id="cjTipo"><option value="lista">Lista exacta (la clienta ve cada producto)</option><option value="misteriosa">Misteriosa (solo ve la promesa)</option></select></div>
+          <div><label>Nombre</label><input id="cjNombre" placeholder="Emprende" value="Emprende"></div>
+          <div><label>Piezas premium</label><input id="cjPremium" type="number" min="0" max="80" value="0"></div>
+          <div><label>Piezas promedio</label><input id="cjPromedio" type="number" min="0" max="80" value="0"></div>
+          <div><label>Piezas básicas</label><input id="cjBasico" type="number" min="0" max="80" value="24"></div>
+          <div><label>Tu ganancia sobre el costo (%)</label><input id="cjGanancia" type="number" min="0" max="100" value="15"></div>
+          <div><label>Ella gana como mínimo (%)</label><input id="cjElla" type="number" min="0" max="100" value="20"></div>
+          <div><label>Inventario a usar</label>
+            <select id="cjInventario"><option value="ambos">Stock y por encargo</option><option value="stock">Solo lo que hay en stock</option></select></div>
+          <div><label>Mínimo de marcas</label><input id="cjMinMarcas" type="number" min="1" max="20" value="5"></div>
+          <div class="campoAncho" style="display:flex;gap:18px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjStockPrimero" checked style="width:auto"> Usar primero lo que hay en stock</label>
+            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjMejorMargen" checked style="width:auto"> Priorizar lo que deja más margen</label>
+          </div>
+        </div>
+        <button onclick="cajaSugerir()">Sugerir caja</button>
+      </div>
+      <div id="cajaResultado"></div>
+      <div class="panel">
+        <h2>Cajas guardadas</h2>
+        <div id="cajasGuardadas"></div>
+      </div>
+    </section>
+
     <section id="tab-clientes" class="oculto">
       <div class="panel">
         <div class="filaBotones">
@@ -1152,7 +1189,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07c · app Avellana Avisos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07d · cajas de mayoreo</p>
         </div>
       </div>
       <div class="panel">
@@ -1462,6 +1499,7 @@ function mostrarTab(nombre) {
   redibujarGraficosVisibles();
   // La lista de celulares conectados se pide recién al abrir Configuración
   if (nombre === 'config' && !avisosCargados) verAvisosCelular(false).catch(() => {});
+  if (nombre === 'cajas') renderCajasGuardadas();
 }
 
 function alternar(idFormulario) {
@@ -1539,6 +1577,7 @@ function renderTodo() {
   renderMovimientos();
   renderAbonos();
   renderContenido();
+  renderCajasGuardadas();
   llenarSelectoresVenta();
   llenarSelectorMarcas();
   llenarSelectorClientesAbono();
@@ -4858,6 +4897,429 @@ async function guardarConfig() {
   const resultado = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
   if (resultado.ok) { mostrarToast('Configuración guardada.'); await cargarDatos(true, ['Config']); }
   else mostrarToast('Error: ' + resultado.error);
+}
+
+// ---------- Cajas ----------
+// Arma cajas de mayoreo (lista exacta o misteriosa) con lo que hay en el
+// inventario, y calcula costo, precio, tu ganancia y cuánto gana la
+// revendedora si vende cada pieza al precio detalle. Todo producto de una
+// caja es nuevo y sellado, igual que el resto de la tienda.
+// La parte de arriba (lógica) no toca la pantalla: se prueba aparte con los
+// productos reales (test_cajas.js).
+
+// ===== CAJAS: lógica =====
+const CAJA_PREMIUM_DESDE = 20000;   // detalle desde el que una pieza es premium
+const CAJA_PROMEDIO_DESDE = 12000;  // de acá hasta premium es promedio; menos, básico
+const CAJA_GANANCIA_DEFECTO = 15;   // % sobre el costo
+const CAJA_ELLA_MIN = 20;           // % que debería ganar ella revendiendo al detalle (verde)
+const CAJA_ELLA_AVISO = 15;         // por debajo de esto, rojo
+const CAJA_REDONDEO = 500;          // los precios de caja se redondean a ₡500
+const CAJA_GAMAS = ['premium', 'promedio', 'basico'];
+const CAJA_GAMA_TEXTO = { premium: 'premium', promedio: 'de gama promedio', basico: 'básicos' };
+const CAJA_PRESETS = {
+  emprende: { nombre: 'Emprende', premium: 0, promedio: 0, basico: 24 },
+  selecta:  { nombre: 'Selecta',  premium: 2, promedio: 6, basico: 14 },
+  prestige: { nombre: 'Prestige', premium: 6, promedio: 6, basico: 6 }
+};
+
+function cajaGamaDe(detalle) {
+  return detalle >= CAJA_PREMIUM_DESDE ? 'premium' : (detalle >= CAJA_PROMEDIO_DESDE ? 'promedio' : 'basico');
+}
+
+// Las piezas que se pueden meter en una caja: tienen costo y precio, no están
+// ocultas de la tienda y, si se pide, hay stock hoy.
+function cajaCandidatos(productos, soloStock) {
+  const sal = [];
+  (productos || []).forEach(p => {
+    const costo = Number(p.costoTotalCRC) || 0;
+    const detalle = precioConDescuento(p.precioVenta, p.descuento);
+    const nombre = String(p.nombre || '').trim();
+    if (!(costo > 0) || !(detalle > 0) || !nombre) return;
+    const pub = String(p.publicado == null ? '' : p.publicado).trim().toLowerCase();
+    if (['no', 'false', '0', 'oculto'].indexOf(pub) !== -1) return;
+    const stock = Number(p.stock) || 0;
+    const enStock = p.modalidad !== 'encargo' && stock > 0;
+    if (soloStock && !enStock) return;
+    const marca = String(p.marca || '').trim();
+    sal.push({
+      id: p.id, nombre: nombre, marca: marca, tono: String(p.tono == null ? '' : p.tono).trim(),
+      categoria: String(p.categoria || '').trim(), costo: costo, detalle: detalle,
+      gama: cajaGamaDe(detalle), enStock: enStock,
+      familia: marca.toLowerCase() + '|' + nombre.toLowerCase(), ratio: detalle / costo
+    });
+  });
+  return sal;
+}
+
+// Elige UNA pieza de la gama pedida respetando las reglas. Con `azar` (0..1)
+// la elección es al azar pero ponderada: prefiere lo que hay en stock, lo que
+// deja mejor margen y marcas y categorías que todavía no están en la caja.
+function cajaElegirUno(candidatos, gama, actuales, total, op, azar) {
+  const usados = new Set(actuales.map(i => i.id));
+  const porFamilia = {}, porMarca = {}, porCat = {};
+  actuales.forEach(i => {
+    porFamilia[i.familia] = (porFamilia[i.familia] || 0) + 1;
+    porMarca[i.marca] = (porMarca[i.marca] || 0) + 1;
+    porCat[i.categoria] = (porCat[i.categoria] || 0) + 1;
+  });
+  let pool = candidatos.filter(c => c.gama === gama && !usados.has(c.id) && (porFamilia[c.familia] || 0) < op.maxPorFamilia);
+  if (!pool.length) return null;
+
+  // Si ya casi no quedan lugares y todavía faltan marcas, solo marcas nuevas.
+  const marcasAhora = Object.keys(porMarca).filter(m => m).length;
+  const faltanMarcas = Math.max(0, Math.min(op.minMarcas, total) - marcasAhora);
+  const lugaresQuedan = total - actuales.length;
+  if (faltanMarcas > 0 && faltanMarcas >= lugaresQuedan) {
+    const nuevas = pool.filter(c => c.marca && !porMarca[c.marca]);
+    if (nuevas.length) pool = nuevas;
+  }
+
+  const pesos = pool.map(c => {
+    let w = 1;
+    if (op.stockPrimero && c.enStock) w *= 5;
+    if (op.mejorMargen) w *= Math.min(c.ratio, 3);
+    w /= Math.pow(1 + (porMarca[c.marca] || 0), 1.5);
+    w /= Math.pow(1 + (porCat[c.categoria] || 0), 0.7);
+    return w;
+  });
+  let x = azar() * pesos.reduce((s, w) => s + w, 0);
+  for (let i = 0; i < pool.length; i++) { x -= pesos[i]; if (x <= 0) return pool[i]; }
+  return pool[pool.length - 1];
+}
+
+// plan = { premium: n, promedio: n, basico: n }. Devuelve las piezas y, si
+// no alcanzó el inventario para alguna gama, cuántas faltan.
+function cajaArmar(candidatos, plan, opciones, azar) {
+  const op = Object.assign({ maxPorFamilia: 2, minMarcas: 5, stockPrimero: true, mejorMargen: true }, opciones || {});
+  const rnd = azar || Math.random;
+  const pedido = {};
+  CAJA_GAMAS.forEach(g => { pedido[g] = Math.max(0, Math.floor(Number(plan[g]) || 0)); });
+  const total = CAJA_GAMAS.reduce((s, g) => s + pedido[g], 0);
+  const items = [];
+  const faltan = {};
+  CAJA_GAMAS.forEach(g => {
+    for (let i = 0; i < pedido[g]; i++) {
+      const c = cajaElegirUno(candidatos, g, items, total, op, rnd);
+      if (!c) { faltan[g] = (faltan[g] || 0) + 1; continue; }
+      items.push(c);
+    }
+  });
+  return { items: items, faltan: faltan, total: total };
+}
+
+// Cambia una pieza por otra de la misma gama (o null si no hay otra).
+function cajaCambiar(items, indice, candidatos, opciones, azar) {
+  const op = Object.assign({ maxPorFamilia: 2, minMarcas: 5, stockPrimero: true, mejorMargen: true }, opciones || {});
+  const otros = items.filter((_, i) => i !== indice);
+  return cajaElegirUno(candidatos, items[indice].gama, otros, items.length, op, azar || Math.random);
+}
+
+function cajaNumeros(items, precio) {
+  const costo = items.reduce((s, i) => s + i.costo, 0);
+  const valor = items.reduce((s, i) => s + i.detalle, 0);
+  const nStock = items.filter(i => i.enStock).length;
+  const ganancia = precio - costo;
+  const ellaGana = valor - precio;
+  return {
+    n: items.length, nStock: nStock, nEncargo: items.length - nStock,
+    costo: costo, valor: valor, precio: precio,
+    ganancia: ganancia, gananciaPct: costo > 0 ? ganancia / costo * 100 : 0,
+    ellaGana: ellaGana, ellaPct: precio > 0 ? ellaGana / precio * 100 : 0
+  };
+}
+
+function cajaPrecioPorGanancia(costo, pct) {
+  return Math.ceil(costo * (1 + pct / 100) / CAJA_REDONDEO) * CAJA_REDONDEO;
+}
+// El precio más alto con el que ella todavía gana `ellaPct` % revendiendo todo al detalle.
+function cajaPrecioJusto(valor, ellaPct) {
+  return Math.floor(valor / (1 + ellaPct / 100) / CAJA_REDONDEO) * CAJA_REDONDEO;
+}
+function cajaSemaforoElla(ellaPct, minimo) {
+  const min = minimo || CAJA_ELLA_MIN;
+  return ellaPct >= min ? 'verde' : (ellaPct >= Math.min(CAJA_ELLA_AVISO, min) ? 'amarillo' : 'rojo');
+}
+function cajaSemaforoTu(gananciaPct) {
+  return gananciaPct >= 10 ? 'verde' : (gananciaPct >= 5 ? 'amarillo' : 'rojo');
+}
+
+function cajaConteos(items) {
+  const c = { premium: 0, promedio: 0, basico: 0 };
+  items.forEach(i => { c[i.gama]++; });
+  return c;
+}
+function cajaMarcas(items) {
+  return new Set(items.map(i => i.marca).filter(Boolean)).size;
+}
+
+function cajaEntregaTexto(nums, diasMin, diasMax) {
+  if (!nums.n) return '';
+  if (!nums.nEncargo) return 'Entrega inmediata: todas las piezas están en stock.';
+  const dias = 'Entrega en ' + diasMin + ' a ' + diasMax + ' días hábiles';
+  if (!nums.nStock) return dias + ': todas las piezas se piden por encargo.';
+  return dias + ' (' + nums.nEncargo + ' de ' + nums.n + ' piezas se piden por encargo).';
+}
+
+// Lo que se le manda a la clienta. Nunca lleva costos ni datos internos.
+function cajaTexto(tipo, nombre, items, precio, opciones) {
+  const op = opciones || {};
+  const nums = cajaNumeros(items, precio);
+  const f = op.formato || (n => '₡' + Math.round(n));
+  const conteo = cajaConteos(items);
+  const partes = CAJA_GAMAS.filter(g => conteo[g]).map(g => conteo[g] + ' ' + CAJA_GAMA_TEXTO[g]);
+  const marcas = cajaMarcas(items);
+  // se promete un poco menos de lo que lleva hoy, por si hay que cambiar una pieza al comprar
+  const marcasPrometidas = marcas >= 4 ? Math.floor(marcas * 0.75) : marcas;
+  const lineas = [];
+  if (tipo === 'misteriosa') {
+    lineas.push('Caja misteriosa ' + nombre + ' — ' + nums.n + ' piezas nuevas y selladas');
+    lineas.push('Lleva: ' + partes.join(', ') + (marcasPrometidas ? ', de al menos ' + marcasPrometidas + ' marcas' : '') + '.');
+    lineas.push('Valor al detalle garantizado: ' + f(Math.floor(nums.valor / 5000) * 5000) + ' o más.');
+  } else {
+    lineas.push('Caja ' + nombre + ' — ' + nums.n + ' piezas nuevas y selladas');
+    items.forEach((i, k) => {
+      lineas.push((k + 1) + '. ' + [i.marca, i.nombre, i.tono ? 'tono ' + i.tono : ''].filter(Boolean).join(' · '));
+    });
+    lineas.push('Valor al detalle: ' + f(nums.valor) + '.');
+  }
+  lineas.push('Precio de la caja: ' + f(precio) + '.');
+  if (op.incluirGananciaElla && nums.ellaGana > 0) {
+    lineas.push('Si revendés cada pieza al precio detalle de Avellana, ganás ' + f(nums.ellaGana) + '.');
+  }
+  lineas.push(cajaEntregaTexto(nums, op.diasMin || 20, op.diasMax || 25));
+  lineas.push('Todo es original, nuevo y sellado. Pagás completo por SINPE antes de que armemos tu caja.');
+  return lineas.filter(Boolean).join('\n');
+}
+// ===== /CAJAS: lógica =====
+
+// ----- Pantalla -----
+let cajaActual = null; // { tipo, nombre, items, candidatos, precio, guardadaId }
+let cajaAvisoFaltan = '';
+
+function cajaLeerFormulario() {
+  const num = (id, def) => { const v = Number(document.getElementById(id).value); return isFinite(v) && v >= 0 ? v : def; };
+  return {
+    tipo: document.getElementById('cjTipo').value,
+    nombre: document.getElementById('cjNombre').value.trim() || 'Sin nombre',
+    plan: { premium: num('cjPremium', 0), promedio: num('cjPromedio', 0), basico: num('cjBasico', 0) },
+    ganancia: num('cjGanancia', CAJA_GANANCIA_DEFECTO),
+    ella: num('cjElla', CAJA_ELLA_MIN),
+    soloStock: document.getElementById('cjInventario').value === 'stock',
+    opciones: {
+      minMarcas: Math.max(1, Math.floor(num('cjMinMarcas', 5))),
+      stockPrimero: document.getElementById('cjStockPrimero').checked,
+      mejorMargen: document.getElementById('cjMejorMargen').checked
+    }
+  };
+}
+
+function cajaPreset(clave) {
+  const p = CAJA_PRESETS[clave];
+  if (!p) return;
+  document.getElementById('cjNombre').value = p.nombre;
+  document.getElementById('cjPremium').value = p.premium;
+  document.getElementById('cjPromedio').value = p.promedio;
+  document.getElementById('cjBasico').value = p.basico;
+  document.querySelectorAll('#cajaPresets .chipT').forEach(b => b.classList.toggle('activo', b.dataset.preset === clave));
+}
+
+function cajaSugerir() {
+  if (!estado.productos.length) { mostrarToast('Todavía no cargó el inventario. Esperá un momento.'); return; }
+  const f = cajaLeerFormulario();
+  const total = f.plan.premium + f.plan.promedio + f.plan.basico;
+  if (!total) { mostrarToast('Poné cuántas piezas lleva cada gama.'); return; }
+  if (total > 80) { mostrarToast('Máximo 80 piezas por caja.'); return; }
+  const candidatos = cajaCandidatos(estado.productos, f.soloStock);
+  const r = cajaArmar(candidatos, f.plan, f.opciones);
+  const faltan = CAJA_GAMAS.filter(g => r.faltan[g]).map(g => `${r.faltan[g]} ${CAJA_GAMA_TEXTO[g]}`);
+  cajaAvisoFaltan = faltan.length
+    ? `No alcanzó el inventario para: ${faltan.join(', ')}. ${f.soloStock ? 'Probá con "Stock y por encargo".' : 'Bajá esa cantidad.'}`
+    : '';
+  if (!r.items.length) { cajaActual = null; document.getElementById('cajaResultado').innerHTML = `<div class="panel"><div class="vacio">${escaparHtml(cajaAvisoFaltan || 'No hay piezas para armar esta caja.')}</div></div>`; return; }
+  const costo = r.items.reduce((s, i) => s + i.costo, 0);
+  cajaActual = {
+    tipo: f.tipo, nombre: f.nombre, items: r.items, candidatos, opciones: f.opciones,
+    ella: f.ella, precio: cajaPrecioPorGanancia(costo, f.ganancia), guardadaId: null
+  };
+  cajaRender();
+}
+
+function cajaTextoActual() {
+  const incluir = document.getElementById('cjIncluirElla') ? document.getElementById('cjIncluirElla').checked : true;
+  return cajaTexto(cajaActual.tipo, cajaActual.nombre, cajaActual.items, cajaActual.precio, {
+    formato: formatoColones, diasMin: ENCARGO_DIAS_MIN, diasMax: ENCARGO_DIAS_MAX, incluirGananciaElla: incluir
+  });
+}
+
+function cajaTablaPiezas(conCambiar) {
+  const filas = cajaActual.items.map((i, k) => [
+    escaparHtml([i.marca, i.nombre].filter(Boolean).join(' · ')) + (i.tono ? `<br><span style="color:var(--brown-soft);font-size:12px">tono ${escaparHtml(i.tono)}</span>` : ''),
+    `<span class="badge ${i.gama === 'premium' ? 'pink' : (i.gama === 'promedio' ? 'peach' : 'mint')}" style="white-space:nowrap">${i.gama === 'basico' ? 'básico' : i.gama}</span>`,
+    i.enStock ? '<span class="badge mint" style="white-space:nowrap">En stock</span>' : '<span class="badge peach" style="white-space:nowrap">Por encargo</span>',
+    formatoColones(i.costo), formatoColones(i.detalle),
+    conCambiar ? `<button class="secundario" style="padding:4px 10px;font-size:12px" onclick="cajaCambiarPieza(${k})">Cambiar</button>` : ''
+  ]);
+  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th><th>Costo</th><th>Detalle</th><th></th></tr></thead>
+    <tbody>${filas.map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function cajaRender() {
+  const c = cajaActual;
+  if (!c) return;
+  const esMist = c.tipo === 'misteriosa';
+  const conteo = cajaConteos(c.items);
+  const resumen = CAJA_GAMAS.filter(g => conteo[g]).map(g => `${conteo[g]} ${CAJA_GAMA_TEXTO[g]}`).join(' · ');
+  document.getElementById('cajaResultado').innerHTML = `
+    <div class="panel">
+      <div class="filaBotones">
+        <h2 style="margin:0">Caja ${escaparHtml(c.nombre)} · ${esMist ? 'misteriosa' : 'lista exacta'}</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="secundario" onclick="cajaSugerir()">Regenerar</button>
+          <button id="btnCajaGuardar" onclick="ejecutarConBoton('btnCajaGuardar', cajaGuardar)">${c.guardadaId ? 'Guardar cambios' : 'Guardar caja'}</button>
+        </div>
+      </div>
+      <p class="ayudaTienda" style="margin:0 0 12px">${c.items.length} piezas: ${escaparHtml(resumen)} · ${cajaMarcas(c.items)} marcas</p>
+      ${cajaAvisoFaltan ? `<p class="ayudaTienda" style="color:#A5323F;margin:0 0 12px">${escaparHtml(cajaAvisoFaltan)}</p>` : ''}
+      ${esMist
+        ? `<details><summary style="cursor:pointer;font-size:13px;color:var(--brown-soft)">Contenido real (solo para vos, la clienta no lo ve)</summary><div style="margin-top:10px">${cajaTablaPiezas(true)}</div></details>`
+        : cajaTablaPiezas(true)}
+    </div>
+    <div class="tarjetas">
+      <div class="tarjeta"><p class="etiqueta">Tu costo</p><p class="valor" id="cjCosto"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Precio de la caja</p>
+        <input id="cjPrecio" type="number" min="0" step="500" style="font-size:22px;font-weight:500;padding:4px 8px" oninput="cajaPrecioEditado()">
+        <p class="fNota"><a href="#" onclick="cajaUsarPrecioJusto();return false">Usar el precio justo para ella</a></p></div>
+      <div class="tarjeta"><p class="etiqueta">Tu ganancia</p><p class="valor" id="cjGanTu"></p><p class="fNota" id="cjGanTuNota"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Valor al detalle</p><p class="valor" id="cjValor"></p><p class="fNota" id="cjEntrega"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Ella gana revendiendo</p><p class="valor" id="cjGanElla"></p><p class="fNota" id="cjGanEllaNota"></p></div>
+    </div>
+    <div class="panel">
+      <div class="filaBotones">
+        <h2 style="margin:0">Texto para la clienta</h2>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjIncluirElla" checked style="width:auto" onchange="cajaActualizarNumeros()"> Incluir cuánto gana ella</label>
+      </div>
+      <textarea id="cjTexto" readonly rows="${esMist ? 8 : Math.min(18, c.items.length + 8)}" style="margin-bottom:10px"></textarea>
+      <button onclick="cajaCopiarTexto()">Copiar texto</button>
+    </div>`;
+  document.getElementById('cjPrecio').value = c.precio;
+  cajaActualizarNumeros();
+}
+
+const CAJA_COLOR = { verde: 'mint', amarillo: 'peach', rojo: 'pink' };
+const CAJA_ETIQUETA_ELLA = { verde: 'Justo para ella', amarillo: 'Ajustado para ella', rojo: 'Poca ganancia para ella' };
+const CAJA_ETIQUETA_TU = { verde: 'Buen margen', amarillo: 'Margen justo', rojo: 'Margen muy bajo' };
+
+function cajaActualizarNumeros() {
+  const c = cajaActual;
+  if (!c || !document.getElementById('cjCosto')) return;
+  const n = cajaNumeros(c.items, c.precio);
+  const sElla = cajaSemaforoElla(n.ellaPct, c.ella), sTu = cajaSemaforoTu(n.gananciaPct);
+  const pct = x => (Math.round(x * 10) / 10).toString().replace('.', ',') + ' %';
+  document.getElementById('cjCosto').textContent = formatoColones(n.costo);
+  document.getElementById('cjValor').textContent = formatoColones(n.valor);
+  document.getElementById('cjEntrega').textContent = cajaEntregaTexto(n, ENCARGO_DIAS_MIN, ENCARGO_DIAS_MAX);
+  document.getElementById('cjGanTu').textContent = formatoColones(n.ganancia);
+  document.getElementById('cjGanTuNota').innerHTML = `${pct(n.gananciaPct)} sobre tu costo <span class="badge ${CAJA_COLOR[sTu]}">${n.ganancia < 0 ? 'Con este precio perdés plata' : CAJA_ETIQUETA_TU[sTu]}</span>`;
+  document.getElementById('cjGanElla').textContent = formatoColones(n.ellaGana);
+  document.getElementById('cjGanEllaNota').innerHTML = `${pct(n.ellaPct)} sobre lo que paga, si vende todo al detalle <span class="badge ${CAJA_COLOR[sElla]}">${CAJA_ETIQUETA_ELLA[sElla]}</span>`;
+  document.getElementById('cjTexto').value = cajaTextoActual();
+}
+
+function cajaPrecioEditado() {
+  const v = Math.round(Number(document.getElementById('cjPrecio').value) || 0);
+  cajaActual.precio = v;
+  cajaActualizarNumeros();
+}
+
+function cajaUsarPrecioJusto() {
+  const n = cajaNumeros(cajaActual.items, 0);
+  cajaActual.precio = cajaPrecioJusto(n.valor, cajaActual.ella);
+  document.getElementById('cjPrecio').value = cajaActual.precio;
+  cajaActualizarNumeros();
+}
+
+function cajaCambiarPieza(indice) {
+  const nueva = cajaCambiar(cajaActual.items, indice, cajaActual.candidatos, cajaActual.opciones);
+  if (!nueva) { mostrarToast('No hay otra pieza de esa gama que cumpla las reglas.'); return; }
+  cajaActual.items[indice] = nueva;
+  cajaRender();
+}
+
+function cajaCopiarTexto() {
+  const texto = document.getElementById('cjTexto').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(texto) : Promise.reject())
+    .then(() => mostrarToast('Texto copiado.'))
+    .catch(() => { const t = document.getElementById('cjTexto'); t.removeAttribute('readonly'); t.select(); mostrarToast('Seleccioné el texto: copialo con Ctrl+C.'); });
+}
+
+// ----- Cajas guardadas (en Configuración, no hace falta tocar Code.gs) -----
+function cajasGuardadas() {
+  return estado.config.filter(c => String(c.clave).indexOf('caja:') === 0).map(c => {
+    try { return Object.assign({ clave: c.clave }, JSON.parse(c.valor)); } catch (e) { return null; }
+  }).filter(Boolean).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+}
+
+async function cajaGuardarFilas(filasCaja, quitarClave) {
+  const filas = estado.config.filter(c => c.clave !== quitarClave).map(c => [c.clave, c.valor]).concat(filasCaja);
+  const res = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
+  if (res && res.ok) { await cargarDatos(true, ['Config']); return true; }
+  mostrarToast('Error: ' + ((res && res.error) || 'no se pudo guardar'));
+  return false;
+}
+
+async function cajaGuardar() {
+  const c = cajaActual;
+  if (!c) return;
+  const clave = c.guardadaId || ('caja:' + Date.now().toString(36));
+  const valor = JSON.stringify({
+    v: 1, tipo: c.tipo, nombre: c.nombre, precio: c.precio, ella: c.ella,
+    fecha: new Date().toISOString(), ids: c.items.map(i => i.id)
+  });
+  if (await cajaGuardarFilas([[clave, valor]], clave)) {
+    c.guardadaId = clave;
+    mostrarToast('Caja guardada.');
+    cajaRender();
+  }
+}
+
+function cajaAbrir(clave) {
+  const g = cajasGuardadas().find(x => x.clave === clave);
+  if (!g) return;
+  const todos = cajaCandidatos(estado.productos, false);
+  const porId = new Map(todos.map(p => [String(p.id), p]));
+  const items = (g.ids || []).map(id => porId.get(String(id))).filter(Boolean);
+  const perdidas = (g.ids || []).length - items.length;
+  if (!items.length) { mostrarToast('Los productos de esa caja ya no están disponibles.'); return; }
+  cajaActual = { tipo: g.tipo, nombre: g.nombre, items, candidatos: todos, opciones: cajaLeerFormulario().opciones,
+    ella: Number(g.ella) || CAJA_ELLA_MIN, precio: Number(g.precio) || cajaPrecioPorGanancia(items.reduce((s, i) => s + i.costo, 0), CAJA_GANANCIA_DEFECTO), guardadaId: clave };
+  cajaAvisoFaltan = perdidas ? `${perdidas} pieza(s) de esta caja ya no están en el inventario. Cambialas o regenerá la caja.` : '';
+  document.getElementById('cjTipo').value = g.tipo;
+  document.getElementById('cjNombre').value = g.nombre;
+  cajaRender();
+  document.getElementById('cajaResultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function cajaEliminar(clave) {
+  if (!confirm('¿Eliminar esta caja guardada?')) return;
+  if (await cajaGuardarFilas([], clave)) {
+    if (cajaActual && cajaActual.guardadaId === clave) cajaActual.guardadaId = null;
+    mostrarToast('Caja eliminada.');
+  }
+}
+
+function renderCajasGuardadas() {
+  const caja = document.getElementById('cajasGuardadas');
+  if (!caja) return;
+  const lista = cajasGuardadas();
+  if (!lista.length) { caja.innerHTML = '<div class="vacio">Todavía no guardaste ninguna caja.</div>'; return; }
+  const filas = lista.map(g => [
+    escaparHtml(g.nombre), g.tipo === 'misteriosa' ? '<span class="badge pink">Misteriosa</span>' : '<span class="badge mint">Lista exacta</span>',
+    (g.ids || []).length + ' piezas', formatoColones(g.precio), escaparHtml(fechaCorta(g.fecha)),
+    `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="secundario" style="padding:4px 10px;font-size:12px" onclick="cajaAbrir('${escaparHtml(g.clave)}')">Abrir</button>
+     <button class="secundario" style="padding:4px 10px;font-size:12px;color:#A5323F;border-color:#A5323F" onclick="ejecutarConBotonElemento(this, () => cajaEliminar('${escaparHtml(g.clave)}'))">Eliminar</button></div>`
+  ]);
+  caja.innerHTML = `<div class="tablaScroll"><table><thead><tr><th>Caja</th><th>Tipo</th><th>Piezas</th><th>Precio</th><th>Guardada</th><th></th></tr></thead>
+    <tbody>${filas.map(f => `<tr>${f.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 // ---------- Arranque ----------
