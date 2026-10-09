@@ -1218,7 +1218,7 @@
       </div>
       <div class="panel">
         <h2>Caja misteriosa de la tienda</h2>
-        <p class="ayudaTienda">La clienta elige cuántas piezas y cada tamaño tiene un precio fijo. Las piezas las escogés vos al armar el pedido (Pedidos → Armar caja). «Valor en tienda prometido» es lo que sumarían esas mismas piezas compradas sueltas: el sistema solo te sugiere cajas que lo cumplan. «Cajas listas» son las que ya tenés armadas para entrega inmediata (0 = solo por encargo); baja sola cuando una clienta pide una.</p>
+        <p class="ayudaTienda">La clienta elige cuántas piezas y cada tamaño tiene un precio fijo. Las piezas las escogés vos al armar el pedido (Pedidos → Armar caja). «Valor en tienda prometido» es lo que sumarían esas mismas piezas compradas al detalle: el sistema solo te sugiere cajas que lo cumplan. «Cajas listas» son las que ya tenés armadas para entrega inmediata (0 = solo por encargo); baja sola cuando una clienta pide una.</p>
         <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" id="mistActiva" style="width:auto" onchange="mistCambiaActiva(this.checked)" />Ofrecer la caja misteriosa en la tienda</label>
         <div id="mistTamanos" style="margin-top:12px"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
@@ -5119,7 +5119,7 @@ function renderMistConfig() {
 function mistAyudaTamano(t) {
   if (!(t.precio > 0) || !(t.piezas > 0)) return '';
   const ahorro = t.valorMin > t.precio ? Math.round((t.valorMin / t.precio - 1) * 100) : 0;
-  return `${formatoColones(Math.round(t.precio / t.piezas))} por pieza · le prometés ahorrar ${ahorro} % o más frente a comprar las piezas sueltas`;
+  return `${formatoColones(Math.round(t.precio / t.piezas))} por pieza · le prometés ahorrar ${ahorro} % o más frente a comprarlas al detalle`;
 }
 
 function mistCampo(i, campo, valor) {
