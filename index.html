@@ -142,6 +142,15 @@
     display:flex;flex-direction:column;gap:12px;
   }
   .pagoPedido .titPago{font-size:12px;color:var(--brown-soft);margin-bottom:6px;}
+  .mistPieza{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+  .mistPieza .mpSub{display:block;font-size:11.5px;color:var(--brown-soft);margin-top:1px;}
+  .mistPieza .mpEnc{color:var(--coral-dark);}
+  .mistPieza .mpVal{font-variant-numeric:tabular-nums;text-align:right;}
+  .mistPieza .mpCambiar{padding:5px 10px;font-size:12px;}
+  .mistChequeo{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin:5px 0 0;}
+  .mistTam{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:end;margin-bottom:8px;}
+  .mistTam label{font-size:11.5px;}
+  @media(max-width:560px){.mistTam{grid-template-columns:repeat(2,minmax(0,1fr));}}
   .pagoPedido .chequeo{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--brown);cursor:pointer;margin:0;}
   .pagoPedido .chequeo input{width:auto;}
 
@@ -1204,7 +1213,17 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-08a · plata disponible</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-08b · caja misteriosa</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Caja misteriosa de la tienda</h2>
+        <p class="ayudaTienda">La clienta elige cuántas piezas y cada tamaño tiene un precio fijo. Las piezas las escogés vos al armar el pedido (Pedidos → Armar caja). «Valor en tienda prometido» es lo que sumarían esas mismas piezas compradas sueltas: el sistema solo te sugiere cajas que lo cumplan. «Cajas listas» son las que ya tenés armadas para entrega inmediata (0 = solo por encargo); baja sola cuando una clienta pide una.</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" id="mistActiva" style="width:auto" onchange="mistCambiaActiva(this.checked)" />Ofrecer la caja misteriosa en la tienda</label>
+        <div id="mistTamanos" style="margin-top:12px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+          <button type="button" class="secundario" onclick="mistAgregarTamano()">Agregar un tamaño</button>
+          <button id="btnGuardarMist" onclick="ejecutarConBoton('btnGuardarMist', guardarMisteriosa)">Guardar caja misteriosa</button>
         </div>
       </div>
       <div class="panel">
@@ -1599,6 +1618,7 @@ function renderTodo() {
   llenarSelectorClientesAbono();
   document.getElementById('cfgTipoCambio').value = valorConfig('tipoCambio', 520);
   document.getElementById('cfgMinimoMayorista').value = valorConfig('minimoMayorista', 3);
+  renderMistConfig();
 }
 
 // ---------- Resumen ----------
@@ -2405,9 +2425,11 @@ function renderPedidos() {
     // Una caja armada en la tienda trae una nota informativa (qué hay que
     // mandar a traer). Eso no es un problema que revisar: solo se muestra.
     const esCaja = p.caja === 'Sí';
+    const esMist = p.misteriosa === 'Sí';
+    const mistSinArmar = mistLineaSinArmar(p);
     const notaPedido = String(p.notas || '').trim();
-    const revisar = esCaja && !/REVISAR/.test(notaPedido) ? '' : notaPedido;
-    const notaCaja = esCaja && !revisar ? notaPedido : '';
+    const revisar = (esCaja || esMist) && !/REVISAR/.test(notaPedido) ? '' : notaPedido;
+    const notaCaja = (esCaja || esMist) && !revisar ? notaPedido : '';
     const id = escaparHtml(p.id);
 
     // Un botón por paso, con lo que de verdad se hizo
@@ -2423,6 +2445,10 @@ function renderPedidos() {
       pasos = `<span class="pastilla verde">${p.entrega === 'retiro' ? 'Entregado' : 'Enviado'}</span>`;
     } else if (est === 'Cancelado') {
       pasos = '<span class="estadoFin">Cancelado</span>';
+    }
+    // Una caja misteriosa todavía sin piezas: primero hay que armarla
+    if (mistSinArmar && (est === 'Nuevo' || est === 'Contactado') && !(mistArmando && String(mistArmando.id) === String(p.id))) {
+      pasos = `<button class="btnPaso" onclick="mistAbrir('${id}')">Armar caja</button>` + pasos;
     }
     const cancelar = est !== 'Cancelado'
       ? `<button class="btnCancelar" onclick="avanzarPedido('${id}','Cancelado')">Cancelar pedido</button>` : '';
@@ -2443,7 +2469,7 @@ function renderPedidos() {
 
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
-        <span class="pedidoNombre">${escaparHtml(p.nombre)}${esCaja ? ' <span class="pastilla verde" title="Caja armada por la clienta en la tienda, al por mayor: se cobra completa antes de enviar o de pedir lo que va por encargo">CAJA</span>' : (p.mayoreo === 'Sí' ? ' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : '')}</span>
+        <span class="pedidoNombre">${escaparHtml(p.nombre)}${esMist ? ' <span class="pastilla verde" title="Caja misteriosa de la tienda: la clienta eligió cuántas piezas y nosotras escogemos cuáles. Se cobra completa antes de enviar o de pedir lo que va por encargo">MISTERIOSA</span>' : esCaja ? ' <span class="pastilla verde" title="Caja armada por la clienta en la tienda, al por mayor: se cobra completa antes de enviar o de pedir lo que va por encargo">CAJA</span>' : (p.mayoreo === 'Sí' ?' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : '')}</span>
         <span class="pedidoNum">${escaparHtml(p.numero)} · ${fechaCorta(p.fecha)}</span>
         <span class="pedidoTotal">${formatoColones(p.total)}</span>
       </div>
@@ -2463,6 +2489,7 @@ function renderPedidos() {
         ${cancelar}
         ${borrar}
       </div>
+      ${mistArmando && String(mistArmando.id) === String(p.id) ? htmlPanelMisteriosa(p) : ''}
       ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? htmlPanelPago(p) : ''}
     </div>`;
   }).join('');
@@ -2517,6 +2544,13 @@ async function avanzarPedido(id, nuevoEstado, opciones = {}) {
     });
   }
 
+  // Una caja misteriosa sin piezas no se puede cobrar: no habría qué descontar ni qué vender
+  if (vaACobrar && !yaCobrado && mistLineaSinArmar(p)) {
+    mostrarToast('Primero armá la caja: tocá «Armar caja» para elegir las piezas.');
+    renderPedidos();
+    return;
+  }
+
   // El descuento de stock ocurre UNA sola vez: al cruzar a Pagado por primera vez
   if (vaACobrar && !yaCobrado) {
     const items = itemsDe(p);
@@ -2539,7 +2573,7 @@ async function avanzarPedido(id, nuevoEstado, opciones = {}) {
     });
     if (faltantes.length) {
       const detalle = faltantes.map(n => '· ' + n).join('\n');
-      const aviso = p.caja === 'Sí'
+      const aviso = (p.caja === 'Sí' || p.misteriosa === 'Sí')
         ? `Esta caja trae piezas por encargo (no hay stock de):\n${detalle}\n\nAl registrar el pago el stock de esos productos queda en negativo: son las piezas que hay que pedir. ¿Seguir?`
         : `Ojo: no hay stock suficiente para:\n${detalle}\n\n¿Registrar el pago de todas formas? El stock puede quedar en negativo.`;
       if (!confirm(aviso)) { renderPedidos(); return; }
@@ -2676,6 +2710,7 @@ let pagoAbierto = null;
 function abrirPago(id) {
   const p = estado.pedidos.find(x => String(x.id) === String(id));
   if (!p) return;
+  if (mistLineaSinArmar(p)) { mostrarToast('Primero armá la caja: tocá «Armar caja» para elegir las piezas.'); return; }
   pagoAbierto = { id: p.id, formaPago: 'SINPE Móvil', regalias: [], entregado: false };
   renderPedidos();
 }
@@ -2772,6 +2807,117 @@ async function confirmarPago(id) {
     sinConfirmar: true
   });
   if (ok) { pagoAbierto = null; renderPedidos(); }
+}
+
+// ---------- Caja misteriosa: armar el pedido ----------
+// La clienta eligió cuántas piezas; acá se escogen cuáles, con sugerencias que
+// cumplen lo prometido (valor en tienda y ganancia). Al usar la caja, el pedido
+// pasa de una línea "Caja misteriosa" a las piezas reales, con el precio de la
+// caja repartido; desde ahí se cobra igual que cualquier pedido.
+let mistArmando = null; // { id, linea, soloStock, items, ev, cumple, pool, evitar }
+
+// La línea "MIST-N" que lleva el pedido mientras todavía no se armó (o null)
+function mistLineaSinArmar(p) {
+  if (!p || p.misteriosa !== 'Sí') return null;
+  return itemsDe(p).find(i => String(i.id).indexOf('MIST-') === 0) || null;
+}
+
+function mistParametros(linea, soloStock) {
+  // En un pedido por encargo NO se prefiere lo que hay en stock: se deja para las cajas de entrega inmediata.
+  return { piezas: Number(linea.piezas) || 0, precio: Number(linea.subtotal) || 0, valorMin: Number(linea.valorMin) || 0, soloStock: !!soloStock, preferirStock: linea.entrega === 'inmediata' };
+}
+
+function mistCandidatos() { return cajaCandidatos(estado.productos, false); }
+
+function mistSugerir(evitarAnterior) {
+  const m = mistArmando;
+  if (!m) return;
+  if (evitarAnterior) m.items.forEach(i => { m.evitar[i.familia] = true; }); else m.evitar = {};
+  const r = misteriosaSugerir(mistCandidatos(), Object.assign(mistParametros(m.linea, m.soloStock), { evitar: m.evitar }));
+  m.items = r.items; m.ev = r.ev; m.cumple = r.cumple; m.pool = r.pool;
+}
+
+function mistAbrir(id) {
+  const p = estado.pedidos.find(x => String(x.id) === String(id));
+  const linea = mistLineaSinArmar(p);
+  if (!linea) return;
+  mistArmando = { id: p.id, linea: linea, soloStock: linea.entrega === 'inmediata', items: [], ev: null, cumple: false, pool: 0, evitar: {} };
+  mistSugerir(false);
+  renderPedidos();
+}
+
+function mistOtra() { mistSugerir(true); renderPedidos(); }
+
+function mistSoloStock(marcado) {
+  if (!mistArmando) return;
+  mistArmando.soloStock = marcado;
+  mistSugerir(false);
+  renderPedidos();
+}
+
+function mistCambiarPieza(i) {
+  const m = mistArmando;
+  if (!m) return;
+  const c = misteriosaCambiar(m.items, i, mistCandidatos(), mistParametros(m.linea, m.soloStock));
+  if (!c) { mostrarToast('No hay otra pieza que mantenga lo prometido en ese lugar.'); return; }
+  m.items[i] = c;
+  m.ev = misteriosaEvaluar(m.items, Number(m.linea.subtotal) || 0, Number(m.linea.valorMin) || 0);
+  m.cumple = m.ev.cumple;
+  renderPedidos();
+}
+
+function mistCerrar() { mistArmando = null; renderPedidos(); }
+
+async function mistUsar(id) {
+  const m = mistArmando;
+  const p = estado.pedidos.find(x => String(x.id) === String(id));
+  if (!m || !p || !m.items.length) return;
+  if (!m.cumple && !confirm('Esta caja NO cumple todo lo prometido (' + [m.ev.cumpleValor ? '' : 'el valor en tienda queda corto', m.ev.cumpleGanancia ? '' : 'la ganancia queda bajo ' + MIST_GANANCIA_MIN + ' %'].filter(Boolean).join(' y ') + '). ¿Usarla de todas formas?')) return;
+  const lineas = misteriosaLineasPedido(m.items, Number(m.linea.subtotal) || 0);
+  const nEnc = lineas.filter(l => l.porEncargo).length;
+  const nota = 'CAJA MISTERIOSA armada · ' + lineas.length + ' piezas' +
+    (nEnc ? ' (' + nEnc + ' por encargo, 20 a 25 días hábiles)' : ', todo en stock') +
+    ' · valor en tienda ' + formatoColones(m.ev.valor) + ' · se cobra completa antes de pedir o enviar';
+  const res = await apiPost({ accion: 'editar_fila', hoja: 'Pedidos', id: p.id, fila: { ...p, items: JSON.stringify(lineas), notas: nota } });
+  if (!res || !res.ok) { mostrarToast('Error: ' + ((res && res.error) || 'no se pudo guardar')); return; }
+  mistArmando = null;
+  await refrescarTrasGuardar('Caja armada en el pedido ' + p.numero + '.', ['Pedidos']);
+}
+
+function htmlPanelMisteriosa(p) {
+  const m = mistArmando, l = m.linea, ev = m.ev, id = escaparHtml(p.id);
+  const precio = Number(l.subtotal) || 0;
+  const cabecera = `<div class="titPago"><b>${Number(l.piezas)} piezas</b> · ${formatoColones(precio)} · prometido: valor en tienda ${formatoColones(l.valorMin)} o más · ${l.entrega === 'inmediata' ? 'ENTREGA INMEDIATA' : 'por encargo'}</div>`;
+  const soloStock = `<label class="chequeo"><input type="checkbox" ${m.soloStock ? 'checked' : ''} onchange="mistSoloStock(this.checked)" />Usar solo lo que hay en stock</label>`;
+  if (!m.items.length) {
+    return `<div class="pagoPedido">${cabecera}
+      <div class="pedidoAlerta">No alcanzó el inventario para armar ${Number(l.piezas)} piezas que cumplan${m.soloStock ? ' usando solo lo que hay en stock' : ''}. Quitá «solo stock» o cargá más productos.</div>
+      ${soloStock}
+      <div class="pedidoAcciones"><button type="button" class="secundario btnPaso" onclick="mistCerrar()">Cerrar</button></div></div>`;
+  }
+  const filas = m.items.map((i, k) => `<div class="mistPieza">
+      <span>${escaparHtml([i.marca, i.nombre].filter(Boolean).join(' · '))}${i.tono ? ' · ' + escaparHtml(i.tono) : ''}
+        <span class="mpSub ${i.enStock ? '' : 'mpEnc'}">${i.enStock ? 'en stock' : 'por encargo'} · costo ${formatoColones(i.costo)}</span></span>
+      <span class="mpVal">${formatoColones(i.detalle)}</span>
+      <button type="button" class="secundario mpCambiar" onclick="mistCambiarPieza(${k})">Cambiar</button>
+    </div>`).join('');
+  const marca = (bien, texto) => `<b style="color:var(${bien ? '--entra' : '--coral-dark'})">${texto}</b>`;
+  return `<div class="pagoPedido">
+    ${cabecera}
+    <div class="titPago">${m.cumple ? 'Sugerencia: estas piezas cumplen lo prometido.' : '<span style="color:var(--coral-dark)">Ninguna combinación cumple todo; esta es la más cercana.</span>'}</div>
+    ${filas}
+    <div class="mistChequeo"><span>Valor en tienda (prometido ${formatoColones(l.valorMin)})</span>${marca(ev.cumpleValor, formatoColones(ev.valor) + (ev.cumpleValor ? ' ✓' : ' ✗'))}</div>
+    <div class="mistChequeo"><span>Ella ahorra</span>${marca(ev.ahorro > 0, formatoColones(ev.ahorro) + ' (' + Math.round(ev.ahorroPct) + ' %)')}</div>
+    <div class="mistChequeo"><span>Ganancia nuestra (mínimo ${MIST_GANANCIA_MIN} %)</span>${marca(ev.cumpleGanancia, formatoColones(precio - ev.costo) + ' (' + Math.round(ev.gananciaPct) + ' %)' + (ev.cumpleGanancia ? ' ✓' : ' ✗'))}</div>
+    <div class="mistChequeo"><span>Marcas</span><b>${ev.marcas}</b></div>
+    <div class="mistChequeo"><span>Entrega</span><b>${ev.nEncargo ? ev.nEncargo + ' por encargo (20 a 25 días)' : 'todo en stock'}</b></div>
+    ${soloStock}
+    <div class="pedidoAcciones">
+      <button id="btnMistUsar" class="btnPaso" onclick="ejecutarConBoton('btnMistUsar', () => mistUsar('${id}'))">Usar esta caja</button>
+      <button type="button" class="secundario btnPaso" onclick="mistOtra()">Otra sugerencia</button>
+      <button type="button" class="secundario btnPaso" onclick="mistCerrar()">Cancelar</button>
+    </div>
+  </div>`;
 }
 
 // Reutiliza el cliente si ya existe (por teléfono); si no, lo crea.
@@ -4935,6 +5081,95 @@ async function guardarConfig() {
   else mostrarToast('Error: ' + resultado.error);
 }
 
+// ---------- Caja misteriosa de la tienda: configuración ----------
+// Vive en Config, fila 'misteriosa' (texto JSON). Mismos valores de siempre que
+// usa el servidor (Code.gs, MISTERIOSA_DEFECTO) si todavía no se guardó nada.
+const MIST_DEFECTO_PANEL = {
+  activa: true,
+  tamanos: [
+    { piezas: 3, precio: 21000, valorMin: 23500, cupos: 0 },
+    { piezas: 4, precio: 28000, valorMin: 31400, cupos: 0 },
+    { piezas: 5, precio: 35000, valorMin: 39200, cupos: 0 },
+    { piezas: 6, precio: 42000, valorMin: 47000, cupos: 0 }
+  ]
+};
+let mistConfig = null;
+
+function mistLeerConfig() {
+  const fila = estado.config.find(c => c.clave === 'misteriosa');
+  let cfg = null;
+  if (fila) { try { cfg = JSON.parse(fila.valor); } catch (e) { cfg = null; } }
+  if (!cfg || typeof cfg !== 'object') cfg = MIST_DEFECTO_PANEL;
+  return {
+    activa: cfg.activa !== false,
+    tamanos: (Array.isArray(cfg.tamanos) ? cfg.tamanos : []).map(t => ({
+      piezas: Math.floor(Number(t.piezas)) || 0, precio: Math.round(Number(t.precio)) || 0,
+      valorMin: Math.round(Number(t.valorMin)) || 0, cupos: Math.max(0, Math.floor(Number(t.cupos)) || 0)
+    }))
+  };
+}
+
+function renderMistConfig() {
+  mistConfig = mistLeerConfig();
+  document.getElementById('mistActiva').checked = mistConfig.activa;
+  document.getElementById('mistTamanos').innerHTML = mistConfig.tamanos.map((t, i) => `<div class="mistTam">
+      <div><label>Piezas</label><input type="number" min="2" max="12" value="${t.piezas}" onchange="mistCampo(${i}, 'piezas', this.value)" /></div>
+      <div><label>Precio (₡)</label><input type="number" min="1000" step="500" value="${t.precio}" onchange="mistCampo(${i}, 'precio', this.value)" /></div>
+      <div><label>Valor en tienda prometido (₡)</label><input type="number" min="1000" step="100" value="${t.valorMin}" onchange="mistCampo(${i}, 'valorMin', this.value)" /></div>
+      <div><label>Cajas listas</label><input type="number" min="0" max="999" value="${t.cupos}" onchange="mistCampo(${i}, 'cupos', this.value)" /></div>
+      <button type="button" class="secundario" onclick="mistQuitarTamano(${i})">Quitar</button>
+      <div class="ayudaTienda" id="mistAyuda-${i}" style="grid-column:1/-1;margin:0">${mistAyudaTamano(t)}</div>
+    </div>`).join('') || '<p class="ayudaTienda">No hay tamaños: la caja misteriosa no se ofrece.</p>';
+}
+
+function mistAyudaTamano(t) {
+  if (!(t.precio > 0) || !(t.piezas > 0)) return '';
+  const ahorro = t.valorMin > t.precio ? Math.round((t.valorMin / t.precio - 1) * 100) : 0;
+  return `${formatoColones(Math.round(t.precio / t.piezas))} por pieza · le prometés ahorrar ${ahorro} % o más frente a comprar las piezas sueltas`;
+}
+
+function mistCampo(i, campo, valor) {
+  const t = mistConfig.tamanos[i];
+  if (!t) return;
+  t[campo] = Math.max(0, Math.round(Number(valor) || 0));
+  const ayuda = document.getElementById('mistAyuda-' + i);
+  if (ayuda) ayuda.textContent = mistAyudaTamano(t);
+}
+
+function mistCambiaActiva(v) { mistConfig.activa = !!v; }
+
+function mistAgregarTamano() {
+  const ultimo = mistConfig.tamanos[mistConfig.tamanos.length - 1];
+  const piezas = ultimo ? ultimo.piezas + 1 : 3;
+  const porPieza = ultimo && ultimo.piezas ? ultimo.precio / ultimo.piezas : 7000;
+  const precio = Math.round(porPieza * piezas / 500) * 500;
+  mistConfig.tamanos.push({ piezas: piezas, precio: precio, valorMin: Math.round(precio * 1.12 / 100) * 100, cupos: 0 });
+  renderMistConfig();
+}
+
+function mistQuitarTamano(i) {
+  mistConfig.tamanos.splice(i, 1);
+  renderMistConfig();
+}
+
+async function guardarMisteriosa() {
+  const t = mistConfig.tamanos;
+  const vistos = new Set();
+  for (const x of t) {
+    if (x.piezas < 2 || x.piezas > 12) { mostrarToast('Las piezas de cada tamaño van de 2 a 12.'); return; }
+    if (vistos.has(x.piezas)) { mostrarToast('Hay dos tamaños de ' + x.piezas + ' piezas.'); return; }
+    vistos.add(x.piezas);
+    if (x.precio < 1000) { mostrarToast('Falta el precio del tamaño de ' + x.piezas + ' piezas.'); return; }
+    if (x.valorMin < x.precio) { mostrarToast('En el tamaño de ' + x.piezas + ' piezas, el valor prometido no puede ser menor que el precio.'); return; }
+  }
+  const ordenados = t.slice().sort((a, b) => a.piezas - b.piezas);
+  const filas = estado.config.filter(c => c.clave !== 'misteriosa').map(c => [c.clave, c.valor]);
+  filas.push(['misteriosa', JSON.stringify({ activa: mistConfig.activa, tamanos: ordenados })]);
+  const res = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
+  if (res.ok) { mostrarToast('Caja misteriosa guardada.'); await cargarDatos(true, ['Config']); }
+  else mostrarToast('Error: ' + res.error);
+}
+
 // ---------- Cajas ----------
 // Arma cajas de mayoreo (lista exacta o misteriosa) con lo que hay en el
 // inventario, y calcula costo, precio, tu ganancia y cuánto gana la
@@ -5239,6 +5474,145 @@ function cajaDisponibilidad(items, productoDe) {
     sinStock += necesarias[id] - con;
   });
   return { conStock: conStock, sinStock: sinStock, faltan: faltan };
+}
+
+// ----- Caja misteriosa de la tienda -----
+// La clienta elige cuántas piezas; el precio y el valor mínimo prometido son
+// fijos. Esto SUGIERE qué piezas poner: que el valor en tienda alcance lo
+// prometido, que la caja deje al menos MIST_GANANCIA_MIN % sobre el costo, sin
+// repetir productos, con marcas variadas, prefiriendo lo que hay en stock y
+// dejando para el final las marcas de baja prioridad (SHEGLAM, por ahora).
+const MIST_GANANCIA_MIN = 12;      // % mínimo sobre el costo
+const MIST_DETALLE_MIN = 4500;     // una pieza que en tienda vale menos que esto no vale la pena en una caja
+const MIST_COSTO_MIN = 1000;
+const MIST_MAX_POR_MARCA = 2;
+const MIST_BAJA_PRIORIDAD = ['sheglam'];
+
+function misteriosaEvaluar(items, precio, valorMin, gananciaMin) {
+  const costo = items.reduce((s, i) => s + i.costo, 0);
+  const valor = items.reduce((s, i) => s + i.detalle, 0);
+  const minG = gananciaMin == null ? MIST_GANANCIA_MIN : gananciaMin;
+  const gananciaPct = costo > 0 ? (precio - costo) / costo * 100 : 0;
+  const cumpleValor = valor >= valorMin;
+  const cumpleGanancia = gananciaPct >= minG;
+  return {
+    costo: costo, valor: valor, gananciaPct: gananciaPct,
+    ahorro: valor - precio, ahorroPct: valor > 0 ? (1 - precio / valor) * 100 : 0,
+    cumpleValor: cumpleValor, cumpleGanancia: cumpleGanancia, cumple: cumpleValor && cumpleGanancia,
+    nStock: items.filter(i => i.enStock).length, nEncargo: items.filter(i => !i.enStock).length,
+    marcas: new Set(items.map(i => i.marca).filter(Boolean)).size
+  };
+}
+
+function misteriosaEsBajaPrioridad(c) {
+  return MIST_BAJA_PRIORIDAD.indexOf(String(c.marca || '').toLowerCase()) !== -1;
+}
+
+function misteriosaPuntaje(items, ev, precio, valorMin, preferirStock) {
+  const n = items.length || 1;
+  const bajas = items.filter(misteriosaEsBajaPrioridad).length;
+  // Se premia el ahorro de ella y la ganancia nuestra, los dos con tope: pasado
+  // cierto punto, regalar más valor (o ganar más) no hace mejor la caja.
+  let p = Math.min(ev.ahorroPct, 25) / 100 + 0.5 * Math.min(ev.gananciaPct, 30) / 100 +
+    0.06 * Math.min(ev.marcas, n) / n - 0.05 * bajas;
+  if (preferirStock) p += 0.12 * ev.nStock / n;
+  // Las que no cumplen lo prometido quedan siempre por debajo de las que sí
+  if (!ev.cumple) p -= 5 + (ev.cumpleValor ? 0 : (valorMin - ev.valor) / Math.max(precio, 1)) + (ev.cumpleGanancia ? 0 : 1);
+  return p;
+}
+
+function misteriosaPool(candidatos, p) {
+  const costoMax = p.costoMax || (p.precio / p.piezas) * 1.5;
+  return candidatos.filter(c => c.costo >= MIST_COSTO_MIN && c.costo <= costoMax &&
+    c.detalle >= MIST_DETALLE_MIN && (!p.soloStock || c.enStock));
+}
+
+function misteriosaParametros(params) {
+  return Object.assign({ gananciaMin: MIST_GANANCIA_MIN, maxPorMarca: MIST_MAX_POR_MARCA, intentos: 2500, soloStock: false, preferirStock: false, evitar: null }, params);
+}
+
+// Elige n piezas al azar (con pesos) sin repetir producto y respetando el máximo por marca.
+function misteriosaElegir(pool, n, p, azar) {
+  const elegidos = [], marcas = {}, familias = {};
+  while (elegidos.length < n) {
+    const pesos = pool.map(c => {
+      if (familias[c.familia] || (marcas[c.marca] || 0) >= p.maxPorMarca) return 0;
+      let w = 1;
+      if (c.enStock && p.preferirStock) w *= 4;
+      if (misteriosaEsBajaPrioridad(c)) w *= 0.12;
+      if (p.evitar && p.evitar[c.familia]) w *= 0.25;
+      w *= Math.min(c.ratio, 2.2);
+      w /= 1 + (marcas[c.marca] || 0);
+      return w;
+    });
+    const total = pesos.reduce((s, w) => s + w, 0);
+    if (!(total > 0)) return null;
+    let x = azar() * total, k = 0;
+    for (; k < pool.length - 1; k++) { x -= pesos[k]; if (x <= 0) break; }
+    if (!(pesos[k] > 0)) k = pesos.findIndex(w => w > 0);
+    const c = pool[k];
+    elegidos.push(c);
+    familias[c.familia] = true;
+    marcas[c.marca] = (marcas[c.marca] || 0) + 1;
+  }
+  return elegidos;
+}
+
+// params: { piezas, precio, valorMin, gananciaMin, maxPorMarca, intentos, soloStock, preferirStock, evitar, costoMax }
+// Devuelve { items, ev, cumple, pool }. Si ninguna combinación cumple, devuelve la más
+// cercana con cumple=false (la pantalla lo avisa).
+function misteriosaSugerir(candidatos, params, azar) {
+  const p = misteriosaParametros(params);
+  const rnd = azar || Math.random;
+  const pool = misteriosaPool(candidatos, p);
+  let mejor = null;
+  if (pool.length >= p.piezas) {
+    for (let t = 0; t < p.intentos; t++) {
+      const items = misteriosaElegir(pool, p.piezas, p, rnd);
+      if (!items) break;
+      const ev = misteriosaEvaluar(items, p.precio, p.valorMin, p.gananciaMin);
+      const puntaje = misteriosaPuntaje(items, ev, p.precio, p.valorMin, p.preferirStock);
+      if (!mejor || puntaje > mejor.puntaje) mejor = { items: items, ev: ev, puntaje: puntaje };
+    }
+  }
+  return mejor ? { items: mejor.items, ev: mejor.ev, cumple: mejor.ev.cumple, pool: pool.length }
+    : { items: [], ev: null, cumple: false, pool: pool.length };
+}
+
+// Cambia UNA pieza por otra que mantenga todo lo prometido (o null si no hay).
+function misteriosaCambiar(items, indice, candidatos, params, azar) {
+  const p = misteriosaParametros(params);
+  const rnd = azar || Math.random;
+  const otros = items.filter((_, i) => i !== indice);
+  const ids = new Set(otros.map(i => String(i.id))), familias = new Set(otros.map(i => i.familia));
+  const marcas = {};
+  otros.forEach(i => { marcas[i.marca] = (marcas[i.marca] || 0) + 1; });
+  const validas = [];
+  misteriosaPool(candidatos, p).forEach(c => {
+    // (tampoco la misma pieza ni el mismo producto que se está cambiando)
+    if (ids.has(String(c.id)) || familias.has(c.familia) || c.familia === items[indice].familia || (marcas[c.marca] || 0) >= p.maxPorMarca) return;
+    const nuevos = otros.concat([c]);
+    const ev = misteriosaEvaluar(nuevos, p.precio, p.valorMin, p.gananciaMin);
+    if (!ev.cumple) return;
+    validas.push({ c: c, puntaje: misteriosaPuntaje(nuevos, ev, p.precio, p.valorMin, p.preferirStock) });
+  });
+  if (!validas.length) return null;
+  validas.sort((a, b) => b.puntaje - a.puntaje);
+  const mejores = validas.slice(0, 5);
+  return mejores[Math.floor(rnd() * mejores.length)].c;
+}
+
+// Las líneas del pedido una vez armada la caja: una por pieza, con el precio
+// de la caja repartido (suma EXACTA) en proporción a lo que vale cada una en tienda.
+function misteriosaLineasPedido(items, precio) {
+  const partes = cajaReparto(items, precio);
+  return items.map(function (i, k) {
+    return {
+      id: i.id, nombre: i.nombre, marca: i.marca || '', tono: i.tono || '',
+      cantidad: 1, precioUnitario: partes[k], subtotal: partes[k],
+      tipoPrecio: 'mayor', precioNormal: i.detalle, porEncargo: i.enStock ? 0 : 1
+    };
+  });
 }
 
 // ===== /CAJAS: lógica =====
