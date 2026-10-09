@@ -412,6 +412,7 @@
   th{color:var(--brown-soft);font-weight:500;background:var(--bg);}
   tr:hover td{background:#FAF9F8;}
   .vacio{padding:24px;text-align:center;color:var(--brown-soft);font-size:13px;}
+  .verMasLista{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:16px 8px 4px;font-size:13px;color:var(--brown-soft);}
 
   /* ---------- Gráficos ---------- */
   .gSub{font-size:12.5px;color:var(--brown-soft);margin:-10px 0 12px;}
@@ -2192,6 +2193,31 @@ function ordenarInventario(cual) {
   renderProductos();
 }
 
+// Las listas largas (el inventario y la pestaña Tienda tienen más de mil
+// productos) se pintan de a 100 y se piden más con un botón. Pintar las más
+// de mil filas juntas tardaba cerca de 0,4 s en la compu y más de 2 s en un
+// celular normal, cada vez que algo se refrescaba. Al cambiar la búsqueda, el
+// filtro o el orden se vuelve a empezar desde el principio; al editar algo, no.
+const LISTA_PAGINA = 100;
+let limiteInventario = LISTA_PAGINA, vistaInventarioPrev = '';
+let limiteTienda = LISTA_PAGINA, vistaTiendaPrev = '';
+
+function pieVerMas(cual, mostrados, total) {
+  if (mostrados >= total) return '';
+  const quedan = total - mostrados;
+  return `<div class="verMasLista"><span>Mostrando ${mostrados} de ${total}</span>
+    <button class="secundario" style="padding:6px 14px;font-size:12px;" onclick="verMasLista('${cual}')">Ver ${Math.min(LISTA_PAGINA, quedan)} más</button>
+    <button class="secundario" style="padding:6px 14px;font-size:12px;" onclick="verMasLista('${cual}', true)">Ver todos</button></div>`;
+}
+function verMasLista(cual, todos) {
+  const mas = todos ? Infinity : LISTA_PAGINA;
+  if (cual === 'inv') { limiteInventario += mas; renderProductos(); }
+  else { limiteTienda += mas; renderTienda(); }
+}
+
+// Miniaturas: se piden a Google ya achicadas y en WebP, en vez de bajar la foto de 1000 px completa.
+function fotoMini(url) { return String(url || '').replace(/=w\d+(-rw)?$/, '=w120-rw'); }
+
 // Comparadores disponibles en el selector "Ordenar por". "duplicados" es el
 // orden por defecto (marca+nombre+tono) que agrupa los productos iguales.
 function comparadorInventario(cual, claveProducto) {
@@ -2263,6 +2289,9 @@ function renderProductos() {
   });
 
   const ordenados = filtrados.slice().sort(comparadorInventario(ordenInventarioActual, claveProducto));
+  const vistaInv = [filtroInventarioTextoActual, filtroInventarioMarcaActual, filtroInventarioEstadoActual, ordenInventarioActual].join('\u0001');
+  if (vistaInv !== vistaInventarioPrev) { vistaInventarioPrev = vistaInv; limiteInventario = LISTA_PAGINA; }
+  const paginaInv = ordenados.slice(0, limiteInventario);
 
   if (contador) {
     contador.textContent = filtrados.length === estado.productos.length
@@ -2277,7 +2306,7 @@ function renderProductos() {
 
   caja.innerHTML = tablaSimple(
     ['Foto', 'Nombre', 'Tono', 'Categoría', 'Marca', 'Costo', 'Precio minorista', 'Precio mayorista', 'Stock', 'Estado', 'Tienda', 'Acciones'],
-    ordenados.map(p => {
+    paginaInv.map(p => {
       const costo = Number(p.costoTotalCRC) || 0;
       const tieneDescuento = Number(p.descuento) > 0;
       const precioFinal = precioConDescuento(p.precioVenta, p.descuento);
@@ -2287,7 +2316,7 @@ function renderProductos() {
         ? `<span style="color:#A5323F;font-weight:700" title="Hay ${conteoClaves[claveProducto(p)]} productos con la misma marca, nombre y tono">⚠ ${escaparHtml(p.nombre)}</span>`
         : escaparHtml(p.nombre);
       const fotoCelda = p.foto
-        ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(p.foto)}" alt="" loading="lazy"></div>`
+        ? `<div class="miniFoto" style="cursor:default"><img src="${escaparHtml(fotoMini(p.foto))}" alt="" loading="lazy" decoding="async"></div>`
         : `<div class="miniFoto" style="cursor:default"><span class="miniIcono">📷</span></div>`;
       const precioCelda = (tieneDescuento
         ? `<span style="color:var(--gris,#999);text-decoration:line-through;font-size:12px">${formatoColones(p.precioVenta)}</span><br>
@@ -2325,7 +2354,7 @@ function renderProductos() {
         botonesAccion('editarProducto', 'eliminarProducto', p.id)
       ];
     })
-  );
+  ) + pieVerMas('inv', paginaInv.length, ordenados.length);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -3130,7 +3159,11 @@ function renderTienda() {
     return;
   }
 
-  caja.innerHTML = '<div class="rejillaT">' + lista.map(p => {
+  const vistaT = filtroTienda + '\u0001' + filtroTiendaTextoActual;
+  if (vistaT !== vistaTiendaPrev) { vistaTiendaPrev = vistaT; limiteTienda = LISTA_PAGINA; }
+  const paginaT = lista.slice(0, limiteTienda);
+
+  caja.innerHTML = '<div class="rejillaT">' + paginaT.map(p => {
     const on = estaPublicado(p);        // lo que controla el interruptor
     const visible = seVeEnLaTienda(p);  // lo que el cliente realmente ve
     const esEncargo = p.modalidad === 'encargo';
@@ -3150,7 +3183,7 @@ function renderTienda() {
 
     return `<div class="fichaT ${visible ? '' : 'apagada'}" id="fichaT-${escaparHtml(p.id)}">
       <label class="miniFoto" title="${p.foto ? 'Cambiar foto' : 'Subir foto'}">
-        ${p.foto ? `<img src="${escaparHtml(p.foto)}" alt="" loading="lazy">` : `<span class="miniIcono">📷</span>`}
+        ${p.foto ? `<img src="${escaparHtml(fotoMini(p.foto))}" alt="" loading="lazy" decoding="async">` : `<span class="miniIcono">📷</span>`}
         <input type="file" accept="image/*" hidden onchange="subirFoto('${escaparHtml(p.id)}', this)">
       </label>
       <div class="infoT">
@@ -3171,7 +3204,7 @@ function renderTienda() {
         aria-label="${on ? 'Quitar' : 'Mostrar'} ${escaparHtml(p.nombre)} en la tienda"
         onclick="alternarVisibilidad('${escaparHtml(p.id)}', this)"></button>
     </div>`;
-  }).join('') + '</div>';
+  }).join('') + '</div>' + pieVerMas('tienda', paginaT.length, lista.length);
 }
 
 // Achica la imagen en el navegador antes de mandarla (más rápido de subir,
