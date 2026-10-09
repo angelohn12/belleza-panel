@@ -534,7 +534,7 @@
     <!-- ---------- RESUMEN ---------- -->
     <section id="tab-resumen">
       <div class="tarjetas">
-        <div class="tarjeta"><p class="etiqueta">Plata en caja</p><p class="valor" id="rSaldo">₡0</p></div>
+        <div class="tarjeta"><p class="etiqueta">Plata disponible</p><p class="valor" id="rSaldo">₡0</p><p class="fNota">efectivo y cuenta del banco</p></div>
         <div class="tarjeta"><p class="etiqueta">Productos en stock</p><p class="valor" id="rStock">0</p></div>
         <div class="tarjeta"><p class="etiqueta">Ventas del mes</p><p class="valor" id="rVentasMes">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Clientes</p><p class="valor" id="rClientes">0</p></div>
@@ -1087,7 +1087,7 @@
     <!-- ---------- FINANZAS ---------- -->
     <section id="tab-finanzas" class="oculto">
       <div class="tarjetas">
-        <div class="tarjeta"><p class="etiqueta">Plata en caja</p><p class="valor" id="fCaja">₡0</p><p class="fNota" id="fCajaNota"></p></div>
+        <div class="tarjeta"><p class="etiqueta">Plata disponible</p><p class="valor" id="fCaja">₡0</p><p class="fNota" id="fCajaNota"></p></div>
         <div class="tarjeta"><p class="etiqueta">Te deben</p><p class="valor" id="fPorCobrar">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Mercadería (al costo)</p><p class="valor" id="fInventario">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Lo que vale el negocio</p><p class="valor" id="fVale">₡0</p><p class="fNota">caja + te deben + mercadería</p></div>
@@ -1204,7 +1204,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-07i · cajas desde la tienda</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-08a · plata disponible</p>
         </div>
       </div>
       <div class="panel">
@@ -4582,8 +4582,8 @@ function renderMovimientos() {
   // Caja negativa = salió más plata de la que el sistema sabe que entró:
   // falta registrar algo (un aporte, una venta de contado…)
   document.getElementById('fCajaNota').textContent = f.caja < 0
-    ? 'Negativo: falta registrar alguna plata que entró (un aporte, una venta).'
-    : '';
+    ? 'Negativo: falta registrar alguna plata que entró (un aporte, una venta). Es efectivo y cuenta del banco.'
+    : 'efectivo y cuenta del banco';
   document.getElementById('fPuestoNota').textContent = Object.keys(f.porSocio).length
     ? Object.entries(f.porSocio).map(([quien, monto]) => quien + ' ' + formatoColones(monto)).join(' · ')
     : '';
