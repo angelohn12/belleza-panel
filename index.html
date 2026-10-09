@@ -1213,7 +1213,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-08b · caja misteriosa</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-08c · búsqueda sin tildes ni apóstrofes</p>
         </div>
       </div>
       <div class="panel">
@@ -2242,13 +2242,12 @@ function renderProductos() {
   const selectOrden = document.getElementById('inventarioOrden');
   if (selectOrden) selectOrden.value = ordenInventarioActual;
 
-  const textoBusqueda = normalizaTexto(filtroInventarioTextoActual.trim());
+  const palabrasBusqueda = textoBuscable(filtroInventarioTextoActual).split(/\s+/).filter(Boolean);
 
   let filtrados = estado.productos.filter(p => {
-    if (textoBusqueda) {
-      const coincide = [p.nombre, p.tono, p.marca].some(v => normalizaTexto(v).includes(textoBusqueda));
-      if (!coincide) return false;
-    }
+    // Cada palabra tiene que estar en el nombre, la marca, el tono o la categoría (en cualquier
+    // orden), sin importar tildes, puntos ni apóstrofes: "loreal fijador" encuentra el spray fijador de L'Oréal.
+    if (palabrasBusqueda.length && !coincidenPalabras(p, palabrasBusqueda)) return false;
     if (filtroInventarioMarcaActual !== 'todas' && p.marca !== filtroInventarioMarcaActual) return false;
 
     switch (filtroInventarioEstadoActual) {
@@ -3123,14 +3122,8 @@ function renderTienda() {
   if (filtroTienda === 'ocultos')   lista = todos.filter(p => !seVeEnLaTienda(p));
   if (filtroTienda === 'agotados')  lista = todos.filter(p => (Number(p.stock) || 0) <= 0);
 
-  const texto = normalizaTexto(filtroTiendaTextoActual.trim());
-  if (texto) {
-    lista = lista.filter(p =>
-      normalizaTexto(p.nombre).includes(texto) ||
-      normalizaTexto(p.tono).includes(texto) ||
-      normalizaTexto(p.marca).includes(texto)
-    );
-  }
+  const palabrasTienda = textoBuscable(filtroTiendaTextoActual).split(/\s+/).filter(Boolean);
+  if (palabrasTienda.length) lista = lista.filter(p => coincidenPalabras(p, palabrasTienda));
 
   if (!lista.length) {
     caja.innerHTML = '<div class="vacio">No hay productos que coincidan con ese filtro.</div>';
@@ -4222,15 +4215,16 @@ function textoBuscable(s) {
   return normalizaTexto(s).replace(/[.'’\-]/g, '');
 }
 
+// ¿Aparecen todas las palabras buscadas en el nombre, la marca, el tono o la categoría?
+function coincidenPalabras(p, palabras) {
+  const t = textoBuscable([p.nombre, p.marca, p.tono, p.categoria].join(' '));
+  return palabras.every(w => t.includes(w));
+}
+
 function productosQueCoinciden(texto, limite, incluirSinStock) {
   const palabras = textoBuscable(texto).split(/\s+/).filter(Boolean);
   const conStock = incluirSinStock ? estado.productos : estado.productos.filter(p => (Number(p.stock) || 0) > 0);
-  const hallados = palabras.length
-    ? conStock.filter(p => {
-        const t = textoBuscable([p.nombre, p.marca, p.tono, p.categoria].join(' '));
-        return palabras.every(w => t.includes(w));
-      })
-    : conStock;
+  const hallados = palabras.length ? conStock.filter(p => coincidenPalabras(p, palabras)) : conStock;
   return hallados.slice(0, limite);
 }
 
