@@ -1214,7 +1214,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-10 · cédula para envíos por Correos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-10b · resumen de envío gratis</p>
         </div>
       </div>
       <div class="panel">
@@ -2431,11 +2431,17 @@ function renderPedidos() {
   const cobrado = todos.filter(p => ['Pagado', 'Enviado'].includes(String(p.estado || '').trim()))
     .reduce((a, p) => a + (Number(p.total) || 0) - (Number(p.envio) || 0), 0);
 
+  // Envío gratis por Correos: cuántos pedidos lo usaron y cuánto le costó a la tienda (lo que
+  // se anota en la columna envioAbsorbido de cada pedido). Un pedido cancelado no cuenta.
+  const regalados = todos.filter(p => Number(p.envioAbsorbido) > 0 && String(p.estado || '').trim() !== 'Cancelado');
+  const envioRegalado = regalados.reduce((a, p) => a + (Number(p.envioAbsorbido) || 0), 0);
+
   resumen.innerHTML = `
     <div class="cajaT${porEstado('Nuevo') ? ' alerta' : ''}"><div class="n">${porEstado('Nuevo')}</div><div class="t">Sin atender</div></div>
     <div class="cajaT"><div class="n">${porEstado('Contactado')}</div><div class="t">Esperando pago</div></div>
     <div class="cajaT"><div class="n">${porEstado('Pagado')}</div><div class="t">Por entregar</div></div>
-    <div class="cajaT"><div class="n">${formatoColones(cobrado)}</div><div class="t">Cobrado (sin envíos)</div></div>`;
+    <div class="cajaT"><div class="n">${formatoColones(cobrado)}</div><div class="t">Cobrado (sin envíos)</div></div>
+    <div class="cajaT" title="Pedidos que no pagaron envío porque llegaron a ₡30.000 al detalle por Correos. El monto es lo que le cuesta a la tienda ese envío"><div class="n">${formatoColones(envioRegalado)}</div><div class="t">Envío gratis · ${regalados.length} ${regalados.length === 1 ? 'pedido' : 'pedidos'}</div></div>`;
 
   let lista = todos.slice().reverse();  // el más reciente primero
   if (filtroPedidos === 'activos') lista = lista.filter(p => ['Nuevo', 'Contactado', 'Pagado'].includes(String(p.estado || '').trim()));
@@ -2501,7 +2507,7 @@ function renderPedidos() {
 
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
-        <span class="pedidoNombre">${escaparHtml(p.nombre)}${esMist ? ' <span class="pastilla verde" title="Caja misteriosa de la tienda: la clienta eligió cuántas piezas y nosotras escogemos cuáles. Se cobra completa antes de enviar o de pedir lo que va por encargo">MISTERIOSA</span>' : esCaja ? ' <span class="pastilla verde" title="Caja armada por la clienta en la tienda, al por mayor: se cobra completa antes de enviar o de pedir lo que va por encargo">CAJA</span>' : (p.mayoreo === 'Sí' ?' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : '')}</span>
+        <span class="pedidoNombre">${escaparHtml(p.nombre)}${esMist ? ' <span class="pastilla verde" title="Caja misteriosa de la tienda: la clienta eligió cuántas piezas y nosotras escogemos cuáles. Se cobra completa antes de enviar o de pedir lo que va por encargo">MISTERIOSA</span>' : esCaja ? ' <span class="pastilla verde" title="Caja armada por la clienta en la tienda, al por mayor: se cobra completa antes de enviar o de pedir lo que va por encargo">CAJA</span>' : (p.mayoreo === 'Sí' ?' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : '')}${Number(p.envioAbsorbido) > 0 ? ` <span class="pastilla verde" title="Envío gratis por Correos: a la tienda le cuesta ${formatoColones(p.envioAbsorbido)}">ENVÍO GRATIS · ${formatoColones(p.envioAbsorbido)}</span>` : ''}</span>
         <span class="pedidoNum">${escaparHtml(p.numero)} · ${fechaCorta(p.fecha)}</span>
         <span class="pedidoTotal">${formatoColones(p.total)}</span>
       </div>
