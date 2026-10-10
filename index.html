@@ -2494,7 +2494,7 @@ function renderPedidos() {
     const primerNombre = String(p.nombre || '').trim().split(' ')[0];
     const saludo = encodeURIComponent(
       p.entrega === 'retiro'
-        ? `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido y el método de entrega y pago (podés cancelar en efectivo o SINPE al retirar). Gracias.`
+        ? `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido y el método de entrega y pago (puedes pagar en efectivo o SINPE al retirar). Gracias.`
         : `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido, la dirección de envío y el pago por SINPE. Gracias.`);
 
     const confirmarRecepcion = encodeURIComponent(mensajeConfirmarRecepcion(p));
@@ -3045,7 +3045,7 @@ function renderAvisosStock() {
 const ENCARGO_DIAS_MIN = 20, ENCARGO_DIAS_MAX = 25, ENCARGO_ADELANTO_PCT = 50;
 
 function mensajeEncargo(s) {
-  return 'Hola ' + String(s.nombre).split(' ')[0] + ', vimos que querés que te consigamos ' + s.producto + '. ' +
+  return 'Hola ' + String(s.nombre).split(' ')[0] + ', vimos que quieres que te consigamos ' + s.producto + '. ' +
     'Nos toma entre ' + ENCARGO_DIAS_MIN + ' y ' + ENCARGO_DIAS_MAX + ' días hábiles en llegar y pedimos el ' +
     ENCARGO_ADELANTO_PCT + '% del valor por adelantado; el otro ' + (100 - ENCARGO_ADELANTO_PCT) +
     '% se paga cuando te lo entregamos. ¿Seguimos con el pedido?';
@@ -5483,7 +5483,7 @@ function cajaTexto(tipo, nombre, items, precio, opciones) {
     lineas.push('Si revendés cada pieza al precio detalle de Avellana, ganás ' + f(nums.ellaGana) + '.');
   }
   lineas.push(cajaEntregaTexto(nums, op.diasMin || 20, op.diasMax || 25));
-  lineas.push('Todo es original, nuevo y sellado. Pagás completo por SINPE antes de que armemos tu caja.');
+  lineas.push('Todo es original, nuevo y sellado. Pagas completo por SINPE antes de que armemos tu caja.');
   return lineas.filter(Boolean).join('\n');
 }
 // Reparte el precio de la caja entre las piezas, en proporción a lo que vale
