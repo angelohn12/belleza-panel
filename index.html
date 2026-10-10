@@ -1214,7 +1214,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-08c · búsqueda sin tildes ni apóstrofes</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-09a · buscador de cajas: lo que hay en stock primero</p>
         </div>
       </div>
       <div class="panel">
@@ -2270,7 +2270,7 @@ function renderProductos() {
   const selectOrden = document.getElementById('inventarioOrden');
   if (selectOrden) selectOrden.value = ordenInventarioActual;
 
-  const palabrasBusqueda = textoBuscable(filtroInventarioTextoActual).split(/\s+/).filter(Boolean);
+  const palabrasBusqueda = palabrasDeBusqueda(filtroInventarioTextoActual);
 
   let filtrados = estado.productos.filter(p => {
     // Cada palabra tiene que estar en el nombre, la marca, el tono o la categoría (en cualquier
@@ -3153,7 +3153,7 @@ function renderTienda() {
   if (filtroTienda === 'ocultos')   lista = todos.filter(p => !seVeEnLaTienda(p));
   if (filtroTienda === 'agotados')  lista = todos.filter(p => (Number(p.stock) || 0) <= 0);
 
-  const palabrasTienda = textoBuscable(filtroTiendaTextoActual).split(/\s+/).filter(Boolean);
+  const palabrasTienda = palabrasDeBusqueda(filtroTiendaTextoActual);
   if (palabrasTienda.length) lista = lista.filter(p => coincidenPalabras(p, palabrasTienda));
 
   if (!lista.length) {
@@ -4246,21 +4246,90 @@ function etiquetaProducto(p) {
 // Solo productos con stock (no se puede vender lo que no hay). Cada palabra
 // buscada tiene que aparecer en el nombre, la marca, el tono o la categoría.
 // Puntos, guiones y apóstrofes no cuentan: "elf" encuentra e.l.f. y "loreal", L'Oréal.
+// Las letras repetidas tampoco: las marcas escriben en inglés y uno busca como lo
+// dice en español, así "infalible" encuentra Infallible y "glos" encuentra gloss.
 function textoBuscable(s) {
-  return normalizaTexto(s).replace(/[.'’\-]/g, '');
+  return normalizaTexto(s).replace(/[.'’\-]/g, '').replace(/([a-z])\1+/g, '$1');
+}
+
+// Las palabras que de verdad se buscan. Las de enlace ("and", "y", "n", "&") no se
+// exigen: "wet and wild" tiene que encontrar "Wet n Wild", que la marca escribe con "n".
+function palabrasDeBusqueda(texto) {
+  const enlace = ['and', 'y', 'n', 'e', '&'];
+  const todas = textoBuscable(texto).split(/\s+/).filter(Boolean);
+  const utiles = todas.filter(w => enlace.indexOf(w) === -1);
+  return utiles.length ? utiles : todas;
 }
 
 // ¿Aparecen todas las palabras buscadas en el nombre, la marca, el tono o la categoría?
 function coincidenPalabras(p, palabras) {
+  return puntajeCoincidencia(p, palabras) > 0;
+}
+
+// Cuántas letras hay que cambiar, borrar o agregar para pasar de una palabra a otra
+// (se corta apenas pasa del tope, para que sea rápido con todo el inventario).
+function distanciaEdicion(a, b, tope) {
+  if (Math.abs(a.length - b.length) > tope) return tope + 1;
+  // Dos letras cambiadas de lugar ("wlid" por "wild") cuentan como UN error
+  let prev2 = null;
+  let prev = [];
+  for (let j = 0; j <= b.length; j++) prev.push(j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let min = i;
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (prev2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2] + 1);
+      cur.push(v);
+      if (v < min) min = v;
+    }
+    if (min > tope) return tope + 1;
+    prev2 = prev;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// 0 = no coincide; 2 = todas las palabras están tal cual; 1 = coincide, pero alguna
+// palabra tenía un error de tipeo ("loeal infalibe" encuentra L'Oréal Infallible).
+// A las palabras de 4 letras o más se les perdona 1 error (2 si tienen 7 o más).
+function puntajeCoincidencia(p, palabras) {
   const t = textoBuscable([p.nombre, p.marca, p.tono, p.categoria].join(' '));
-  return palabras.every(w => t.includes(w));
+  let puntaje = 2;
+  let fichas = null;
+  for (const w of palabras) {
+    if (t.includes(w)) continue;
+    if (w.length < 4) return 0;
+    if (!fichas) fichas = t.split(/\s+/).filter(Boolean);
+    const tope = w.length >= 7 ? 2 : 1;
+    const parecida = fichas.some(f => distanciaEdicion(w, f, tope) <= tope ||
+      (f.length > w.length && distanciaEdicion(w, f.slice(0, w.length), tope) <= tope));
+    if (!parecida) return 0;
+    puntaje = 1;
+  }
+  return puntaje;
+}
+
+// Todos los productos que coinciden. Cuando se incluyen los que no tienen stock
+// (armar cajas, entradas de inventario), los que SÍ tienen stock van primero: son
+// los que casi siempre se buscan, y antes quedaban enterrados detrás de decenas de
+// variantes "por encargo" de la misma marca (el límite de la lista los cortaba).
+// `lista` solo se pasa en las pruebas.
+function productosQueCoincidenTodos(texto, incluirSinStock, lista) {
+  const palabras = palabrasDeBusqueda(texto);
+  const base = lista || estado.productos;
+  const candidatos = incluirSinStock ? base : base.filter(p => (Number(p.stock) || 0) > 0);
+  // Primero los que coinciden tal cual y después los que solo se parecen (errores de tipeo)
+  const puntos = new Map();
+  const hallados = palabras.length ? candidatos.filter(p => { const n = puntajeCoincidencia(p, palabras); puntos.set(p, n); return n > 0; }) : candidatos;
+  const exactosPrimero = lista => lista.filter(p => puntos.get(p) !== 1).concat(lista.filter(p => puntos.get(p) === 1));
+  if (!incluirSinStock) return exactosPrimero(hallados);
+  const hayEnMano = p => p.modalidad !== 'encargo' && (Number(p.stock) || 0) > 0;
+  return exactosPrimero(hallados.filter(hayEnMano)).concat(exactosPrimero(hallados.filter(p => !hayEnMano(p))));
 }
 
 function productosQueCoinciden(texto, limite, incluirSinStock) {
-  const palabras = textoBuscable(texto).split(/\s+/).filter(Boolean);
-  const conStock = incluirSinStock ? estado.productos : estado.productos.filter(p => (Number(p.stock) || 0) > 0);
-  const hallados = palabras.length ? conStock.filter(p => coincidenPalabras(p, palabras)) : conStock;
-  return hallados.slice(0, limite);
+  return productosQueCoincidenTodos(texto, incluirSinStock).slice(0, limite);
 }
 
 function buscarEnBuscador(clave) {
@@ -4269,13 +4338,19 @@ function buscarEnBuscador(clave) {
   if (!input || !caja) return;
   const cfg = BUSCADORES[clave];
   const todos = cfg.todos;
-  const hallados = productosQueCoinciden(input.value, 40, todos);
+  const LIMITE = 40;
+  const coinciden = productosQueCoincidenTodos(input.value, todos);
+  const hallados = coinciden.slice(0, LIMITE);
   caja.classList.remove('oculto');
+  // Si hay más de los que caben, se dice (antes se cortaba la lista sin avisar)
+  const aviso = coinciden.length > hallados.length
+    ? `<div class="vacio" style="padding:8px 10px;font-size:12px">Mostrando ${hallados.length} de ${coinciden.length}. Escribí más letras para afinar la búsqueda.</div>`
+    : '';
   caja.innerHTML = hallados.length
     ? hallados.map(p => `<button type="button" class="resultadoProd" onclick="elegirEnBuscador('${clave}', '${escaparHtml(p.id)}')">
         <span class="rpNombre">${escaparHtml(etiquetaProducto(p))}</span>
         <span class="rpDato">${cfg.dato ? cfg.dato(p) : `${p.stock} en stock · ${formatoColones(todos ? p.costoTotalCRC : precioConDescuento(p.precioVenta, p.descuento))}${todos ? ' costo' : ''}`}</span>
-      </button>`).join('')
+      </button>`).join('') + aviso
     : `<div class="vacio">${todos ? 'Ningún producto coincide.' : (input.value.trim() ? 'Ningún producto con stock coincide.' : 'No hay productos con stock.')}</div>`;
 }
 
