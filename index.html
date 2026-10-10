@@ -1214,7 +1214,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-10b · resumen de envío gratis</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-10c · resumen de envío gratis</p>
         </div>
       </div>
       <div class="panel">
@@ -2441,7 +2441,7 @@ function renderPedidos() {
     <div class="cajaT"><div class="n">${porEstado('Contactado')}</div><div class="t">Esperando pago</div></div>
     <div class="cajaT"><div class="n">${porEstado('Pagado')}</div><div class="t">Por entregar</div></div>
     <div class="cajaT"><div class="n">${formatoColones(cobrado)}</div><div class="t">Cobrado (sin envíos)</div></div>
-    <div class="cajaT" title="Pedidos que no pagaron envío porque llegaron a ₡30.000 al detalle por Correos. El monto es lo que le cuesta a la tienda ese envío"><div class="n">${formatoColones(envioRegalado)}</div><div class="t">Envío gratis · ${regalados.length} ${regalados.length === 1 ? 'pedido' : 'pedidos'}</div></div>`;
+    <div class="cajaT" title="Pedidos que no pagaron envío porque su compra al detalle por Correos llegó al monto de envío gratis. El monto es lo que le cuesta a la tienda ese envío"><div class="n">${formatoColones(envioRegalado)}</div><div class="t">Envío gratis · ${regalados.length} ${regalados.length === 1 ? 'pedido' : 'pedidos'}</div></div>`;
 
   let lista = todos.slice().reverse();  // el más reciente primero
   if (filtroPedidos === 'activos') lista = lista.filter(p => ['Nuevo', 'Contactado', 'Pagado'].includes(String(p.estado || '').trim()));
