@@ -1214,7 +1214,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-09b · confirmar recepción del pedido</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-10 · cédula para envíos por Correos</p>
         </div>
       </div>
       <div class="panel">
@@ -2518,14 +2518,36 @@ function renderPedidos() {
       <div class="pedidoAcciones">
         <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
         ${est !== 'Cancelado' ? `<a class="wa" title="Abre WhatsApp con un mensaje listo: recibimos tu pedido y ya estamos trabajando en él" href="https://wa.me/506${tel}?text=${confirmarRecepcion}" target="_blank" rel="noopener">Confirmar recepción</a>` : ''}
+        ${p.entrega === 'correos' && ['Nuevo', 'Contactado', 'Pagado'].includes(est)
+          ? `<button class="secundario btnPaso" title="La cédula no está en la hoja: se pide aparte y se borra sola al marcar el pedido como enviado" onclick="verCedula('${escaparHtml(p.numero)}')">Ver cédula</button>` : ''}
         ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? '' : pasos}
         ${cancelar}
         ${borrar}
       </div>
+      ${p.entrega === 'correos' && ['Nuevo', 'Contactado', 'Pagado'].includes(est)
+        ? `<div class="pedidoMeta" id="ced-${escaparHtml(p.numero)}" style="margin-top:6px"></div>` : ''}
       ${mistArmando && String(mistArmando.id) === String(p.id) ? htmlPanelMisteriosa(p) : ''}
       ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? htmlPanelPago(p) : ''}
     </div>`;
   }).join('');
+}
+
+// La cédula de un envío por Correos NO vive en la hoja ni baja con los pedidos: se pide aparte,
+// solo cuando hace falta para llenar la guía, y el sistema la borra al marcar el pedido como
+// enviado o cancelado. Se muestra 90 segundos y se oculta sola.
+async function verCedula(numero) {
+  const caja = document.getElementById('ced-' + numero);
+  if (!caja) return;
+  caja.textContent = 'Buscando…';
+  const res = await apiPost({ accion: 'cedula_ver', numero });
+  if (!res || !res.ok) { caja.textContent = 'No se pudo leer la cédula. Probá de nuevo.'; return; }
+  const c = String(res.cedula || '').replace(/\D/g, '');
+  if (!c) { caja.textContent = 'Sin cédula guardada (el pedido no la tenía o ya se borró).'; return; }
+  const bonita = c.length === 9 ? c[0] + '-' + c.slice(1, 5) + '-' + c.slice(5) : c;
+  caja.innerHTML = `Cédula: <b style="font-size:15px;letter-spacing:.04em">${escaparHtml(bonita)}</b>
+    <button class="secundario btnPaso" style="margin-left:8px" onclick="navigator.clipboard.writeText('${c}').then(()=>mostrarToast('Cédula copiada'))">Copiar</button>
+    <span style="color:var(--brown-soft)"> · se oculta sola; el sistema la borra al marcar el pedido como enviado</span>`;
+  setTimeout(() => { if (document.getElementById('ced-' + numero) === caja) caja.textContent = ''; }, 90000);
 }
 
 // Mensaje de WhatsApp para avisarle a la clienta que recibimos su pedido. Cambia según
