@@ -1214,7 +1214,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-09a · buscador de cajas: lo que hay en stock primero</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-09b · confirmar recepción del pedido</p>
         </div>
       </div>
       <div class="panel">
@@ -2497,6 +2497,8 @@ function renderPedidos() {
         ? `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido y el método de entrega y pago (podés cancelar en efectivo o SINPE al retirar). Gracias.`
         : `Hola ${primerNombre}, somos Avellana Studio. Gracias por enviar tu orden. Te escribimos por acá para confirmar el pedido, la dirección de envío y el pago por SINPE. Gracias.`);
 
+    const confirmarRecepcion = encodeURIComponent(mensajeConfirmarRecepcion(p));
+
     return `<div class="pedido ${est === 'Nuevo' ? 'nuevo' : ''} ${revisar ? 'revisar' : ''}">
       <div class="pedidoTop">
         <span class="pedidoNombre">${escaparHtml(p.nombre)}${esMist ? ' <span class="pastilla verde" title="Caja misteriosa de la tienda: la clienta eligió cuántas piezas y nosotras escogemos cuáles. Se cobra completa antes de enviar o de pedir lo que va por encargo">MISTERIOSA</span>' : esCaja ? ' <span class="pastilla verde" title="Caja armada por la clienta en la tienda, al por mayor: se cobra completa antes de enviar o de pedir lo que va por encargo">CAJA</span>' : (p.mayoreo === 'Sí' ?' <span class="pastilla verde" title="Lleva productos a precio mayorista: se cobra completo, nunca a pagos">MAYOREO</span>' : '')}</span>
@@ -2515,6 +2517,7 @@ function renderPedidos() {
       </div>
       <div class="pedidoAcciones">
         <a class="wa" href="https://wa.me/506${tel}?text=${saludo}" target="_blank" rel="noopener">WhatsApp ${escaparHtml(p.telefono)}</a>
+        ${est !== 'Cancelado' ? `<a class="wa" title="Abre WhatsApp con un mensaje listo: recibimos tu pedido y ya estamos trabajando en él" href="https://wa.me/506${tel}?text=${confirmarRecepcion}" target="_blank" rel="noopener">Confirmar recepción</a>` : ''}
         ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? '' : pasos}
         ${cancelar}
         ${borrar}
@@ -2523,6 +2526,24 @@ function renderPedidos() {
       ${pagoAbierto && String(pagoAbierto.id) === String(p.id) ? htmlPanelPago(p) : ''}
     </div>`;
   }).join('');
+}
+
+// Mensaje de WhatsApp para avisarle a la clienta que recibimos su pedido. Cambia según
+// cómo recibe: Correos (se le pasa la guía), app de envío (se coordina por WhatsApp)
+// o retiro. Si el pedido ya está Pagado, también confirma que llegó el pago.
+function mensajeConfirmarRecepcion(p) {
+  const nombre = String(p.nombre || '').trim().split(' ')[0];
+  const num = p.numero ? ' ' + p.numero : '';
+  const pagado = String(p.estado || '').trim().toLowerCase() === 'pagado';
+  const recibimos = pagado
+    ? `Recibimos tu pedido${num} y tu pago. ¡Muchas gracias!`
+    : `Recibimos tu pedido${num}. ¡Muchas gracias!`;
+  const seguimiento = p.entrega === 'retiro'
+    ? 'Ya estamos trabajando en él y coordinamos contigo la hora del retiro.'
+    : p.entrega === 'correos'
+      ? 'Ya estamos trabajando en él. En cuanto lo enviemos por Correos, te compartiremos la guía para que le des seguimiento.'
+      : 'Ya estamos trabajando en él. Como elegiste una aplicación de envío, coordinaremos la entrega contigo por este medio.';
+  return `Hola ${nombre}, somos Avellana Studio. ${recibimos} ${seguimiento}`;
 }
 
 // Cambia el estado. Al pasar a Pagado descuenta stock y registra las ventas.
