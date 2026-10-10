@@ -49,11 +49,19 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'POST') {
+      // Defensa contra peticiones enviadas desde OTRO sitio con la sesión del operador:
+      // el panel siempre escribe desde su propio origen.
+      if (!mismoOrigen(request)) {
+        return json({ ok: false, error: 'origen no permitido' }, 403);
+      }
       let body;
       try {
         body = await request.json();
       } catch {
         return json({ ok: false, error: 'invalid json in request body' }, 400);
+      }
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return json({ ok: false, error: 'cuerpo invalido' }, 400);
       }
       body.key = env.BELLEZA_KEY;
       const r = await fetchFollow(env.WEB_APP_URL_BELLEZA, {
@@ -74,15 +82,35 @@ export async function onRequest(context) {
   }
 }
 
+// El navegador marca cada petición con Sec-Fetch-Site (y Origin en los POST). Las del propio
+// panel son "same-origin"; si llegan de otro sitio se rechazan. Sin ninguna de las dos
+// cabeceras no es un navegador (herramienta de línea de comandos): ya pasó el pase de Access.
+function mismoOrigen(request) {
+  const sitio = request.headers.get('sec-fetch-site');
+  if (sitio) return sitio === 'same-origin';
+  const origen = request.headers.get('origin');
+  if (origen) {
+    try { return new URL(origen).host === new URL(request.url).host; } catch (e) { return false; }
+  }
+  return true;
+}
+
 // ---------- Pase de Cloudflare Access ----------
 
 // Las llaves públicas con que Cloudflare firma los pases. Se guardan un rato
 // en memoria del worker para no pedirlas en cada lectura del panel.
 let llavesAccess = null;
 let llavesAccessHasta = 0;
+let llavesAccessForzadoEn = 0;
 
 async function llavesDeAccess(forzar) {
   if (!forzar && llavesAccess && Date.now() < llavesAccessHasta) return llavesAccess;
+  // Pedir llaves "porque no encuentro el kid" solo se permite una vez por minuto: sin este
+  // freno, pases falsos con kids inventados harían una consulta externa por petición.
+  if (forzar) {
+    if (llavesAccess && Date.now() - llavesAccessForzadoEn < 60 * 1000) return llavesAccess;
+    llavesAccessForzadoEn = Date.now();
+  }
   const r = await fetch(ACCESS_EQUIPO + '/cdn-cgi/access/certs');
   if (!r.ok) throw new Error('no se pudieron leer las llaves de Access');
   const datos = await r.json();
