@@ -2955,7 +2955,7 @@ async function mistUsar(id) {
   const lineas = misteriosaLineasPedido(m.items, Number(m.linea.subtotal) || 0);
   const nEnc = lineas.filter(l => l.porEncargo).length;
   const nota = 'CAJA MISTERIOSA armada · ' + lineas.length + ' piezas' +
-    (nEnc ? ' (' + nEnc + ' por encargo, 20 a 25 días hábiles)' : ', todo en stock') +
+    (nEnc ? ' (' + nEnc + ' por encargo, 15 a 20 días hábiles)' : ', todo en stock') +
     ' · valor en tienda ' + formatoColones(m.ev.valor) + ' · se cobra completa antes de pedir o enviar';
   const res = await apiPost({ accion: 'editar_fila', hoja: 'Pedidos', id: p.id, fila: { ...p, items: JSON.stringify(lineas), notas: nota } });
   if (!res || !res.ok) { mostrarToast('Error: ' + ((res && res.error) || 'no se pudo guardar')); return; }
@@ -2989,7 +2989,7 @@ function htmlPanelMisteriosa(p) {
     <div class="mistChequeo"><span>Ella ahorra</span>${marca(ev.ahorro > 0, formatoColones(ev.ahorro) + ' (' + Math.round(ev.ahorroPct) + ' %)')}</div>
     <div class="mistChequeo"><span>Ganancia nuestra (mínimo ${MIST_GANANCIA_MIN} %)</span>${marca(ev.cumpleGanancia, formatoColones(precio - ev.costo) + ' (' + Math.round(ev.gananciaPct) + ' %)' + (ev.cumpleGanancia ? ' ✓' : ' ✗'))}</div>
     <div class="mistChequeo"><span>Marcas</span><b>${ev.marcas}</b></div>
-    <div class="mistChequeo"><span>Entrega</span><b>${ev.nEncargo ? ev.nEncargo + ' por encargo (20 a 25 días)' : 'todo en stock'}</b></div>
+    <div class="mistChequeo"><span>Entrega</span><b>${ev.nEncargo ? ev.nEncargo + ' por encargo (15 a 20 días)' : 'todo en stock'}</b></div>
     ${soloStock}
     <div class="pedidoAcciones">
       <button id="btnMistUsar" class="btnPaso" onclick="ejecutarConBoton('btnMistUsar', () => mistUsar('${id}'))">Usar esta caja</button>
@@ -3070,7 +3070,7 @@ function renderAvisosStock() {
 }
 
 // Términos del encargo — si se cambian, cambiarlos igual en Code.gs (TIENDA.encargo*).
-const ENCARGO_DIAS_MIN = 20, ENCARGO_DIAS_MAX = 25, ENCARGO_ADELANTO_PCT = 50;
+const ENCARGO_DIAS_MIN = 15, ENCARGO_DIAS_MAX = 20, ENCARGO_ADELANTO_PCT = 50;
 
 function mensajeEncargo(s) {
   return 'Hola ' + String(s.nombre).split(' ')[0] + ', vimos que quieres que te consigamos ' + s.producto + '. ' +
