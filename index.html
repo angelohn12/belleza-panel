@@ -867,7 +867,7 @@
         <h2 style="margin:0 0 6px">Pedidos por encargo</h2>
         <p class="ayudaTienda">
           Piden algo que no tenemos en stock. Escribiles para confirmar precio y tiempo antes de cobrar el
-          adelanto — el mensaje ya trae el 50%/50% y el plazo armado.
+          adelanto — el mensaje ya trae el 70%/30% y el plazo armado.
         </p>
         <div id="listaEncargos"></div>
       </div>
@@ -1214,7 +1214,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-10c · resumen de envío gratis</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-12 · encargo 70/30 y pedido confirmado por WhatsApp</p>
         </div>
       </div>
       <div class="panel">
@@ -3070,13 +3070,13 @@ function renderAvisosStock() {
 }
 
 // Términos del encargo — si se cambian, cambiarlos igual en Code.gs (TIENDA.encargo*).
-const ENCARGO_DIAS_MIN = 15, ENCARGO_DIAS_MAX = 20, ENCARGO_ADELANTO_PCT = 50;
+const ENCARGO_DIAS_MIN = 15, ENCARGO_DIAS_MAX = 20, ENCARGO_ADELANTO_PCT = 70;
 
 function mensajeEncargo(s) {
   return 'Hola ' + String(s.nombre).split(' ')[0] + ', vimos que quieres que te consigamos ' + s.producto + '. ' +
     'Nos toma entre ' + ENCARGO_DIAS_MIN + ' y ' + ENCARGO_DIAS_MAX + ' días hábiles en llegar y pedimos el ' +
-    ENCARGO_ADELANTO_PCT + '% del valor por adelantado; el otro ' + (100 - ENCARGO_ADELANTO_PCT) +
-    '% se paga cuando te lo entregamos. ¿Seguimos con el pedido?';
+    ENCARGO_ADELANTO_PCT + '% del valor al confirmar el pedido; el otro ' + (100 - ENCARGO_ADELANTO_PCT) +
+    '% se paga cuando el producto ya esté en Costa Rica, antes de entregártelo. ¿Seguimos con el pedido?';
 }
 
 function encargosPendientes() {
