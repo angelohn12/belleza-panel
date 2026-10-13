@@ -640,8 +640,74 @@
         <div class="filaBotones">
           <h2 style="margin:0">Productos</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="secundario" onclick="nuevaCompra()">+ Compra en camino</button>
             <button class="secundario" onclick="nuevaEntrada()">+ Entrada de inventario</button>
             <button onclick="nuevoProducto()">+ Nuevo producto</button>
+          </div>
+        </div>
+        <div id="listaCompras"></div>
+        <div class="formulario oculto" id="formCompra">
+          <div class="campoAncho"><p class="ayudaTienda" style="margin:0">Anota la compra una sola vez. El casillero se pone después, cuando llegue y te lo cobren: ahí el panel lo reparte entre los productos y los mete al inventario con su costo final. Si ya la anotaste a mano en Movimientos, bórrala allá para que no quede doble.</p></div>
+          <div><label>Tienda</label>
+            <input id="cTienda" list="cTiendas" value="Amazon" />
+            <datalist id="cTiendas"><option>Amazon</option><option>Sephora</option><option>Target</option><option>Marshalls</option></datalist>
+          </div>
+          <div><label>Fecha de la compra</label><input id="cFecha" type="date" /></div>
+          <div><label>Moneda de los precios</label>
+            <select id="cMoneda" onchange="renderCompraForm()">
+              <option value="USD">Dólares</option>
+              <option value="CRC">Colones</option>
+            </select>
+          </div>
+          <div id="cTipoCambioWrap"><label>Tipo de cambio</label><input id="cTipoCambio" type="text" inputmode="decimal" oninput="renderCompraResumen()" /></div>
+          <div class="campoAncho">
+            <label>Productos que compraste</label>
+            <div class="buscadorProd">
+              <input id="busq-compra" placeholder="Buscar por nombre, marca o tono…" autocomplete="off"
+                     oninput="buscarEnBuscador('compra')" onfocus="buscarEnBuscador('compra')" />
+              <div class="resultadosProd oculto" id="res-compra"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <input id="cNuevoNombre" placeholder="¿No existe todavía? Escribe su nombre" style="flex:1;min-width:200px" />
+              <button type="button" class="secundario" onclick="agregarLineaCompraNueva()">Agregar producto nuevo</button>
+            </div>
+            <div id="cLineas" class="lineasVenta"></div>
+          </div>
+          <div><label>Casillero estimado (opcional)</label><input id="cCasillero" type="text" inputmode="decimal" placeholder="Solo de referencia" oninput="renderCompraResumen()" /></div>
+          <div><label>¿Cómo se pagó?</label>
+            <select id="cPago" onchange="renderCompraResumen()">
+              <option value="caja">Con plata del negocio</option>
+              <option value="socio">Lo pagó un socio con su plata</option>
+            </select>
+          </div>
+          <div id="cSocioWrap" class="oculto"><label>¿Quién?</label><select id="cSocio"></select></div>
+          <div class="campoAncho" id="cResumen"></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnGuardarCompra" onclick="ejecutarConBoton('btnGuardarCompra', guardarCompra)">Guardar compra</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formCompra')">Cancelar</button>
+          </div>
+        </div>
+        <div class="formulario oculto" id="formLlegada">
+          <div class="campoAncho"><div id="lTitulo" style="font-weight:600"></div></div>
+          <div><label>Lo que cobró el casillero y el flete</label><input id="lCasillero" type="text" inputmode="decimal" placeholder="Ej. 20" oninput="renderLlegada()" /></div>
+          <div><label>Moneda</label>
+            <select id="lMoneda" onchange="renderLlegada()">
+              <option value="USD">Dólares</option>
+              <option value="CRC">Colones</option>
+            </select>
+          </div>
+          <div id="lTipoCambioWrap"><label>Tipo de cambio</label><input id="lTipoCambio" type="text" inputmode="decimal" oninput="renderLlegada()" /></div>
+          <div><label>¿Cómo se pagó el casillero?</label>
+            <select id="lPago" onchange="renderLlegada()">
+              <option value="caja">Con plata del negocio</option>
+              <option value="socio">Lo pagó un socio con su plata</option>
+            </select>
+          </div>
+          <div id="lSocioWrap" class="oculto"><label>¿Quién?</label><select id="lSocio"></select></div>
+          <div class="campoAncho" id="lResumen"></div>
+          <div class="campoAncho" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btnConfirmarLlegada" onclick="ejecutarConBoton('btnConfirmarLlegada', confirmarLlegada)">Confirmar que llegó</button>
+            <button type="button" class="secundario" onclick="cancelarFormulario('formLlegada')">Cancelar</button>
           </div>
         </div>
         <div class="formulario oculto" id="formEntrada">
@@ -1100,7 +1166,8 @@
         <div class="tarjeta"><p class="etiqueta">Plata disponible</p><p class="valor" id="fCaja">₡0</p><p class="fNota" id="fCajaNota"></p></div>
         <div class="tarjeta"><p class="etiqueta">Te deben</p><p class="valor" id="fPorCobrar">₡0</p></div>
         <div class="tarjeta"><p class="etiqueta">Mercadería (al costo)</p><p class="valor" id="fInventario">₡0</p></div>
-        <div class="tarjeta"><p class="etiqueta">Lo que vale el negocio</p><p class="valor" id="fVale">₡0</p><p class="fNota">caja + te deben + mercadería</p></div>
+        <div class="tarjeta"><p class="etiqueta">En camino (ya pagado)</p><p class="valor" id="fEnCamino">₡0</p><p class="fNota">compras que todavía no llegan</p></div>
+        <div class="tarjeta"><p class="etiqueta">Lo que vale el negocio</p><p class="valor" id="fVale">₡0</p><p class="fNota">caja + te deben + mercadería + en camino</p></div>
         <div class="tarjeta"><p class="etiqueta">Pusieron los socios</p><p class="valor" id="fPuesto">₡0</p><p class="fNota" id="fPuestoNota"></p></div>
         <div class="tarjeta"><p class="etiqueta">Ganancia hasta hoy</p><p class="valor" id="fGanancia">₡0</p><p class="fNota">lo que vale menos lo que pusieron</p></div>
       </div>
@@ -1214,7 +1281,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-12b · cajas por encargo 70/30</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-12c · compra en camino (casillero automático)</p>
         </div>
       </div>
       <div class="panel">
@@ -1266,7 +1333,8 @@ let estado = {
   abonos: [],
   contenido: [],
   pedidos: [],
-  solicitudes: []
+  solicitudes: [],
+  compras: []
 };
 
 // ids en edición (null = el formulario está en modo "crear nuevo")
@@ -1292,7 +1360,7 @@ async function apiLeer(hojas) {
 const CAMPO_POR_HOJA = {
   Productos: 'productos', Ventas: 'ventas', Clientes: 'clientes',
   Movimientos: 'movimientos', Config: 'config', Abonos: 'abonos',
-  Contenido: 'contenido', Pedidos: 'pedidos', Solicitudes: 'solicitudes'
+  Contenido: 'contenido', Pedidos: 'pedidos', Solicitudes: 'solicitudes', Compras: 'compras'
 };
 
 // Acciones que reescriben una fila que ya existe (o que no pasa nada si se
@@ -1606,6 +1674,7 @@ function renderTodo() {
   renderResumen();
   renderTendencias();
   renderProductos();
+  renderCompras();
   renderPedidos();
   renderSolicitudes();
   renderTienda();
@@ -1733,7 +1802,8 @@ function resumenFinanciero() {
   const caja = calcularSaldo();
   const porCobrar = totalPorCobrar();
   const inventario = valorInventarioAlCosto();
-  const vale = caja + porCobrar + inventario;
+  const enCamino = valorEnCamino();   // compras ya pagadas que todavía no llegan
+  const vale = caja + porCobrar + inventario + enCamino;
   const puesto = sumaMovimientos('aporte') - sumaMovimientos('retiro');
   const porSocio = {};
   estado.movimientos.forEach(m => {
@@ -1741,7 +1811,7 @@ function resumenFinanciero() {
     const quien = String(m.socio || '').trim() || 'Sin indicar';
     porSocio[quien] = (porSocio[quien] || 0) + (m.tipo === 'aporte' ? 1 : -1) * (Number(m.monto) || 0);
   });
-  return { caja, porCobrar, inventario, vale, puesto, porSocio, ganancia: vale - puesto };
+  return { caja, porCobrar, inventario, enCamino, vale, puesto, porSocio, ganancia: vale - puesto };
 }
 
 function renderPuntoEquilibrio() {
@@ -4278,6 +4348,9 @@ const BUSCADORES = {
   pago:  { alElegir: id => agregarRegaloPago(id) },
   // Una entrada de inventario puede ser de un producto sin stock (o por encargo)
   entrada: { alElegir: id => elegirProductoEntrada(id), todos: true },
+  // Compra en camino: busca en todo el inventario y deja la lista abierta para ir sumando
+  compra: { alElegir: id => agregarLineaCompra(id), todos: true, conservar: true,
+            dato: p => (Number(p.stock) || 0) + ' en stock · ' + formatoColones(p.costoTotalCRC) + ' costo' },
   // Armar una caja a mano: busca en todo el inventario y deja la lista abierta
   // para ir sumando varios productos
   caja: { alElegir: id => cajaAgregarProducto(id), todos: true, conservar: true, dato: p => cajaDatoBuscador(p) }
@@ -4863,6 +4936,315 @@ async function guardarVenta() {
   }
 }
 
+// ---------- Compras en camino ----------
+// Una compra hecha afuera (Amazon, Sephora…) que todavía no llegó. Se anota UNA
+// vez: productos y precio. El casillero se pone al final, cuando llega y lo
+// cobran: ahí el panel lo reparte entre los productos (proporcional a su
+// precio), los mete al inventario con el costo final y anota el pago del
+// casillero en Finanzas. Nada se escribe a mano en Movimientos.
+let lineasCompra = [];       // [{ id | null, nombre, cantidad, precio }]
+let llegadaCompraId = null;
+
+function codigoCompra() { return 'C' + Date.now().toString(36).slice(-5).toUpperCase(); }
+
+function itemsDeCompra(c) {
+  try { const v = JSON.parse(c.items || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+}
+function comprasEnCamino() { return (estado.compras || []).filter(c => String(c.estado) === 'En camino'); }
+function compraPorId(id) { return (estado.compras || []).find(c => String(c.id) === String(id)); }
+
+// Lo que ya se pagó por los productos, en colones (sin el casillero)
+function valorCompraCRC(c) {
+  const tc = Number(c.tipoCambio) || 1;
+  const base = itemsDeCompra(c).reduce((s, it) => s + (Number(it.cantidad) || 0) * (Number(it.precio) || 0), 0);
+  return Math.round(base * tc);
+}
+function valorEnCamino() { return comprasEnCamino().reduce((s, c) => s + valorCompraCRC(c), 0); }
+
+function nuevaCompra() {
+  lineasCompra = [];
+  document.getElementById('busq-compra').value = '';
+  cerrarBuscador('compra');
+  document.getElementById('cTienda').value = 'Amazon';
+  document.getElementById('cFecha').value = hoyISO();
+  document.getElementById('cMoneda').value = 'USD';
+  document.getElementById('cTipoCambio').value = valorConfig('tipoCambio', 520);
+  document.getElementById('cCasillero').value = '';
+  document.getElementById('cPago').value = 'caja';
+  document.getElementById('cNuevoNombre').value = '';
+  llenarSelectorSocios('cSocio');
+  renderCompraForm();
+  abrirFormulario('formCompra');
+}
+
+function agregarLineaCompra(id) {
+  const p = productoPorId(id);
+  if (!p) return;
+  const ya = lineasCompra.find(l => String(l.id) === String(id));
+  if (ya) ya.cantidad = (Number(ya.cantidad) || 0) + 1;
+  else lineasCompra.push({ id: p.id, nombre: etiquetaProducto(p), cantidad: 1, precio: '' });
+  renderCompraForm();
+}
+
+function agregarLineaCompraNueva() {
+  const caja = document.getElementById('cNuevoNombre');
+  const nombre = caja.value.trim();
+  if (!nombre) { mostrarToast('Escribe el nombre del producto nuevo.'); return; }
+  lineasCompra.push({ id: null, nombre, cantidad: 1, precio: '' });
+  caja.value = '';
+  renderCompraForm();
+}
+
+function cambiarLineaCompra(i, campo, valor) {
+  if (!lineasCompra[i]) return;
+  lineasCompra[i][campo] = valor;
+  renderCompraResumen();   // sin redibujar las líneas: así no se pierde el cursor
+}
+function quitarLineaCompra(i) { lineasCompra.splice(i, 1); renderCompraForm(); }
+
+function datosCompraForm() {
+  const usd = document.getElementById('cMoneda').value === 'USD';
+  const tc = usd ? parseMonto(document.getElementById('cTipoCambio').value) : 1;
+  const lineas = lineasCompra.map(l => ({
+    id: l.id, nombre: l.nombre,
+    cantidad: Math.max(1, Math.floor(Number(l.cantidad) || 0)),
+    precio: parseMonto(l.precio) || 0
+  }));
+  const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
+  return { usd, tc, lineas, total, totalCRC: Math.round(total * (tc || 0)) };
+}
+
+function renderCompraForm() {
+  const usd = document.getElementById('cMoneda').value === 'USD';
+  document.getElementById('cTipoCambioWrap').classList.toggle('oculto', !usd);
+  const simbolo = usd ? '$' : '₡';
+  document.getElementById('cLineas').innerHTML = lineasCompra.length
+    ? lineasCompra.map((l, i) => `<div class="lineaVenta" style="gap:8px;flex-wrap:wrap">
+        <span class="lvNombre">${escaparHtml(l.nombre)}${l.id == null ? ' <span class="badge peach">nuevo</span>' : ''}</span>
+        <input type="number" min="1" value="${Number(l.cantidad) || 1}" style="width:70px" aria-label="Cantidad"
+               oninput="cambiarLineaCompra(${i}, 'cantidad', this.value)" />
+        <input type="text" inputmode="decimal" value="${escaparHtml(l.precio)}" placeholder="Precio c/u ${simbolo}" style="width:120px"
+               aria-label="Precio de cada uno" oninput="cambiarLineaCompra(${i}, 'precio', this.value)" />
+        <button type="button" class="secundario" onclick="quitarLineaCompra(${i})">Quitar</button>
+      </div>`).join('')
+    : '<div class="vacio">Busca y agrega los productos que compraste.</div>';
+  renderCompraResumen();
+}
+
+function renderCompraResumen() {
+  document.getElementById('cSocioWrap').classList.toggle('oculto', document.getElementById('cPago').value !== 'socio');
+  const caja = document.getElementById('cResumen');
+  const d = datosCompraForm();
+  if (!d.lineas.length) { caja.innerHTML = ''; return; }
+  const unidades = d.lineas.reduce((s, l) => s + l.cantidad, 0);
+  const pago = document.getElementById('cPago').value;
+  const est = parseMonto(document.getElementById('cCasillero').value) || 0;
+  caja.innerHTML = `<div class="lineasVenta"><div class="lineaVenta" style="display:block;line-height:1.6">
+      <b>${unidades} unidad${unidades === 1 ? '' : 'es'} · ${d.usd ? '$' + d.total.toFixed(2) + ' = ' : ''}${formatoColones(d.totalCRC)}</b>
+      <div style="color:var(--brown-soft);margin-top:4px">En Finanzas queda <b>una sola compra</b> de ${formatoColones(d.totalCRC)}${pago === 'socio' ? ' pagada por un socio' : ' con plata del negocio'}. El casillero se suma cuando llegue.</div>
+      ${est > 0 ? `<div style="color:var(--brown-soft)">Casillero estimado: ${d.usd ? '$' + est : formatoColones(est)} (solo de referencia).</div>` : ''}
+    </div></div>`;
+}
+
+async function guardarCompra() {
+  const d = datosCompraForm();
+  if (!d.lineas.length) { mostrarToast('Agrega al menos un producto.'); return; }
+  if (d.lineas.some(l => !(l.precio > 0))) { mostrarToast('Falta el precio de algún producto.'); return; }
+  if (!(d.tc > 0)) { mostrarToast('Pon el tipo de cambio.'); return; }
+  const tienda = document.getElementById('cTienda').value.trim() || 'Compra';
+  const pago = document.getElementById('cPago').value;
+  const socio = document.getElementById('cSocio').value;
+  const codigo = codigoCompra();
+  const ops = [{ accion: 'agregar_fila', hoja: 'Compras', fila: {
+    id: '', codigo, fecha: document.getElementById('cFecha').value || hoyISO(), tienda,
+    moneda: d.usd ? 'USD' : 'CRC', tipoCambio: d.tc, estado: 'En camino',
+    items: JSON.stringify(d.lineas), total: d.total,
+    casilleroEstimado: parseMonto(document.getElementById('cCasillero').value) || '',
+    casilleroRealCRC: '', pago, socio: pago === 'socio' ? socio : '', fechaLlegada: '', notas: ''
+  } }].concat(movimientosDeCompra(d.totalCRC, pago, socio, `Compra en camino ${codigo} · ${tienda}`));
+
+  const lote = await apiLote(ops);
+  const res = lote.resultados || [];
+  if (!res[0] || !res[0].ok) { mostrarToast('No se pudo guardar la compra: ' + ((res[0] && res[0].error) || lote.error || 'error')); return; }
+  if (!lote.ok) mostrarToast('La compra se guardó, pero algo de Finanzas falló. Revisa Movimientos.');
+  document.getElementById('formCompra').classList.add('oculto');
+  lineasCompra = [];
+  await refrescarTrasGuardar('Compra anotada: queda en camino.', ['Compras', 'Movimientos']);
+}
+
+function renderCompras() {
+  const caja = document.getElementById('listaCompras');
+  if (!caja) return;
+  const abiertas = comprasEnCamino();
+  const recibidas = (estado.compras || []).filter(c => String(c.estado) === 'Recibida').slice(-3).reverse();
+  if (!abiertas.length && !recibidas.length) { caja.innerHTML = ''; return; }
+  const tarjeta = c => {
+    const items = itemsDeCompra(c);
+    const unidades = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+    const usd = String(c.moneda) === 'USD';
+    const est = Number(c.casilleroEstimado) || 0;
+    return `<div class="lineaVenta" style="display:block;line-height:1.6;margin-bottom:8px">
+      <b>${escaparHtml(c.tienda)}</b> · ${escaparHtml(String(c.fecha || '').slice(0, 10))}
+      <span class="badge peach">${escaparHtml(c.codigo)}</span>
+      <div style="color:var(--brown-soft)">${items.length} producto${items.length === 1 ? '' : 's'} · ${unidades} unidad${unidades === 1 ? '' : 'es'} ·
+        ${usd ? '$' + (Number(c.total) || 0).toFixed(2) + ' = ' : ''}${formatoColones(valorCompraCRC(c))}
+        ${est > 0 ? ' · casillero estimado ' + (usd ? '$' + est : formatoColones(est)) : ''}</div>
+      <div style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(items.map(it => (it.cantidad || 1) + '× ' + it.nombre).join(' · '))}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button type="button" onclick="abrirLlegada('${escaparHtml(c.id)}')">Ya llegó</button>
+        <button type="button" class="secundario" onclick="cancelarCompra('${escaparHtml(c.id)}')">Cancelar compra</button>
+      </div>
+    </div>`;
+  };
+  caja.innerHTML = (abiertas.length
+      ? `<h3 style="margin:14px 0 8px">En camino (${abiertas.length})</h3>` + abiertas.map(tarjeta).join('')
+      : '') +
+    (recibidas.length
+      ? `<p class="ayudaTienda" style="margin:10px 0 0">Últimas recibidas: ${recibidas.map(c => escaparHtml(c.tienda) + ' ' + escaparHtml(c.codigo) + ' (' + escaparHtml(String(c.fechaLlegada || '').slice(0, 10)) + ')').join(' · ')}</p>`
+      : '');
+}
+
+function abrirLlegada(id) {
+  const c = compraPorId(id);
+  if (!c) return;
+  llegadaCompraId = c.id;
+  const usd = String(c.moneda) === 'USD';
+  document.getElementById('lTitulo').textContent = `Llegó la compra de ${c.tienda} (${c.codigo})`;
+  document.getElementById('lCasillero').value = '';
+  document.getElementById('lMoneda').value = 'USD';
+  document.getElementById('lTipoCambio').value = usd && Number(c.tipoCambio) > 1 ? c.tipoCambio : valorConfig('tipoCambio', 520);
+  document.getElementById('lPago').value = String(c.pago) === 'socio' ? 'socio' : 'caja';
+  llenarSelectorSocios('lSocio', c.socio);
+  renderLlegada();
+  abrirFormulario('formLlegada');
+}
+
+// Reparte el casillero entre los productos según lo que vale cada uno y calcula
+// el costo final (promedio ponderado con lo que ya hubiera en stock)
+function calculoLlegada() {
+  const c = compraPorId(llegadaCompraId);
+  if (!c) return null;
+  const tcCompra = Number(c.tipoCambio) || 1;
+  const usdCas = document.getElementById('lMoneda').value === 'USD';
+  const tcCas = usdCas ? parseMonto(document.getElementById('lTipoCambio').value) : 1;
+  const casCRC = Math.round((parseMonto(document.getElementById('lCasillero').value) || 0) * (tcCas || 0));
+  const grupos = [];
+  itemsDeCompra(c).forEach(it => {
+    const clave = it.id != null ? 'p' + it.id : 'n' + it.nombre;
+    let g = grupos.find(x => x.clave === clave);
+    if (!g) { g = { clave, id: it.id, nombre: it.nombre, cantidad: 0, valorCRC: 0 }; grupos.push(g); }
+    g.cantidad += Number(it.cantidad) || 0;
+    g.valorCRC += (Number(it.cantidad) || 0) * (Number(it.precio) || 0) * tcCompra;
+  });
+  const totalValor = grupos.reduce((s, g) => s + g.valorCRC, 0) || 1;
+  grupos.forEach(g => {
+    g.casillero = casCRC * g.valorCRC / totalValor;
+    g.costoUnit = g.cantidad > 0 ? Math.round((g.valorCRC + g.casillero) / g.cantidad) : 0;
+    g.p = g.id != null ? productoPorId(g.id) : null;
+    if (g.p) {
+      const stockActual = Number(g.p.stock) || 0;
+      const stockAntes = Math.max(stockActual, 0);
+      const costoAntes = Number(g.p.costoTotalCRC) || 0;
+      g.stockDespues = stockTrasEntrada(stockActual, g.cantidad);
+      g.promedio = stockAntes > 0 && costoAntes > 0
+        ? Math.round((stockAntes * costoAntes + g.cantidad * g.costoUnit) / g.stockDespues)
+        : g.costoUnit;
+    }
+  });
+  return { c, casCRC, tcCas, usdCas, grupos };
+}
+
+function renderLlegada() {
+  const usd = document.getElementById('lMoneda').value === 'USD';
+  document.getElementById('lTipoCambioWrap').classList.toggle('oculto', !usd);
+  document.getElementById('lSocioWrap').classList.toggle('oculto', document.getElementById('lPago').value !== 'socio');
+  const caja = document.getElementById('lResumen');
+  const r = calculoLlegada();
+  if (!r) { caja.innerHTML = ''; return; }
+  const filas = r.grupos.map(g => `<tr><td>${escaparHtml(g.nombre)}${g.p ? '' : ' <span class="badge peach">nuevo: créalo en Nuevo producto</span>'}</td>
+      <td style="text-align:right">${g.cantidad}</td>
+      <td style="text-align:right"><b>${formatoColones(g.costoUnit)}</b></td>
+      <td style="text-align:right">${g.p ? g.stockDespues : '—'}</td></tr>`).join('');
+  const nuevos = r.grupos.filter(g => !g.p).length;
+  const avisos = r.grupos.filter(g => g.p).map(g => {
+    const venta = precioConDescuento(g.p.precioVenta, g.p.descuento);
+    return venta > 0 && g.promedio >= venta ? `${etiquetaProducto(g.p)}: el costo (${formatoColones(g.promedio)}) queda igual o sobre su precio de venta (${formatoColones(venta)}).` : '';
+  }).filter(Boolean);
+  caja.innerHTML = `<div class="lineasVenta"><div class="lineaVenta" style="display:block;line-height:1.6">
+      <div class="tablaScroll"><table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left">Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Costo c/u</th><th style="text-align:right">Quedan</th></tr></thead><tbody>${filas}</tbody></table></div>
+      <div style="color:var(--brown-soft);margin-top:6px">Casillero ${formatoColones(r.casCRC)} repartido según lo que vale cada producto.
+        ${r.casCRC > 0 ? 'En Finanzas se anota ese pago como compra (casillero / flete).' : ''}
+        ${nuevos ? '<br><b>' + nuevos + ' producto(s) nuevo(s)</b>: no entran solos al inventario; créalos con «Nuevo producto» usando el costo de arriba.' : ''}</div>
+      ${avisos.map(a => `<div style="color:var(--coral-dark);font-weight:600;margin-top:4px">${escaparHtml(a)}</div>`).join('')}
+    </div></div>`;
+}
+
+async function confirmarLlegada() {
+  const r = calculoLlegada();
+  if (!r) { mostrarToast('No encontré la compra.'); return; }
+  if (r.usdCas && !(r.tcCas > 0)) { mostrarToast('Pon el tipo de cambio del casillero.'); return; }
+  const campo = document.getElementById('lCasillero').value.trim();
+  if (campo === '' && !confirm('No pusiste lo del casillero. ¿Esta compra llegó sin casillero ni flete?')) return;
+  const c = r.c;
+  const hoy = hoyISO();
+  const usuario = estado.usuario ? estado.usuario.usuario : '';
+
+  // 1) Se marca como recibida PRIMERO y sola: si algo más fallara, no se puede
+  //    volver a dar «Ya llegó» y sumar el stock dos veces.
+  const marca = await apiLote([{ accion: 'editar_fila', hoja: 'Compras', id: c.id,
+    fila: { ...c, estado: 'Recibida', casilleroRealCRC: r.casCRC, fechaLlegada: hoy } }]);
+  const m0 = (marca.resultados || [])[0];
+  if (!m0 || !m0.ok) { mostrarToast('No se pudo marcar la compra como recibida (no se cambió nada): ' + ((m0 && m0.error) || marca.error || '')); return; }
+
+  // 2) Inventario con el costo final + el pago del casillero en Finanzas
+  const ops = [];
+  const filasGuardadas = [];
+  r.grupos.forEach(g => {
+    if (!g.p) return;
+    const fila = {
+      ...filaProductoConStock(g.p, g.stockDespues),
+      costoCompra: g.promedio, moneda: 'CRC', tipoCambio: '', costoTotalCRC: g.promedio, modalidad: 'stock'
+    };
+    filasGuardadas.push({ p: g.p, fila });
+    ops.push({ accion: 'editar_fila', hoja: 'Productos', id: g.p.id, fila });
+  });
+  if (r.casCRC > 0) {
+    const pago = document.getElementById('lPago').value;
+    const socio = document.getElementById('lSocio').value;
+    const descripcion = `Casillero ${c.codigo} · ${c.tienda}`;
+    if (pago === 'socio') ops.push({ accion: 'agregar_fila', hoja: 'Movimientos', fila: {
+      id: '', fecha: hoy, tipo: 'aporte', monto: r.casCRC, socio, categoria: 'Pagó con su plata', descripcion, usuario } });
+    ops.push({ accion: 'agregar_fila', hoja: 'Movimientos', fila: {
+      id: '', fecha: hoy, tipo: 'compra', monto: r.casCRC, socio: pago === 'socio' ? socio : '',
+      categoria: 'Casillero / flete', descripcion, usuario } });
+  }
+  let todoBien = true;
+  if (ops.length) {
+    const lote = await apiLote(ops);
+    todoBien = lote.ok;
+    (lote.resultados || []).forEach((res, i) => {
+      if (res && res.ok && filasGuardadas[i]) Object.assign(filasGuardadas[i].p, filasGuardadas[i].fila);
+    });
+  }
+  llegadaCompraId = null;
+  document.getElementById('formLlegada').classList.add('oculto');
+  await refrescarTrasGuardar(todoBien
+    ? 'Listo: la compra llegó, el inventario y el casillero quedaron anotados.'
+    : 'La compra quedó como recibida, pero algo no se guardó. Revisa Inventario y Movimientos.', ['Compras', 'Movimientos']);
+}
+
+async function cancelarCompra(id) {
+  const c = compraPorId(id);
+  if (!c) return;
+  if (!confirm(`¿Cancelar la compra ${c.codigo} de ${c.tienda}? También se borra lo que se anotó en Finanzas por ella. No se puede deshacer.`)) return;
+  const ops = [{ accion: 'eliminar_fila', hoja: 'Compras', id: c.id }];
+  (estado.movimientos || []).filter(m => String(m.descripcion || '').includes(c.codigo))
+    .forEach(m => ops.push({ accion: 'eliminar_fila', hoja: 'Movimientos', id: m.id }));
+  const lote = await apiLote(ops);
+  if (!lote.ok) mostrarToast('Algo no se pudo borrar. Revisa Movimientos.');
+  await refrescarTrasGuardar('Compra cancelada.', ['Compras', 'Movimientos']);
+}
+
 // ---------- Finanzas ----------
 
 function renderMovimientos() {
@@ -4875,6 +5257,7 @@ function renderMovimientos() {
   poner('fCaja', f.caja, f.caja < 0 ? 'var(--coral-dark)' : '');
   poner('fPorCobrar', f.porCobrar, f.porCobrar > 0 ? 'var(--debe)' : '');
   poner('fInventario', f.inventario);
+  poner('fEnCamino', f.enCamino);
   poner('fVale', f.vale);
   poner('fPuesto', f.puesto);
   poner('fGanancia', f.ganancia, f.ganancia >= 0 ? 'var(--entra)' : 'var(--coral-dark)');
