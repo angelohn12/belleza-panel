@@ -1335,7 +1335,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14f · cajas mix y con toque de gama</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14g · columnas de cajas más claras</p>
         </div>
       </div>
       <div class="panel">
@@ -6518,13 +6518,17 @@ function cajaTablaPiezas() {
     ].concat(conCant ? [cant] : []).concat([
       formatoColones(i.costo), formatoColones(i.detalle),
       `<b id="cjParte${k}">${formatoColones(linea)}</b>` + (g.cantidad > 1 ? `<br><span id="cjParteU${k}" style="color:var(--brown-soft);font-size:12px">${formatoColones(Math.round(linea / g.cantidad))} c/u</span>` : ''),
+      `<span id="cjGanTu${k}" style="color:#2E7D4F;font-weight:500">${formatoColones(linea - i.costo * g.cantidad)}</span>`,
+      `<span id="cjGanElla${k}">${formatoColones(i.detalle * g.cantidad - linea)}</span>`,
       accion
     ]);
   });
   const total = ['<b>Total</b>', '', ''].concat(conCant ? [''] : []).concat([
     '<b>' + formatoColones(suma('costo')) + '</b>', '<b>' + formatoColones(suma('detalle')) + '</b>',
-    '<b id="cjParteTotal">' + formatoColones(c.precio) + '</b>', '']);
-  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th>${conCant ? '<th>Cantidad</th>' : ''}<th>Costo c/u</th><th>Detalle c/u (suelta)</th><th>En la caja (mayor)</th><th></th></tr></thead>
+    '<b id="cjParteTotal">' + formatoColones(c.precio) + '</b>',
+    '<b id="cjGanTuTotal" style="color:#2E7D4F">' + formatoColones(c.precio - suma('costo')) + '</b>',
+    '<b id="cjGanEllaTotal">' + formatoColones(suma('detalle') - c.precio) + '</b>', '']);
+  return `<div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Gama</th><th>Disponible</th>${conCant ? '<th>Cantidad</th>' : ''}<th title="Lo que te costó traer cada una (producto + envío)">Te cuesta c/u</th><th title="Precio de cada una suelta en la tienda">Precio en tienda c/u</th><th title="Lo que le cobrás a la clienta por este producto dentro de la caja">Le cobrás en la caja</th><th title="Le cobrás − te cuesta">Vos ganás</th><th title="Lo que ella gana si lo revende a precio de tienda">Ella gana revendiendo</th><th></th></tr></thead>
     <tbody>${filas.concat([total]).map(f => `<tr>${f.map(x => `<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -6562,13 +6566,13 @@ function cajaRender() {
     </div>
     ${c.nivel ? cajaListaCompraHtml() : ''}
     <div class="tarjetas">
-      <div class="tarjeta"><p class="etiqueta">Tu costo</p><p class="valor" id="cjCosto"></p></div>
-      <div class="tarjeta"><p class="etiqueta">Precio de la caja (mayor)</p>
+      <div class="tarjeta"><p class="etiqueta">Te cuesta la caja</p><p class="valor" id="cjCosto"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Le cobrás la caja a</p>
         <input id="cjPrecio" type="number" min="0" step="500" style="font-size:22px;font-weight:500;padding:4px 8px" oninput="cajaPrecioEditado()">
         <p class="fNota"><a href="#" onclick="cajaUsarPrecioJusto();return false">Usar el precio justo para ella</a></p></div>
-      <div class="tarjeta"><p class="etiqueta">Tu ganancia</p><p class="valor" id="cjGanTu"></p><p class="fNota" id="cjGanTuNota"></p></div>
-      <div class="tarjeta"><p class="etiqueta">Valor al detalle (si se vendieran sueltas)</p><p class="valor" id="cjValor"></p><p class="fNota" id="cjEntrega"></p></div>
-      <div class="tarjeta"><p class="etiqueta">Ella gana revendiendo</p><p class="valor" id="cjGanElla"></p><p class="fNota" id="cjGanEllaNota"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Vos ganás</p><p class="valor" id="cjGanTu"></p><p class="fNota" id="cjGanTuNota"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Vale en tienda (todo suelto)</p><p class="valor" id="cjValor"></p><p class="fNota" id="cjEntrega"></p></div>
+      <div class="tarjeta"><p class="etiqueta">Ella gana revendiendo todo</p><p class="valor" id="cjGanElla"></p><p class="fNota" id="cjGanEllaNota"></p></div>
     </div>
     <div class="panel oculto" id="cajaVentaForm">
       <h2>Registrar venta de la caja</h2>
@@ -6626,9 +6630,18 @@ function cajaActualizarNumeros() {
     if (el) el.textContent = formatoColones(linea);
     const u = document.getElementById('cjParteU' + k);
     if (u) u.textContent = formatoColones(Math.round(linea / g.cantidad)) + ' c/u';
+    const gt = document.getElementById('cjGanTu' + k);
+    if (gt) gt.textContent = formatoColones(linea - g.item.costo * g.cantidad);
+    const ge = document.getElementById('cjGanElla' + k);
+    if (ge) ge.textContent = formatoColones(g.item.detalle * g.cantidad - linea);
   });
   const tot = document.getElementById('cjParteTotal');
   if (tot) tot.textContent = formatoColones(c.precio);
+  const sumaCampo = campo => c.items.reduce((s, i) => s + i[campo], 0);
+  const gtt = document.getElementById('cjGanTuTotal');
+  if (gtt) gtt.textContent = formatoColones(c.precio - sumaCampo('costo'));
+  const get = document.getElementById('cjGanEllaTotal');
+  if (get) get.textContent = formatoColones(sumaCampo('detalle') - c.precio);
 }
 
 function cajaPrecioEditado() {
