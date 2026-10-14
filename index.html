@@ -1109,7 +1109,7 @@
         </div>
         <p class="ayudaTienda" id="cajaAyudaModo"></p>
         <div class="cjSug" style="margin-bottom:14px">
-          <p class="ayudaTienda" style="margin:0 0 6px"><b>Caja para revender</b>: elegí el nivel y el tamaño y se arma sola (varias unidades de cada producto, sin SHEGLAM, con 10 % de ganancia). Tocá «Otra opción» para ver más combinaciones.</p>
+          <p class="ayudaTienda" style="margin:0 0 6px"><b>Caja para revender</b>: elegí el nivel y el tamaño y se arma sola (varias unidades de cada producto, sin SHEGLAM ni productos de la caja de ₡1.500, con 10 % de ganancia). Tocá «Otra opción» para ver más combinaciones.</p>
           <div class="filtrosTienda" id="cajaNiveles" style="margin-bottom:6px">
             <button class="chipT" data-nivel="economica" onclick="cajaNivelElegir('economica')">Económica</button>
             <button class="chipT" data-nivel="media" onclick="cajaNivelElegir('media')">Media</button>
@@ -1335,7 +1335,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14g · columnas de cajas más claras</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14h · cajas sin productos de ₡1.500</p>
         </div>
       </div>
       <div class="panel">
@@ -6263,7 +6263,10 @@ function misteriosaLineasPedido(items, precio) {
 // Se toca un nivel y un tamaño y el sistema arma la caja con VARIAS unidades de
 // cada producto (3 a 6, repartidas entre tonos) y dice qué hay que comprar.
 const CAJA_MARCAS_EXCLUIDAS = ['sheglam'];   // nunca entran en cajas sugeridas
-const CAJA_NIVEL_GANANCIA = 10;              // % sobre el costo (precio al por mayor)
+const CAJA_NIVEL_GANANCIA = 10;
+// Lo que costó ₡1.500 o menos viene de la caja barata del inicio: no se repite,
+// así que las cajas por nivel se calculan solo con productos a precio normal.
+const CAJA_COSTO_LOTE_MAX = 1500;              // % sobre el costo (precio al por mayor)
 const CAJA_NIVEL_TAMANOS = [25, 50, 100];
 const CAJA_NIVELES = {
   economica: { nombre: 'Económica', marcas: ['wet n wild', 'e.l.f.', 'revolution', 'essence', 'physicians formula', 'hard candy', 'colourpop'] },
@@ -6281,7 +6284,7 @@ function cajaPoolNivel(candidatos, nivel) {
   const n = CAJA_NIVELES[nivel];
   if (!n) return [];
   const ok = new Set(n.marcas.map(cajaMarcaClave));
-  return candidatos.filter(c => ok.has(cajaMarcaClave(c.marca)) && !cajaMarcaExcluida(c.marca));
+  return candidatos.filter(c => ok.has(cajaMarcaClave(c.marca)) && !cajaMarcaExcluida(c.marca) && c.costo > CAJA_COSTO_LOTE_MAX);
 }
 function cajaFamiliasDe(pool) {
   const fam = {}, orden = [];
