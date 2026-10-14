@@ -381,6 +381,30 @@
     color:#fff;
   }
   main{padding:24px;max-width:1100px;margin:0 auto;}
+  .navLogo{display:none;}
+  /* Menu lateral estilo tienda (14/10/2026): solo en pantallas anchas; en celular se mantienen las pestañas de arriba */
+  @media(min-width:900px){
+    nav.tabs{position:fixed;left:0;top:0;bottom:0;width:216px;flex-direction:column;flex-wrap:nowrap;gap:2px;padding:20px 12px;background:#3B0F1F;border:0;overflow-y:auto;z-index:30;}
+    nav.tabs .navLogo{display:flex;align-items:center;gap:9px;margin:0 6px 20px;color:#fff;font:600 18px Poppins,-apple-system,Segoe UI,sans-serif;line-height:1;}
+    nav.tabs .navLogo svg{width:20px;height:auto;flex:0 0 auto;}
+    nav.tabs .navLogo small{display:block;font-size:6.5px;font-weight:400;letter-spacing:.5em;text-transform:uppercase;color:#C8A3AC;margin-top:4px;}
+    nav.tabs button.tab{color:#E4CDD3;text-align:left;width:100%;border-radius:8px;display:flex;justify-content:space-between;align-items:center;}
+    nav.tabs button.tab:hover{background:rgba(255,255,255,.09);}
+    nav.tabs button.tab.activo{background:rgba(255,255,255,.15);color:#fff;}
+    header.topbar{margin-left:216px;justify-content:flex-end;}
+    header.topbar h1{display:none;}
+    .avisoPedidos{margin-left:216px;}
+    main{margin:0 auto 0 216px;max-width:none;}
+    main > section{max-width:1100px;}
+  }
+  .paraHoy{margin-bottom:20px;}
+  .paraHoy h2{font-size:16px;font-weight:600;margin:0 0 6px;}
+  .paraHoy .itemHoy{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--border);font-size:14px;}
+  .paraHoy .itemHoy:first-of-type{border-top:0;}
+  .paraHoy .itemHoy .cant{font-weight:600;font-variant-numeric:tabular-nums;color:var(--coral);}
+  .paraHoy .itemHoy .ir{padding:6px 12px;font-size:12.5px;}
+  .paraHoy .itemHoy .ir.suave{background:#fff;color:var(--coral);border:1px solid var(--coral);}
+  .paraHoy .todoAlDia{color:#1E6B49;font-size:14px;padding:6px 0;}
   .oculto{display:none !important;}
 
   .tarjetas{
@@ -533,6 +557,7 @@
   </div>
 
   <nav class="tabs">
+    <div class="navLogo" aria-hidden="true"><svg viewBox="0 0 100 120" aria-hidden="true"><path d="M16 60A34 34 0 0 1 84 60Z" fill="#F2B8C0"/><path d="M22 66H78C78 94 66 112 50 112S22 94 22 66Z" fill="#FFFFFF"/><path d="M33 78C34 90 38 99 44 104" stroke="#6E1D3B" stroke-width="5" stroke-linecap="round" fill="none"/><rect x="47" y="14" width="6" height="14" rx="3" fill="#F2B8C0"/></svg><span>avellana<small>Studio</small></span></div>
     <button class="tab" data-tab="resumen" onclick="mostrarTab('resumen')">Resumen</button>
     <button class="tab" data-tab="tendencias" onclick="mostrarTab('tendencias')">Tendencias</button>
     <button class="tab" data-tab="pedidos" onclick="mostrarTab('pedidos')">Pedidos<span class="chivo oculto" id="chivoTab">0</span></button>
@@ -550,6 +575,7 @@
 
     <!-- ---------- RESUMEN ---------- -->
     <section id="tab-resumen">
+      <div class="panel paraHoy" id="paraHoy"><h2>Para hoy</h2><div id="paraHoyLista"></div></div>
       <div class="tarjetas">
         <div class="tarjeta"><p class="etiqueta">Plata disponible</p><p class="valor" id="rSaldo">₡0</p><p class="fNota">efectivo y cuenta del banco</p></div>
         <div class="tarjeta"><p class="etiqueta">Productos en stock</p><p class="valor" id="rStock">0</p></div>
@@ -1288,7 +1314,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14 · marca nueva (logo y colores)</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14b · menú lateral y bloque Para hoy</p>
         </div>
       </div>
       <div class="panel">
@@ -1702,7 +1728,26 @@ function renderTodo() {
 
 // ---------- Resumen ----------
 
+// Lista de lo que hay que atender hoy: sale de datos que ya existen, no guarda nada
+function renderParaHoy() {
+  const caja = document.getElementById('paraHoyLista');
+  if (!caja) return;
+  const items = [];
+  const nuevos = pedidosPendientes().length;
+  if (nuevos) items.push([nuevos === 1 ? '1 pedido de la tienda espera respuesta' : nuevos + ' pedidos de la tienda esperan respuesta', 'Ver pedidos', 'pedidos', false]);
+  const enc = encargosPendientes().length;
+  if (enc) items.push([enc === 1 ? '1 encargo por confirmar' : enc + ' encargos por confirmar', 'Ver encargos', 'pedidos', false]);
+  const pocos = estado.productos.filter(p => { const s = Number(p.stock) || 0; return s >= 1 && s <= 3; }).length;
+  if (pocos) items.push([pocos === 1 ? '1 producto con 3 unidades o menos' : pocos + ' productos con 3 unidades o menos', 'Revisar', 'inventario', true]);
+  const conSaldo = estado.clientes.filter(c => (totalDebeCliente(c.id) - totalAbonadoCliente(c.id)) > 0.5).length;
+  if (conSaldo) items.push([conSaldo === 1 ? '1 clienta con saldo pendiente' : conSaldo + ' clientas con saldo pendiente', 'Ver', 'clientes', true]);
+  caja.innerHTML = items.length
+    ? items.map(([txt, btn, tab, suave]) => `<div class="itemHoy"><span>${txt}</span><button class="ir${suave ? ' suave' : ''}" onclick="mostrarTab('${tab}')">${btn}</button></div>`).join('')
+    : '<div class="todoAlDia">Todo al día: no hay nada pendiente.</div>';
+}
+
 function renderResumen() {
+  renderParaHoy();
   const stockTotal = estado.productos.reduce((suma, p) => suma + (Number(p.stock) || 0), 0);
   document.getElementById('rStock').textContent = stockTotal;
   document.getElementById('rClientes').textContent = estado.clientes.length;
