@@ -1320,7 +1320,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14c · punto de equilibrio con lo invertido en total</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14d · punto de equilibrio cuenta el ajuste de saldo</p>
         </div>
       </div>
       <div class="panel">
@@ -1891,7 +1891,10 @@ function renderPuntoEquilibrio() {
   const invertido = sumaMovimientos('compra') + sumaMovimientos('gasto');
   const pusieronSocios = Math.max(f.puesto, 0);
   const deVentas = Math.max(invertido - pusieronSocios, 0);
-  const cobrado = plataCobradaPorVentas();
+  const cobradoRegistrado = plataCobradaPorVentas();
+  // Plata de ventas que entro pero no quedo anotada como venta (ajuste de saldo contra el banco)
+  const ajusteVentas = sumaMovimientos('ingreso');
+  const cobrado = cobradoRegistrado + ajusteVentas;
 
   if (invertido <= 0) {
     texto.textContent = 'Registrá en Finanzas las compras de mercadería y los gastos para ver cuánto han recuperado.';
@@ -1917,7 +1920,9 @@ function renderPuntoEquilibrio() {
       fila('Invertido en total (mercadería y gastos)', invertido) +
       fila('Lo pusieron los socios de su bolsa', pusieronSocios, true) +
       fila('Salió de lo que entró por ventas', deVentas, true) +
-      fila('Ya recuperado con ventas cobradas', cobrado) +
+      fila('Cobrado de ventas registradas', cobradoRegistrado, true) +
+      (ajusteVentas ? fila('Plata de ventas sin anotar (ajuste de saldo)', ajusteVentas, true) : '') +
+      fila('Ya recuperado en total', cobrado) +
       fila('Les deben (clientas con saldo)', f.porCobrar) +
       fila('Mercadería que todavía tienen (al costo)', f.inventario + f.enCamino) +
       fila('Ganancia del negocio (lo que vale menos lo que pusieron)', f.ganancia);
