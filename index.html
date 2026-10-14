@@ -1335,7 +1335,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14h · cajas sin productos de ₡1.500</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14i · cajas sin tonos y descripción para copiar</p>
         </div>
       </div>
       <div class="panel">
@@ -6309,10 +6309,11 @@ function cajaElegirFamilia(familias, usadas, porMarca, rnd) {
 // Reparte `cantidad` unidades entre los tonos de la familia (variedad para revender).
 function cajaUnidadesFamilia(f, cantidad, rnd) {
   const tonos = f.tonos.slice().sort(() => rnd() - 0.5).sort((a, b) => (b.enStock ? 1 : 0) - (a.enStock ? 1 : 0));
-  // pocos tonos por producto (1 cada 3 unidades) para que la compra sea de varias unidades iguales
-  const usar = tonos.slice(0, Math.max(1, Math.ceil(cantidad / 3)));
+  // Sin tonos: no siempre se consiguen los mismos, se compran tonos vendibles al pedir.
+  // Se usa un solo tono como referencia (el de más stock) solo para costo y existencias.
+  const ref = tonos.slice().sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))[0];
   const sal = [];
-  for (let i = 0; i < cantidad; i++) sal.push(Object.assign({}, usar[i % usar.length], f.nivel ? { nivel: f.nivel } : {}));
+  for (let i = 0; i < cantidad; i++) sal.push(Object.assign({}, ref, { tono: '' }, f.nivel ? { nivel: f.nivel } : {}));
   return sal;
 }
 // Devuelve { items, productos, faltan }. Cada producto lleva entre 3 y 6 unidades.
@@ -6456,7 +6457,7 @@ function cajaListaCompraHtml() {
   const costoCompra = aComprar.reduce((s, x) => s + x.comprar * x.item.costo, 0);
   const filas = lista.map(x => `<tr><td>${escaparHtml([x.item.marca, x.item.nombre].filter(Boolean).join(' · '))}${x.item.tono ? '<br><span style="color:var(--brown-soft);font-size:12px">tono ' + escaparHtml(x.item.tono) + '</span>' : ''}</td><td><b>${x.comprar}</b></td><td>${x.deStock || '—'}</td><td>${formatoColones(x.item.costo)}</td><td>${formatoColones(x.comprar * x.item.costo)}</td></tr>`).join('');
   return `<div class="panel"><div class="filaBotones"><h2 style="margin:0">Lista de compra</h2><button class="secundario" onclick="cajaCopiarCompra()">Copiar lista</button></div>
-    <p class="ayudaTienda" style="margin:0 0 10px">Hay que comprar <b>${aComprar.reduce((s, x) => s + x.comprar, 0)} unidades</b> por un costo aproximado de <b>${formatoColones(costoCompra)}</b> (costo con envío, según el inventario). Lo que ya hay en stock sale de ahí.</p>
+    <p class="ayudaTienda" style="margin:0 0 10px">Hay que comprar <b>${aComprar.reduce((s, x) => s + x.comprar, 0)} unidades</b> por un costo aproximado de <b>${formatoColones(costoCompra)}</b> (costo con envío, según el inventario). Lo que ya hay en stock sale de ahí. <b>Al comprar, elegí tonos vendibles</b> (los más comunes).</p>
     <div class="tablaScroll"><table><thead><tr><th>Producto</th><th>Comprar</th><th>Ya en stock</th><th>Costo c/u</th><th>Subtotal</th></tr></thead><tbody>${filas}</tbody></table></div></div>`;
 }
 function cajaCopiarCompra() {
@@ -6487,7 +6488,15 @@ function cajaSugerir() {
   cajaRender();
 }
 
+function cajaTextoNivel(c) {
+  const lineas = cajaGrupos(c.items).map(g => '• ' + g.cantidad + ' × ' + [g.item.marca, g.item.nombre].filter(Boolean).join(' · '));
+  return 'Caja ' + c.nombre + ' — ' + c.items.length + ' piezas\n' +
+    'Maquillaje original de Estados Unidos, nuevo y sellado.\n\n' +
+    'Incluye:\n' + lineas.join('\n') + '\n\n' +
+    'Precio de la caja: ' + formatoColones(c.precio);
+}
 function cajaTextoActual() {
+  if (cajaActual.nivel) return cajaTextoNivel(cajaActual);
   const incluir = document.getElementById('cjIncluirElla') ? document.getElementById('cjIncluirElla').checked : true;
   return cajaTexto(cajaActual.tipo, cajaActual.nombre, cajaActual.items, cajaActual.precio, {
     formato: formatoColones, diasMin: ENCARGO_DIAS_MIN, diasMax: ENCARGO_DIAS_MAX, incluirGananciaElla: incluir
@@ -6596,11 +6605,11 @@ function cajaRender() {
     </div>
     <div class="panel">
       <div class="filaBotones">
-        <h2 style="margin:0">Texto para la clienta</h2>
-        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjIncluirElla" checked style="width:auto" onchange="cajaActualizarNumeros()"> Incluir cuánto gana ella</label>
+        <h2 style="margin:0">${c.nivel ? 'Descripción para copiar (Marketplace o clientas)' : 'Texto para la clienta'}</h2>
+        ${c.nivel ? '<span class="ayudaTienda" style="margin:0">Solo productos y precio total: sin costos ni tonos.</span>' : '<label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjIncluirElla" checked style="width:auto" onchange="cajaActualizarNumeros()"> Incluir cuánto gana ella</label>'}
       </div>
       <textarea id="cjTexto" readonly rows="${esMist ? 8 : Math.min(18, grupos.length + 8)}" style="margin-bottom:10px"></textarea>
-      <button onclick="cajaCopiarTexto()">Copiar texto</button>
+      <button onclick="cajaCopiarTexto()">${c.nivel ? 'Copiar descripción' : 'Copiar texto'}</button>
     </div>`;
   document.getElementById('cjPrecio').value = c.precio;
   cajaVentaClienteCambio();
