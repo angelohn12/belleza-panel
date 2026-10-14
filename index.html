@@ -7,10 +7,11 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="icon" href="favicon.ico" />
-<meta name="theme-color" content="#D24558" />
+<meta name="theme-color" content="#3B0F1F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Avellana" />
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap">
 <style>
   :root{
     /* Texto y superficies: neutro calido. Antes era cafe sobre crema, que se
@@ -19,12 +20,12 @@
     --brown:#22201E;
     --brown-soft:#6E6862;
     /* Marca: se mantiene tal cual para botones, pestana activa y encabezado */
-    --coral:#D24558;
-    --coral-dark:#A5323F;
-    --pink:#FDA6AB;
+    --coral:#6E1D3B;
+    --coral-dark:#3B0F1F;
+    --pink:#F2B8C0;
     --peach:#FAC977;
-    --mint:#C6E9C8;
-    --sage:#61A07D;
+    --mint:#E6EACF;
+    --sage:#4F5630;
     --bg:#F7F6F4;
     --surface:#FFFFFF;
     --border:#E8E5E1;
@@ -333,8 +334,9 @@
   /* ---------- App shell ---------- */
   #app{display:none;min-height:100vh;}
   header.topbar{
-    background:var(--pink);
-    padding:16px 24px;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    padding:12px 24px;
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -342,10 +344,15 @@
     gap:12px;
   }
   header.topbar h1{
-    font-size:20px;
+    font-family:Poppins,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    font-size:20px;font-weight:600;letter-spacing:-.01em;
     margin:0;
-    color:var(--brown);
+    color:#3B0F1F;
+    display:flex;align-items:center;gap:9px;line-height:1;
   }
+  header.topbar h1 .marcaSim{width:22px;height:auto;display:block;flex:0 0 auto;}
+  header.topbar h1 .marcaTxt{display:block;}
+  header.topbar h1 small{display:block;font-size:7px;font-weight:400;letter-spacing:.5em;text-transform:uppercase;color:var(--brown-soft);margin-top:4px;}
   header.topbar .usuarioInfo{
     font-size:13px;
     color:var(--brown-soft);
@@ -509,7 +516,7 @@
 <!-- ================= APP ================= -->
 <div id="app">
   <header class="topbar">
-    <h1>Avellana Studio</h1>
+    <h1 aria-label="Avellana Studio"><svg class="marcaSim" viewBox="0 0 100 120" aria-hidden="true"><path d="M16 60A34 34 0 0 1 84 60Z" fill="#3B0F1F"/><path d="M22 66H78C78 94 66 112 50 112S22 94 22 66Z" fill="#6E1D3B"/><path d="M33 78C34 90 38 99 44 104" stroke="#F2B8C0" stroke-width="5" stroke-linecap="round" fill="none"/><rect x="47" y="14" width="6" height="14" rx="3" fill="#3B0F1F"/></svg><span class="marcaTxt">avellana<small>Studio</small></span></h1>
     <div class="usuarioInfo">
       <span id="nombreUsuarioActual"></span>
       <button id="btnActualizar" class="secundario" onclick="ejecutarConBoton('btnActualizar', actualizarDatos, 'Actualizando...')">Actualizar</button>
@@ -1281,7 +1288,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-12c · compra en camino (casillero automático)</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14 · marca nueva (logo y colores)</p>
         </div>
       </div>
       <div class="panel">
@@ -1859,7 +1866,7 @@ function botonesAccion(fnEditar, fnEliminar, id) {
 // el tiempo; barras horizontales para rankings. El color siempre significa lo
 // mismo: verde = plata que entra, gris = costo, ámbar = lo que deben,
 // coral = unidades. Rojo y verde nunca van juntos en un mismo gráfico.
-const G_COLOR = { entra: '#1E8A5A', entraSuave: '#8CC5A5', costo: '#9C958D', debe: '#B0741F', marca: '#D24558' };
+const G_COLOR = { entra: '#1E8A5A', entraSuave: '#8CC5A5', costo: '#9C958D', debe: '#B0741F', marca: '#6E1D3B' };
 const G_TINTA = { grilla: '#EEEBE7', base: '#CFC9C2' };
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 
