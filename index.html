@@ -397,6 +397,11 @@
     main{margin:0 auto 0 216px;max-width:none;}
     main > section{max-width:1100px;}
   }
+  .peDetalle{margin-top:14px;font-size:14px;}
+  .peDetalle .fila{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--border);}
+  .peDetalle .fila:first-child{border-top:0;}
+  .peDetalle .fila.sub{padding-left:14px;color:var(--brown-soft);font-size:13px;}
+  .peDetalle .fila b{font-variant-numeric:tabular-nums;font-weight:600;}
   .paraHoy{margin-bottom:20px;}
   .paraHoy h2{font-size:16px;font-weight:600;margin:0 0 6px;}
   .paraHoy .itemHoy{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--border);font-size:14px;}
@@ -593,6 +598,7 @@
         <div style="background:var(--bg);border-radius:20px;height:20px;overflow:hidden;">
           <div id="peBarra" style="height:100%;background:var(--coral);width:0%;border-radius:20px;transition:width .3s;"></div>
         </div>
+        <div id="peDetalle" class="peDetalle"></div>
       </div>
       <div class="panel">
         <h2>Stock bajo (5 unidades o menos)</h2>
@@ -1314,7 +1320,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14b · menú lateral y bloque Para hoy</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14c · punto de equilibrio con lo invertido en total</p>
         </div>
       </div>
       <div class="panel">
@@ -1866,26 +1872,55 @@ function resumenFinanciero() {
   return { caja, porCobrar, inventario, enCamino, vale, puesto, porSocio, ganancia: vale - puesto };
 }
 
+// Punto de equilibrio (14/10/2026): se mide contra TODO lo que se ha invertido
+// (mercaderia + gastos), no solo contra lo que pusieron los socios de su bolsa.
+// Lo recuperado es plata ya cobrada por ventas (contado + abonos).
+function plataCobradaPorVentas() {
+  let t = 0;
+  estado.ventas.forEach(v => { if (v.formaPago !== 'A pagos') t += Number(v.precioVenta) || 0; });
+  estado.abonos.forEach(a => { t += Number(a.monto) || 0; });
+  return t;
+}
+
 function renderPuntoEquilibrio() {
   const f = resumenFinanciero();
   const texto = document.getElementById('peTexto');
   const barra = document.getElementById('peBarra');
+  const detalle = document.getElementById('peDetalle');
 
-  if (f.puesto <= 0) {
-    texto.textContent = 'Registrá en Finanzas la plata que pusieron los socios para ver cuánto lleva ganado el negocio.';
+  const invertido = sumaMovimientos('compra') + sumaMovimientos('gasto');
+  const pusieronSocios = Math.max(f.puesto, 0);
+  const deVentas = Math.max(invertido - pusieronSocios, 0);
+  const cobrado = plataCobradaPorVentas();
+
+  if (invertido <= 0) {
+    texto.textContent = 'Registrá en Finanzas las compras de mercadería y los gastos para ver cuánto han recuperado.';
     barra.style.width = '0%';
+    if (detalle) detalle.innerHTML = '';
     return;
   }
 
-  const porcentaje = Math.max(0, Math.min(100, (f.ganancia / f.puesto) * 100));
+  const porcentaje = Math.max(0, Math.min(100, (cobrado / invertido) * 100));
   barra.style.width = porcentaje.toFixed(0) + '%';
 
-  if (f.ganancia >= f.puesto) {
-    texto.textContent = `El negocio ya ganó más de lo que pusieron: ${formatoColones(f.ganancia)} de ganancia sobre ${formatoColones(f.puesto)} puestos.`;
+  if (cobrado >= invertido) {
+    texto.textContent = `Ya recuperaron todo lo invertido: ${formatoColones(cobrado)} cobrados por ventas sobre ${formatoColones(invertido)} invertidos.`;
     barra.style.background = 'var(--sage)';
   } else {
-    texto.textContent = `El negocio lleva ganados ${formatoColones(f.ganancia)} de los ${formatoColones(f.puesto)} que pusieron (${porcentaje.toFixed(0)}%). Al llegar al 100%, la inversión se pagó sola.`;
+    texto.textContent = `Han invertido ${formatoColones(invertido)} en mercadería y gastos y ya recuperaron ${formatoColones(cobrado)} (${porcentaje.toFixed(0)}%) con ventas cobradas. Faltan ${formatoColones(invertido - cobrado)}.`;
     barra.style.background = 'var(--coral)';
+  }
+
+  if (detalle) {
+    const fila = (t, v, sub) => `<div class="fila${sub ? ' sub' : ''}"><span>${t}</span><b>${formatoColones(v)}</b></div>`;
+    detalle.innerHTML =
+      fila('Invertido en total (mercadería y gastos)', invertido) +
+      fila('Lo pusieron los socios de su bolsa', pusieronSocios, true) +
+      fila('Salió de lo que entró por ventas', deVentas, true) +
+      fila('Ya recuperado con ventas cobradas', cobrado) +
+      fila('Les deben (clientas con saldo)', f.porCobrar) +
+      fila('Mercadería que todavía tienen (al costo)', f.inventario + f.enCamino) +
+      fila('Ganancia del negocio (lo que vale menos lo que pusieron)', f.ganancia);
   }
 }
 
