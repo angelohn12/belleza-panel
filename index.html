@@ -1335,7 +1335,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14k · cajas grandes más baratas por pieza</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14l · cajas grandes con más variedad</p>
         </div>
       </div>
       <div class="panel">
@@ -6322,16 +6322,26 @@ function cajaUnidadesFamilia(f, cantidad, rnd) {
 // Devuelve { items, productos, faltan }. Cada producto lleva entre 3 y 6 unidades.
 function cajaArmarNivel(candidatos, nivel, piezas, azar) {
   const rnd = azar || Math.random;
-  // Cajas de 50 y 100 = la de 25 multiplicada: mismo costo por pieza, y con el
-  // descuento por volumen a la clienta SIEMPRE le sale más barata cada pieza.
+  // Cajas de 50 y 100: más productos distintos (6 a 8 unidades de cada uno), pero
+  // el costo por pieza no puede pasar el de una caja más chica del mismo nivel. Con el
+  // descuento por volumen, a la clienta le sale más barata cada pieza.
   const pedidas = Math.max(0, Math.floor(Number(piezas) || 0));
-  if (pedidas > 25 && pedidas % 25 === 0) {
-    const base = cajaArmarNivel(candidatos, nivel, 25, rnd);
-    const veces = pedidas / 25;
+  if (pedidas > 25 && !(arguments[4] && arguments[4].sinReferencia)) {
+    // la referencia es la caja del tamaño anterior (100 se compara con 50, 50 con 25)
+    const tamBase = pedidas >= 100 ? 50 : 25;
+    const base = cajaArmarNivel(candidatos, nivel, tamBase, rnd);
+    const tope = base.items.reduce((s, i) => s + i.costo, 0) / Math.max(1, base.items.length);
+    for (let intento = 0; intento < 80; intento++) {
+      const r = cajaArmarNivel(candidatos, nivel, pedidas, rnd, { sinReferencia: true, unidades: 7 });
+      if (r.items.length === pedidas && r.items.reduce((s, i) => s + i.costo, 0) / pedidas <= tope) return r;
+    }
+    // Si no se logra con variedad, la de 25 multiplicada (siempre cumple).
+    const veces = Math.ceil(pedidas / tamBase);
     const items = [];
     cajaGrupos(base.items).forEach(g => { for (let v = 0; v < veces; v++) g.indices.forEach(i => items.push(Object.assign({}, base.items[i]))); });
-    return { items: items, productos: base.productos, faltan: base.faltan * veces };
+    return { items: items.slice(0, pedidas), productos: base.productos, faltan: 0 };
   }
+  const unidades = (arguments[4] && arguments[4].unidades) || 4;
   const def = CAJA_NIVELES[nivel];
   if (def && def.mezcla) {
     const total = Math.max(0, Math.floor(Number(piezas) || 0));
@@ -6344,7 +6354,7 @@ function cajaArmarNivel(candidatos, nivel, piezas, azar) {
     const items = []; let productos = 0, faltan = 0;
     partes.forEach((p, i) => {
       if (cuantas[i] <= 0) return;
-      const r = cajaArmarNivel(candidatos, p, cuantas[i], rnd);
+      const r = cajaArmarNivel(candidatos, p, cuantas[i], rnd, { sinReferencia: true, unidades: unidades });
       const ya = new Set(items.map(x => x.familia));
       r.items.forEach(x => { if (!ya.has(x.familia)) items.push(x); else faltan++; });
       productos += r.productos; faltan += r.faltan;
@@ -6355,7 +6365,7 @@ function cajaArmarNivel(candidatos, nivel, piezas, azar) {
   familias.forEach(f => { f.nivel = nivel; });
   const total = Math.max(0, Math.floor(Number(piezas) || 0));
   if (!familias.length || !total) return { items: [], productos: 0, faltan: total };
-  let k = Math.max(1, Math.round(total / 4));
+  let k = Math.max(1, Math.round(total / unidades));
   k = Math.min(k, familias.length, Math.floor(total / 3) || 1);
   const usadas = new Set(), porMarca = {}, elegidas = [];
   for (let i = 0; i < k; i++) {
