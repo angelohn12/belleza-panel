@@ -1109,7 +1109,7 @@
         </div>
         <p class="ayudaTienda" id="cajaAyudaModo"></p>
         <div class="cjSug" style="margin-bottom:14px">
-          <p class="ayudaTienda" style="margin:0 0 6px"><b>Caja para revender</b>: elegí el nivel y el tamaño y se arma sola (varias unidades de cada producto, sin SHEGLAM ni productos de la caja de ₡1.500, con 10 % de ganancia). Tocá «Otra opción» para ver más combinaciones.</p>
+          <p class="ayudaTienda" style="margin:0 0 6px"><b>Caja para revender</b>: elegí el nivel y el tamaño y se arma sola (varias unidades de cada producto, sin SHEGLAM ni productos de la caja de ₡1.500, con 10 % de ganancia en 25 piezas, 9 % en 50 y 8 % en 100: mientras más grande, más barata cada pieza). Tocá «Otra opción» para ver más combinaciones.</p>
           <div class="filtrosTienda" id="cajaNiveles" style="margin-bottom:6px">
             <button class="chipT" data-nivel="economica" onclick="cajaNivelElegir('economica')">Económica</button>
             <button class="chipT" data-nivel="media" onclick="cajaNivelElegir('media')">Media</button>
@@ -1335,7 +1335,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14j · nivel Alta ahora se llama Premium</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14k · cajas grandes más baratas por pieza</p>
         </div>
       </div>
       <div class="panel">
@@ -6264,6 +6264,9 @@ function misteriosaLineasPedido(items, precio) {
 // cada producto (3 a 6, repartidas entre tonos) y dice qué hay que comprar.
 const CAJA_MARCAS_EXCLUIDAS = ['sheglam'];   // nunca entran en cajas sugeridas
 const CAJA_NIVEL_GANANCIA = 10;
+// Descuento por volumen: la caja más grande deja menos % por pieza, para que a la
+// clienta le salga más barata cada pieza mientras más compra.
+function cajaGananciaNivel(piezas) { return piezas >= 100 ? 8 : (piezas >= 50 ? 9 : CAJA_NIVEL_GANANCIA); }
 // Lo que costó ₡1.500 o menos viene de la caja barata del inicio: no se repite,
 // así que las cajas por nivel se calculan solo con productos a precio normal.
 const CAJA_COSTO_LOTE_MAX = 1500;              // % sobre el costo (precio al por mayor)
@@ -6319,6 +6322,16 @@ function cajaUnidadesFamilia(f, cantidad, rnd) {
 // Devuelve { items, productos, faltan }. Cada producto lleva entre 3 y 6 unidades.
 function cajaArmarNivel(candidatos, nivel, piezas, azar) {
   const rnd = azar || Math.random;
+  // Cajas de 50 y 100 = la de 25 multiplicada: mismo costo por pieza, y con el
+  // descuento por volumen a la clienta SIEMPRE le sale más barata cada pieza.
+  const pedidas = Math.max(0, Math.floor(Number(piezas) || 0));
+  if (pedidas > 25 && pedidas % 25 === 0) {
+    const base = cajaArmarNivel(candidatos, nivel, 25, rnd);
+    const veces = pedidas / 25;
+    const items = [];
+    cajaGrupos(base.items).forEach(g => { for (let v = 0; v < veces; v++) g.indices.forEach(i => items.push(Object.assign({}, base.items[i]))); });
+    return { items: items, productos: base.productos, faltan: base.faltan * veces };
+  }
   const def = CAJA_NIVELES[nivel];
   if (def && def.mezcla) {
     const total = Math.max(0, Math.floor(Number(piezas) || 0));
@@ -6440,13 +6453,14 @@ function cajaNivelArmar() {
   const candidatos = cajaCandidatos(estado.productos, false);
   const r = cajaArmarNivel(candidatos, nivel, cajaTamSel);
   if (!r.items.length) { cajaActual = null; document.getElementById('cajaResultado').innerHTML = '<div class="panel"><div class="vacio">No hay productos de ese nivel en el inventario.</div></div>'; return; }
-  document.getElementById('cjGanancia').value = CAJA_NIVEL_GANANCIA;
+  const ganancia = cajaGananciaNivel(cajaTamSel);
+  document.getElementById('cjGanancia').value = ganancia;
   document.getElementById('cjNombre').value = n.nombre + ' ' + cajaTamSel;
   cajaMarcarDisponibilidad(r.items);
   const costo = r.items.reduce((s, i) => s + i.costo, 0);
   cajaActual = {
     tipo: 'lista', manual: false, nivel: nivel, nombre: n.nombre + ' ' + cajaTamSel, items: r.items, candidatos, opciones: {},
-    ella: cajaLeerFormulario().ella, precio: cajaPrecioPorGanancia(costo, CAJA_NIVEL_GANANCIA), precioManual: false, guardadaId: null, vendida: null
+    ella: cajaLeerFormulario().ella, precio: cajaPrecioPorGanancia(costo, ganancia), precioManual: false, guardadaId: null, vendida: null
   };
   cajaAvisoFaltan = r.faltan ? `No alcanzaron los productos de este nivel: faltan ${r.faltan} piezas.` : '';
   cajaRender();
