@@ -1113,9 +1113,9 @@
           <div class="filtrosTienda" id="cajaNiveles" style="margin-bottom:6px">
             <button class="chipT" data-nivel="economica" onclick="cajaNivelElegir('economica')">Económica</button>
             <button class="chipT" data-nivel="media" onclick="cajaNivelElegir('media')">Media</button>
-            <button class="chipT" data-nivel="alta" onclick="cajaNivelElegir('alta')">Alta</button>
+            <button class="chipT" data-nivel="alta" onclick="cajaNivelElegir('alta')">Premium</button>
             <button class="chipT" data-nivel="economica_plus" onclick="cajaNivelElegir('economica_plus')">Económica + toque Media</button>
-            <button class="chipT" data-nivel="media_plus" onclick="cajaNivelElegir('media_plus')">Media + toque Alta</button>
+            <button class="chipT" data-nivel="media_plus" onclick="cajaNivelElegir('media_plus')">Media + toque Premium</button>
             <button class="chipT" data-nivel="mix_eco_media" onclick="cajaNivelElegir('mix_eco_media')">Mix Económica y Media</button>
             <button class="chipT" data-nivel="mix" onclick="cajaNivelElegir('mix')">Mix de todo</button>
           </div>
@@ -1335,7 +1335,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14i · cajas sin tonos y descripción para copiar</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-14j · nivel Alta ahora se llama Premium</p>
         </div>
       </div>
       <div class="panel">
@@ -6273,10 +6273,10 @@ const CAJA_NIVELES = {
   media:     { nombre: 'Media', marcas: ['nyx professional makeup', 'nyx', 'milani', "l'oréal paris", "l'oreal paris", 'maybelline', 'kiko milano'] },
   // Combinadas: reparten las piezas entre niveles (proporciones).
   economica_plus: { nombre: 'Económica + toque Media', mezcla: { economica: 0.8, media: 0.2 } },
-  media_plus:     { nombre: 'Media + toque Alta', mezcla: { media: 0.85, alta: 0.15 } },
+  media_plus:     { nombre: 'Media + toque Premium', mezcla: { media: 0.85, alta: 0.15 } },
   mix:            { nombre: 'Mix', mezcla: { economica: 0.45, media: 0.4, alta: 0.15 } },
   mix_eco_media:  { nombre: 'Mix Económica y Media', mezcla: { economica: 0.5, media: 0.5 } },
-  alta: { nombre: 'Alta', marcas: ['rare beauty', 'fenty beauty', 'huda beauty', 'too faced', 'benefit cosmetics', 'tower 28 beauty', 'one size', 'patrick ta', 'saie', 'rhode', 'charlotte tilbury'] }
+  alta: { nombre: 'Premium', marcas: ['rare beauty', 'fenty beauty', 'huda beauty', 'too faced', 'benefit cosmetics', 'tower 28 beauty', 'one size', 'patrick ta', 'saie', 'rhode', 'charlotte tilbury'] }
 };
 function cajaMarcaClave(m) { return String(m || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 function cajaMarcaExcluida(m) { const k = cajaMarcaClave(m); return CAJA_MARCAS_EXCLUIDAS.some(x => cajaMarcaClave(x) === k); }
