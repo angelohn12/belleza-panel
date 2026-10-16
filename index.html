@@ -1333,7 +1333,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-15b · acceso directo en iPhone</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-16a · acceso directo en iPhone</p>
         </div>
       </div>
       <div class="panel">
@@ -6378,6 +6378,29 @@ function cajaArmarNivel(candidatos, nivel, piezas, azar) {
   elegidas.forEach(f => { const q = base + (resto > 0 ? 1 : 0); if (resto > 0) resto--; items.push.apply(items, cajaUnidadesFamilia(f, q, rnd)); });
   return { items: items, productos: elegidas.length, faltan: total - items.length };
 }
+// Precios PUBLICADOS (Facebook/Marketplace): la caja cuesta siempre lo mismo.
+// El sistema elige los productos para que quepan en ese precio con la ganancia del tamaño.
+const CAJA_PRECIOS_FIJOS = {
+  economica: { 25: 108000, 50: 206500, 100: 408000 },
+  media:     { 25: 206500, 50: 396500, 100: 782000 },
+  alta:      { 25: 427000, 50: 789000, 100: 1567000 }
+};
+function cajaPrecioFijo(nivel, piezas) { return (CAJA_PRECIOS_FIJOS[nivel] || {})[piezas] || 0; }
+// Prueba muchas combinaciones y se queda con la de más valor que todavía deja la
+// ganancia del tamaño dentro del precio fijo. Si ninguna cabe, la más barata (cabe: false).
+function cajaArmarNivelFijo(candidatos, nivel, piezas, precio) {
+  const tope = precio / (1 + cajaGananciaNivel(piezas) / 100);
+  let mejor = null, barata = null;
+  const intentos = piezas > 25 ? 40 : 300; // las grandes ya prueban 80 combinaciones por dentro
+  for (let intento = 0; intento < intentos; intento++) {
+    const r = cajaArmarNivel(candidatos, nivel, piezas);
+    if (!r.items.length) return Object.assign(r, { cabe: false });
+    const costo = r.items.reduce((s, i) => s + i.costo, 0);
+    if (r.items.length === piezas && costo <= tope && (!mejor || costo > mejor.costo)) mejor = { r: r, costo: costo };
+    if (!barata || costo < barata.costo) barata = { r: r, costo: costo };
+  }
+  return mejor ? Object.assign(mejor.r, { cabe: true }) : Object.assign(barata.r, { cabe: false });
+}
 // Cambia un producto entero (todas sus unidades) por otro del mismo nivel.
 function cajaCambiarFamiliaNivel(items, indice, candidatos, nivel, azar) {
   const rnd = azar || Math.random;
@@ -6460,7 +6483,8 @@ function cajaNivelArmar() {
   cajaLimpiar();
   document.querySelectorAll('#cajaNiveles .chipT').forEach(b => b.classList.toggle('activo', b.dataset.nivel === nivel));
   const candidatos = cajaCandidatos(estado.productos, false);
-  const r = cajaArmarNivel(candidatos, nivel, cajaTamSel);
+  const fijo = cajaPrecioFijo(nivel, cajaTamSel);
+  const r = fijo ? cajaArmarNivelFijo(candidatos, nivel, cajaTamSel, fijo) : cajaArmarNivel(candidatos, nivel, cajaTamSel);
   if (!r.items.length) { cajaActual = null; document.getElementById('cajaResultado').innerHTML = '<div class="panel"><div class="vacio">No hay productos de ese nivel en el inventario.</div></div>'; return; }
   const ganancia = cajaGananciaNivel(cajaTamSel);
   document.getElementById('cjGanancia').value = ganancia;
@@ -6469,9 +6493,10 @@ function cajaNivelArmar() {
   const costo = r.items.reduce((s, i) => s + i.costo, 0);
   cajaActual = {
     tipo: 'lista', manual: false, nivel: nivel, nombre: n.nombre + ' ' + cajaTamSel, items: r.items, candidatos, opciones: {},
-    ella: cajaLeerFormulario().ella, precio: cajaPrecioPorGanancia(costo, ganancia), precioManual: false, guardadaId: null, vendida: null
+    ella: cajaLeerFormulario().ella, precio: fijo || cajaPrecioPorGanancia(costo, ganancia), precioManual: !!fijo, guardadaId: null, vendida: null
   };
   cajaAvisoFaltan = r.faltan ? `No alcanzaron los productos de este nivel: faltan ${r.faltan} piezas.` : '';
+  if (fijo && !r.cabe) cajaAvisoFaltan += (cajaAvisoFaltan ? ' ' : '') + `Con los productos cargados no se logró armarla dentro del precio publicado (${formatoColones(fijo)}) con ${ganancia} % de ganancia. Revisá la ganancia abajo o tocá «Otra opción».`;
   cajaRender();
 }
 function cajaListaCompraHtml() {
