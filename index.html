@@ -1101,11 +1101,23 @@
         <h2>Armar caja</h2>
         <p class="ayudaTienda" style="margin:0 0 8px">¿Cómo la querés armar?</p>
         <div class="filtrosTienda" id="cajaModos" style="margin-bottom:12px">
-          <button class="chipT activo" data-modo="sugerida" onclick="cajaModoElegir('sugerida')">Sugerida por el sistema</button>
+          <button class="chipT activo" data-modo="mixta" onclick="cajaModoElegir('mixta')">Caja mixta</button>
           <button class="chipT" data-modo="manual" onclick="cajaModoElegir('manual')">A mano (la clienta pide productos)</button>
           <button class="chipT" data-modo="misteriosa" onclick="cajaModoElegir('misteriosa')">Misteriosa</button>
         </div>
         <p class="ayudaTienda" id="cajaAyudaModo"></p>
+        <div class="cjMix" style="margin-bottom:14px">
+          <div class="filtrosTienda" id="cajaMixTamanos" style="margin-bottom:12px">
+            <button class="chipT activo" data-mtam="25" onclick="cajaMixTam(25)">25 piezas</button>
+            <button class="chipT" data-mtam="50" onclick="cajaMixTam(50)">50 piezas</button>
+            <button class="chipT" data-mtam="100" onclick="cajaMixTam(100)">100 piezas</button>
+          </div>
+          <div class="formulario" style="margin-bottom:10px">
+            <div><label>Piezas</label><input id="cjMixPiezas" type="number" min="3" max="300" value="25"></div>
+            <div><label>Precio que le ofrecés (₡)</label><input id="cjMixPrecio" type="number" min="0" step="500" value="100000"></div>
+          </div>
+          <button onclick="cajaMixArmar()">Armar caja</button>
+        </div>
         <div class="cjSug" style="margin-bottom:14px">
           <p class="ayudaTienda" style="margin:0 0 6px"><b>Caja para revender</b>: elegí el nivel y el tamaño y se arma sola (varias unidades de cada producto, sin SHEGLAM ni productos de la caja de ₡1.500, con 10 % de ganancia en 25 piezas, 9 % en 50 y 8 % en 100: mientras más grande, más barata cada pieza). Tocá «Otra opción» para ver más combinaciones.</p>
           <div class="filtrosTienda" id="cajaNiveles" style="margin-bottom:6px">
@@ -1129,8 +1141,8 @@
             <button class="chipT" data-preset="prestige" onclick="cajaPreset('prestige')">Prestige · 6 premium, 6 promedio, 6 básicos</button>
           </div>
         </div>
-        <div class="formulario">
-          <div><label>Nombre de la caja</label><input id="cjNombre" placeholder="Emprende" value="Emprende" oninput="cajaNombreEditado()"></div>
+        <div class="formulario cjNoMix">
+          <div class="cjNoMix"><label>Nombre de la caja</label><input id="cjNombre" placeholder="Emprende" value="Emprende" oninput="cajaNombreEditado()"></div>
           <div class="cjSug"><label>Piezas premium</label><input id="cjPremium" type="number" min="0" max="80" value="0" oninput="cajaConteosEditados()"></div>
           <div class="cjSug"><label>Piezas promedio</label><input id="cjPromedio" type="number" min="0" max="80" value="0" oninput="cajaConteosEditados()"></div>
           <div class="cjSug"><label>Piezas básicas</label><input id="cjBasico" type="number" min="0" max="80" value="24" oninput="cajaConteosEditados()"></div>
@@ -1142,8 +1154,8 @@
               <div class="resultadosProd oculto" id="res-caja"></div>
             </div>
           </div>
-          <div><label>Tu ganancia sobre el costo (%)</label><input id="cjGanancia" type="number" min="0" max="100" value="15" oninput="cajaGananciaEditada()"></div>
-          <div><label>Ella gana como mínimo (%)</label><input id="cjElla" type="number" min="0" max="100" value="20" oninput="cajaEllaEditada()"></div>
+          <div class="cjNoMix"><label>Tu ganancia sobre el costo (%)</label><input id="cjGanancia" type="number" min="0" max="100" value="15" oninput="cajaGananciaEditada()"></div>
+          <div class="cjNoMix"><label>Ella gana como mínimo (%)</label><input id="cjElla" type="number" min="0" max="100" value="20" oninput="cajaEllaEditada()"></div>
           <div class="cjSug"><label>Inventario a usar</label>
             <select id="cjInventario"><option value="ambos">Stock y por encargo</option><option value="stock">Solo lo que hay en stock</option></select></div>
           <div class="cjSug"><label>Mínimo de marcas</label><input id="cjMinMarcas" type="number" min="1" max="20" value="5"></div>
@@ -1333,7 +1345,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-16a · acceso directo en iPhone</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-16b · caja mixta</p>
         </div>
       </div>
       <div class="panel">
@@ -6426,10 +6438,149 @@ function cajaListaCompra(items) {
 }
 // ===== /CAJAS: lógica =====
 
+// ===== CAJA MIXTA (16/10/2026) =====
+// Precio fijo por tamaño (lo que se ofrece en Marketplace). Mientras más piezas, más barata cada una.
+// En la pantalla se puede cambiar el precio para una oferta puntual.
+const CAJA_MIXTA_PRECIOS = { 25: 100000, 50: 190000, 100: 360000 };
+function cajaMixPrecioDe(piezas) {
+  if (CAJA_MIXTA_PRECIOS[piezas]) return CAJA_MIXTA_PRECIOS[piezas];
+  // otros tamaños: el precio por pieza del tamaño publicado más cercano por debajo
+  const tams = Object.keys(CAJA_MIXTA_PRECIOS).map(Number).sort((a, b) => a - b);
+  let base = tams[0];
+  tams.forEach(t => { if (t <= piezas) base = t; });
+  return Math.ceil(piezas * CAJA_MIXTA_PRECIOS[base] / base / CAJA_REDONDEO) * CAJA_REDONDEO;
+}
+// Cuántas unidades del mismo producto como máximo (variedad para revender).
+function cajaMixMaxPorProducto(piezas) { return Math.max(3, Math.ceil(piezas / 7)); }
+
+// Arma UNA combinación: primero el stock (producto por producto, repartiendo tonos),
+// después completa con productos por encargo. Prefiere lo barato (para que quepa
+// en el precio), pero al azar, para que «Otra opción» cambie la mezcla.
+function cajaMixUnaVez(candidatos, piezas, rnd, usarStock, exp) {
+  const maxP = cajaMixMaxPorProducto(piezas);
+  const fams = cajaFamiliasDe(candidatos);
+  const costoRef = f => Math.min.apply(null, f.tonos.map(t => t.costo));
+  const elegir = (pool, porMarca) => {
+    const pesos = pool.map(f => (1 / Math.pow(costoRef(f), exp || 1.6)) / Math.pow(1 + (porMarca[f.marca] || 0), 1.2) * (0.5 + rnd()));
+    let x = rnd() * pesos.reduce((s, w) => s + w, 0);
+    for (let i = 0; i < pool.length; i++) { x -= pesos[i]; if (x <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  };
+  const items = [], usadas = new Set(), porMarca = {}, sobra = [];
+  // 1) lo que hay en stock
+  // usarStock (0..1): probabilidad de meter cada producto en stock; baja en algunos
+  // intentos para encontrar mezclas que sí quepan en el precio (ej. stock muy caro).
+  let conStock = fams.filter(f => f.tonos.some(t => t.enStock) && rnd() < (usarStock == null ? 1 : usarStock));
+  while (items.length < piezas && conStock.length) {
+    const f = elegir(conStock, porMarca);
+    conStock = conStock.filter(x => x !== f);
+    usadas.add(f.familia);
+    const tonos = f.tonos.filter(t => t.enStock).sort(() => rnd() - 0.5);
+    const quedan = tonos.map(t => Number(t.stock) || 0);
+    let puestas = 0, avanzo = true;
+    while (puestas < maxP && items.length < piezas && avanzo) {
+      avanzo = false;
+      for (let k = 0; k < tonos.length && puestas < maxP && items.length < piezas; k++) {
+        if (quedan[k] > 0) { items.push(Object.assign({}, tonos[k])); quedan[k]--; puestas++; avanzo = true; }
+      }
+    }
+    tonos.forEach((t, k) => { for (let q = 0; q < quedan[k]; q++) sobra.push(t); });
+    porMarca[f.marca] = (porMarca[f.marca] || 0) + 1;
+  }
+  // 1b) si todavía faltan, más unidades de lo que hay en stock (antes que comprar)
+  sobra.sort((a, b) => a.costo - b.costo);
+  while (items.length < piezas && sobra.length) items.push(Object.assign({}, sobra.shift()));
+  // 2) por encargo (sin tono: se eligen tonos vendibles al comprar)
+  let resto = fams.filter(f => !usadas.has(f.familia));
+  while (items.length < piezas && resto.length) {
+    const f = elegir(resto, porMarca);
+    resto = resto.filter(x => x !== f);
+    const ref = f.tonos.slice().sort((a, b) => a.costo - b.costo)[0];
+    const q = Math.min(maxP, piezas - items.length);
+    for (let i = 0; i < q; i++) items.push(Object.assign({}, ref, { tono: '', stock: 0, enStock: false }));
+    porMarca[f.marca] = (porMarca[f.marca] || 0) + 1;
+  }
+  return items;
+}
+
+// Prueba muchas combinaciones. Gana la que: 1) está completa, 2) no hace perder
+// plata con el precio ofrecido, 3) usa más stock, 4) deja más ganancia.
+function cajaArmarMixta(candidatos, piezas, precio, azar) {
+  const rnd = azar || Math.random;
+  let mejor = null;
+  for (let intento = 0; intento < 120; intento++) {
+    const items = cajaMixUnaVez(candidatos, piezas, rnd, 1 - intento / 120, [1.6, 4, 10][intento % 3]);
+    cajaMarcarDisponibilidad(items);
+    const costo = items.reduce((s, i) => s + i.costo, 0);
+    const deStock = items.filter(i => i.enStock).length;
+    const puntaje = (items.length === piezas ? 1e13 : 0) + (costo <= precio ? 1e12 : 0) + deStock * 1e7 + (precio - costo);
+    if (!mejor || puntaje > mejor.puntaje) mejor = { items, costo, deStock, puntaje };
+  }
+  return mejor || { items: [], costo: 0, deStock: 0 };
+}
+
+// «Cambiar»: otro producto entero (mismas unidades), prefiriendo lo que hay en stock.
+function cajaMixCambiarFamilia(items, indice, candidatos) {
+  const vieja = items[indice].familia;
+  const cantidad = items.filter(i => i.familia === vieja).length;
+  const usadas = new Set(items.map(i => i.familia));
+  const pool = cajaFamiliasDe(candidatos.filter(c => !usadas.has(c.familia)));
+  if (!pool.length) return null;
+  const conStock = pool.filter(f => f.tonos.some(t => t.enStock));
+  const de = conStock.length ? conStock : pool;
+  const f = de[Math.floor(Math.random() * de.length)];
+  const nuevas = [];
+  const tonos = f.tonos.filter(t => t.enStock);
+  const quedan = tonos.map(t => Number(t.stock) || 0);
+  let k = 0, vueltas = 0;
+  while (nuevas.length < cantidad && tonos.length && vueltas < cantidad * tonos.length + 1) {
+    if (quedan[k] > 0) { nuevas.push(Object.assign({}, tonos[k])); quedan[k]--; }
+    k = (k + 1) % tonos.length; vueltas++;
+  }
+  const ref = f.tonos.slice().sort((a, b) => a.costo - b.costo)[0];
+  while (nuevas.length < cantidad) nuevas.push(Object.assign({}, ref, { tono: '', stock: 0, enStock: false }));
+  const sal = []; let puesto = false;
+  items.forEach(i => { if (i.familia === vieja) { if (!puesto) { sal.push.apply(sal, nuevas); puesto = true; } } else sal.push(i); });
+  return sal;
+}
+
+function cajaMixTam(n) {
+  document.getElementById('cjMixPiezas').value = n;
+  document.getElementById('cjMixPrecio').value = cajaMixPrecioDe(n);
+  cajaMixArmar();
+}
+
+function cajaMixArmar() {
+  if (!estado.productos.length) { mostrarToast('Todavía no cargó el inventario. Esperá un momento.'); return; }
+  const piezas = Math.floor(Number(document.getElementById('cjMixPiezas').value) || 0);
+  if (piezas < 3 || piezas > 300) { mostrarToast('Poné entre 3 y 300 piezas.'); return; }
+  let precio = Math.round(Number(document.getElementById('cjMixPrecio').value) || 0);
+  if (!(precio > 0)) { precio = cajaMixPrecioDe(piezas); document.getElementById('cjMixPrecio').value = precio; }
+  document.querySelectorAll('#cajaMixTamanos .chipT').forEach(b => b.classList.toggle('activo', Number(b.dataset.mtam) === piezas));
+  const candidatos = cajaCandidatos(estado.productos, false);
+  const r = cajaArmarMixta(candidatos, piezas, precio);
+  cajaAvisoFaltan = '';
+  if (!r.items.length) { cajaActual = null; document.getElementById('cajaResultado').innerHTML = '<div class="panel"><div class="vacio">No hay productos con costo real para armar la caja.</div></div>'; return; }
+  cajaActual = {
+    tipo: 'lista', manual: false, mixta: true, nombre: 'mixta de ' + piezas, items: r.items, candidatos, opciones: {},
+    ella: CAJA_ELLA_MIN, precio, precioManual: true, guardadaId: null, vendida: null
+  };
+  const avisos = [];
+  const faltan = piezas - r.items.length;
+  if (faltan > 0) avisos.push(`No alcanzaron los productos cargados: faltan ${faltan} piezas.`);
+  if (precio < r.costo) avisos.push(`Con ${formatoColones(precio)} perdés plata: los productos cuestan ${formatoColones(r.costo)}. Subí el precio o tocá «Otra opción».`);
+  const aComprar = r.items.length - r.deStock;
+  if (aComprar > 0) avisos.push(`${r.deStock} piezas salen del stock y ${aComprar} hay que comprarlas (ver la lista de compra).`);
+  cajaAvisoFaltan = avisos.join(' ');
+  cajaRender();
+}
+// ===== /CAJA MIXTA =====
+
+
 // ----- Pantalla -----
 let cajaActual = null; // { tipo, nombre, items, candidatos, precio, guardadaId }
 let cajaAvisoFaltan = '';
-let cajaModo = 'sugerida'; // 'sugerida' | 'manual' | 'misteriosa'
+let cajaModo = 'mixta'; // 'mixta' | 'manual' | 'misteriosa' ('sugerida' solo al abrir cajas viejas)
 
 function cajaLeerFormulario() {
   const num = (id, def) => { const v = Number(document.getElementById(id).value); return isFinite(v) && v >= 0 ? v : def; };
@@ -6544,7 +6695,7 @@ function cajaTextoNivel(c) {
     'Precio de la caja: ' + formatoColones(c.precio);
 }
 function cajaTextoActual() {
-  if (cajaActual.nivel) return cajaTextoNivel(cajaActual);
+  if (cajaActual.nivel || cajaActual.mixta) return cajaTextoNivel(cajaActual);
   const incluir = document.getElementById('cjIncluirElla') ? document.getElementById('cjIncluirElla').checked : true;
   return cajaTexto(cajaActual.tipo, cajaActual.nombre, cajaActual.items, cajaActual.precio, {
     formato: formatoColones, diasMin: ENCARGO_DIAS_MIN, diasMax: ENCARGO_DIAS_MAX, incluirGananciaElla: incluir
@@ -6612,7 +6763,7 @@ function cajaRender() {
       <div class="filaBotones">
         <h2 style="margin:0">Caja <span id="cajaTituloNombre">${escaparHtml(c.nombre)}</span> · ${tipoTexto}</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${c.manual ? '' : (c.nivel ? '<button onclick="cajaNivelArmar()">Otra opción</button>' : '<button class="secundario" onclick="cajaSugerir()">Regenerar</button>')}
+          ${c.manual ? '' : (c.mixta ? '<button onclick="cajaMixArmar()">Otra opción</button>' : c.nivel ? '<button onclick="cajaNivelArmar()">Otra opción</button>' : '<button class="secundario" onclick="cajaSugerir()">Regenerar</button>')}
           <button class="secundario" id="btnCajaGuardar" onclick="ejecutarConBoton('btnCajaGuardar', cajaGuardar)">${c.guardadaId ? 'Guardar cambios' : 'Guardar caja'}</button>
           <button id="btnCajaAbrirVenta" onclick="cajaVentaAbrir()" ${c.vendida ? 'disabled' : ''}>${c.vendida ? 'Venta registrada · ' + escaparHtml(c.vendida) : 'Registrar venta'}</button>
           ${c.vendida ? '<button class="secundario" onclick="cajaOtra()">Armar otra caja</button>' : ''}
@@ -6624,7 +6775,7 @@ function cajaRender() {
         ? `<details><summary style="cursor:pointer;font-size:13px;color:var(--brown-soft)">Contenido real (solo para vos, la clienta no lo ve)</summary><div style="margin-top:10px">${cajaTablaPiezas()}</div></details>`
         : cajaTablaPiezas()}
     </div>
-    ${c.nivel ? cajaListaCompraHtml() : ''}
+    ${c.nivel || (c.mixta && c.items.some(i => !i.enStock)) ? cajaListaCompraHtml() : ''}
     <div class="tarjetas">
       <div class="tarjeta"><p class="etiqueta">Te cuesta la caja</p><p class="valor" id="cjCosto"></p></div>
       <div class="tarjeta"><p class="etiqueta">Le cobrás la caja a</p>
@@ -6653,11 +6804,11 @@ function cajaRender() {
     </div>
     <div class="panel">
       <div class="filaBotones">
-        <h2 style="margin:0">${c.nivel ? 'Descripción para copiar (Marketplace o clientas)' : 'Texto para la clienta'}</h2>
-        ${c.nivel ? '<span class="ayudaTienda" style="margin:0">Solo productos y precio total: sin costos ni tonos.</span>' : '<label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjIncluirElla" checked style="width:auto" onchange="cajaActualizarNumeros()"> Incluir cuánto gana ella</label>'}
+        <h2 style="margin:0">${(c.nivel || c.mixta) ? 'Descripción para copiar (Marketplace o clientas)' : 'Texto para la clienta'}</h2>
+        ${(c.nivel || c.mixta) ? '<span class="ayudaTienda" style="margin:0">Solo productos y precio total: sin costos ni tonos.</span>' : '<label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px"><input type="checkbox" id="cjIncluirElla" checked style="width:auto" onchange="cajaActualizarNumeros()"> Incluir cuánto gana ella</label>'}
       </div>
       <textarea id="cjTexto" readonly rows="${esMist ? 8 : Math.min(18, grupos.length + 8)}" style="margin-bottom:10px"></textarea>
-      <button onclick="cajaCopiarTexto()">${c.nivel ? 'Copiar descripción' : 'Copiar texto'}</button>
+      <button onclick="cajaCopiarTexto()">${(c.nivel || c.mixta) ? 'Copiar descripción' : 'Copiar texto'}</button>
     </div>`;
   document.getElementById('cjPrecio').value = c.precio;
   cajaVentaClienteCambio();
@@ -6720,6 +6871,11 @@ function cajaUsarPrecioJusto() {
 }
 
 function cajaCambiarPieza(indice) {
+  if (cajaActual.mixta) {
+    const nuevas = cajaMixCambiarFamilia(cajaActual.items, indice, cajaActual.candidatos);
+    if (!nuevas) { mostrarToast('No hay otro producto para cambiar.'); return; }
+    cajaActual.items = nuevas; cajaCambioComposicion(); return;
+  }
   if (cajaActual.nivel) {
     const nuevas = cajaCambiarFamiliaNivel(cajaActual.items, indice, cajaActual.candidatos, cajaActual.nivel);
     if (!nuevas) { mostrarToast('No hay otro producto de ese nivel para cambiar.'); return; }
@@ -6755,7 +6911,7 @@ async function cajaGuardarFilas(filasCaja, quitarClave) {
 
 function cajaValorGuardado(c) {
   return JSON.stringify({
-    v: 2, tipo: c.tipo, manual: !!c.manual, nombre: c.nombre, precio: c.precio, precioManual: !!c.precioManual, ella: c.ella,
+    v: 2, tipo: c.tipo, manual: !!c.manual, mixta: !!c.mixta, nombre: c.nombre, precio: c.precio, precioManual: !!c.precioManual, ella: c.ella,
     fecha: new Date().toISOString(), ids: c.items.map(i => i.id), vendida: c.vendida || null
   });
 }
@@ -6782,11 +6938,11 @@ function cajaAbrir(clave) {
   if (!items.length) { mostrarToast('Los productos de esa caja ya no están disponibles.'); return; }
   cajaMarcarDisponibilidad(items);
   const costo = items.reduce((s, i) => s + i.costo, 0);
-  cajaActual = { tipo: g.tipo, manual: !!g.manual, nombre: g.nombre, items, candidatos: todos, opciones: cajaLeerFormulario().opciones,
+  cajaActual = { tipo: g.tipo, manual: !!g.manual, mixta: !!g.mixta, nombre: g.nombre, items, candidatos: todos, opciones: cajaLeerFormulario().opciones,
     ella: Number(g.ella) || CAJA_ELLA_MIN, precio: Number(g.precio) || cajaPrecioPorGanancia(costo, CAJA_GANANCIA_DEFECTO),
     precioManual: g.precioManual !== undefined ? !!g.precioManual : true, guardadaId: clave, vendida: g.vendida || null };
   cajaAvisoFaltan = perdidas ? `${perdidas} pieza(s) de esta caja ya no están en el inventario. Cambialas o regenerá la caja.` : '';
-  cajaModoAplicar(g.tipo === 'misteriosa' ? 'misteriosa' : (g.manual ? 'manual' : 'sugerida'));
+  cajaModoAplicar(g.tipo === 'misteriosa' ? 'misteriosa' : (g.manual ? 'manual' : (g.mixta ? 'mixta' : 'sugerida')));
   document.getElementById('cjNombre').value = g.nombre;
   cajaRender();
   document.getElementById('cajaResultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -6927,6 +7083,7 @@ async function cajaVentaConfirmar() {
 }
 
 const CAJA_AYUDA_MODO = {
+  mixta: 'Elegí cuántas piezas y el precio que le ofreciste a la clienta. El sistema mete primero lo que hay en stock (solo productos con costo real: nada del lote de ₡1.500 ni SHEGLAM) y te dice cuánto ganás. Si no alcanza el stock, completa con productos por encargo y te arma la lista de compra. Tocá «Otra opción» para ver otra combinación.',
   sugerida: 'El sistema arma la caja con tu inventario según cuántas piezas premium, promedio y básicas pidas. La clienta ve cada producto. Solo maquillaje, nuevo y sellado, con máximo 2 iguales. La gama sale de lo que te costó cada pieza: Premium desde ₡14.000 · Promedio de ₡9.000 a ₡13.999 · Básicos menos de ₡9.000.',
   manual: 'Vos elegís cada producto (los que pidió la clienta) con el buscador, el que sea. Podés poner varias unidades del mismo producto. Lo que pasa del stock queda por encargo.',
   misteriosa: 'El sistema arma la caja, pero la clienta solo ve la promesa: cuántas piezas de cada gama y un valor mínimo. Solo maquillaje, nuevo y sellado, con máximo 2 iguales. La gama sale de lo que te costó cada pieza: Premium desde ₡14.000 · Promedio de ₡9.000 a ₡13.999 · Básicos menos de ₡9.000.'
@@ -6935,7 +7092,9 @@ const CAJA_AYUDA_MODO = {
 function cajaModoAplicar(modo) {
   cajaModo = modo;
   document.querySelectorAll('#cajaModos .chipT').forEach(b => b.classList.toggle('activo', b.dataset.modo === modo));
-  document.querySelectorAll('#tab-cajas .cjSug').forEach(el => el.classList.toggle('oculto', modo === 'manual'));
+  document.querySelectorAll('#tab-cajas .cjSug').forEach(el => el.classList.toggle('oculto', modo === 'manual' || modo === 'mixta'));
+  document.querySelectorAll('#tab-cajas .cjMix').forEach(el => el.classList.toggle('oculto', modo !== 'mixta'));
+  document.querySelectorAll('#tab-cajas .cjNoMix').forEach(el => el.classList.toggle('oculto', modo === 'mixta'));
   document.querySelectorAll('#tab-cajas .cjMan').forEach(el => el.classList.toggle('oculto', modo !== 'manual'));
   document.getElementById('cajaAyudaModo').textContent = CAJA_AYUDA_MODO[modo];
   document.getElementById('cjNombre').placeholder = modo === 'manual' ? 'Ej: de María' : 'Emprende';
