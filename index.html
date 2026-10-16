@@ -1333,7 +1333,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-15a · acceso directo en iPhone</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-15b · acceso directo en iPhone</p>
         </div>
       </div>
       <div class="panel">
@@ -5857,6 +5857,7 @@ function cajaCandidatos(productos, soloStock) {
     if (cajaMarcaExcluida(p.marca)) return;
     const c = cajaCandidatoDe(p);
     if (!c) return;
+    if (c.costo <= CAJA_COSTO_LOTE_MAX) return; // lote de ₡1.500 del inicio: no entra en ninguna caja
     if (soloStock && !c.enStock) return;
     sal.push(c);
   });
