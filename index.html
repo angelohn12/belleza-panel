@@ -1353,7 +1353,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18d · compras en camino plegadas</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18e · productos en camino reutilizables</p>
         </div>
       </div>
       <div class="panel">
@@ -4599,6 +4599,19 @@ function buscarEnBuscador(clave) {
         <span class="rpDato">${cfg.dato ? cfg.dato(p) : `${p.stock} en stock · ${formatoColones(todos ? p.costoTotalCRC : precioConDescuento(p.precioVenta, p.descuento))}${todos ? ' costo' : ''}`}</span>
       </button>`).join('') + aviso
     : `<div class="vacio">${todos ? 'Ningún producto coincide.' : (input.value.trim() ? 'Ningún producto con stock coincide.' : 'No hay productos con stock.')}</div>`;
+  if (clave === 'compra') {
+    // Productos nuevos que ya se anotaron en otra compra en camino: se pueden volver a elegir
+    const palabras = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const enCamino = nuevosEnCamino().map((n, i) => ({ n, i }))
+      .filter(({ n }) => { const t = etiquetaProducto(n).toLowerCase(); return palabras.every(w => t.includes(w)); });
+    if (enCamino.length) {
+      const html = enCamino.map(({ n, i }) => `<button type="button" class="resultadoProd" onclick="elegirNuevoEnCamino(${i})">
+          <span class="rpNombre">${escaparHtml(etiquetaProducto(n))}</span>
+          <span class="rpDato">viene en camino (${n.cantidad} u.) · nuevo</span>
+        </button>`).join('');
+      caja.innerHTML = hallados.length ? html + caja.innerHTML : html;
+    }
+  }
 }
 
 function elegirEnBuscador(clave, id) {
@@ -5137,6 +5150,32 @@ function agregarLineaCompra(id) {
   renderCompraForm();
 }
 
+// Clave para reconocer el mismo producto nuevo en varias compras
+function claveNuevo(it) { return [it.nombre, it.marca, it.tono].map(x => String(x || '').trim().toLowerCase()).join('|'); }
+// Producto del inventario con el mismo nombre, marca y tono (por si ya se creó al llegar otra compra)
+function productoIgualA(it) { return (estado.productos || []).find(p => claveNuevo(p) === claveNuevo(it)); }
+// Productos nuevos (sin crear aún) que vienen en las compras en camino, sin repetir
+function nuevosEnCamino() {
+  const vistos = {};
+  comprasEnCamino().forEach(c => itemsDeCompra(c).forEach(it => {
+    if (it.id != null || productoIgualA(it)) return;
+    const k = claveNuevo(it);
+    if (!vistos[k]) vistos[k] = { nombre: it.nombre, marca: it.marca || '', tono: it.tono || '', categoria: it.categoria || 'Maquillaje', cantidad: 0 };
+    vistos[k].cantidad += Number(it.cantidad) || 0;
+  }));
+  return Object.values(vistos);
+}
+function elegirNuevoEnCamino(i) {
+  const n = nuevosEnCamino()[i];
+  if (!n) return;
+  document.getElementById('busq-compra').value = '';
+  cerrarBuscador('compra');
+  const ya = lineasCompra.find(l => l.id == null && claveNuevo(l) === claveNuevo(n));
+  if (ya) ya.cantidad = (Number(ya.cantidad) || 0) + 1;
+  else lineasCompra.push({ id: null, nombre: n.nombre, marca: n.marca, tono: n.tono, categoria: n.categoria, cantidad: 1, precio: '' });
+  renderCompraForm();
+}
+
 function agregarLineaCompraNueva() {
   const valor = id => document.getElementById(id).value.trim();
   const nuevo = { nombre: valor('cNuevoNombre'), marca: valor('cNuevoMarca'), tono: valor('cNuevoTono'),
@@ -5270,10 +5309,11 @@ function renderCompras() {
     </div>`;
   };
   const total = abiertas.reduce((s, c) => s + valorCompraCRC(c), 0);
+  const unidadesTot = abiertas.reduce((s, c) => s + itemsDeCompra(c).reduce((t, it) => t + (Number(it.cantidad) || 0), 0), 0);
   caja.innerHTML = (abiertas.length
       ? `<details class="lineaVenta" style="display:block;margin:14px 0 8px" ${comprasEnCaminoAbierto ? 'open' : ''}
            ontoggle="comprasEnCaminoAbierto = this.open; this.querySelector('.verOcultar').textContent = this.open ? 'ocultar' : 'ver'">
-           <summary style="cursor:pointer;font-weight:600;padding:2px 0">En camino: ${abiertas.length} compra${abiertas.length === 1 ? '' : 's'} · ${formatoColones(total)}
+           <summary style="cursor:pointer;font-weight:600;padding:2px 0">En camino: ${unidadesTot} producto${unidadesTot === 1 ? '' : 's'} en ${abiertas.length} compra${abiertas.length === 1 ? '' : 's'} · ${formatoColones(total)}
              <span style="font-weight:400;color:var(--brown-soft);font-size:13px">· toca para <span class="verOcultar">${comprasEnCaminoAbierto ? 'ocultar' : 'ver'}</span></span></summary>
            <div style="margin-top:6px">${abiertas.map(fila).join('')}</div>
          </details>`
@@ -5323,7 +5363,7 @@ function calculoLlegada() {
   grupos.forEach(g => {
     g.casillero = casCRC * g.valorCRC / totalValor;
     g.costoUnit = g.cantidad > 0 ? Math.round((g.valorCRC + g.casillero) / g.cantidad) : 0;
-    g.p = g.id != null ? productoPorId(g.id) : null;
+    g.p = g.id != null ? productoPorId(g.id) : (g.nuevo ? productoIgualA(g.nuevo) || null : null);
     if (g.p) {
       const stockActual = Number(g.p.stock) || 0;
       const stockAntes = Math.max(stockActual, 0);
