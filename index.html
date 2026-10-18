@@ -704,8 +704,17 @@
                      oninput="buscarEnBuscador('compra')" onfocus="buscarEnBuscador('compra')" />
               <div class="resultadosProd oculto" id="res-compra"></div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-              <input id="cNuevoNombre" placeholder="¿No existe todavía? Escribe su nombre" style="flex:1;min-width:200px" />
+            <div style="margin-top:10px;font-size:13px;color:var(--brown-soft)">¿Es un producto que todavía no está en el inventario? Llena sus datos:</div>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center">
+              <input id="cNuevoNombre" placeholder="Nombre (ej. Lip Glow Oil)" style="flex:2;min-width:180px" />
+              <input id="cNuevoMarca" list="cMarcas" placeholder="Marca" style="flex:1;min-width:120px" />
+              <datalist id="cMarcas"></datalist>
+              <input id="cNuevoTono" placeholder="Tono (si tiene)" style="flex:1;min-width:110px" />
+              <select id="cNuevoCategoria" style="flex:1;min-width:140px" aria-label="Categoría">
+                <option>Maquillaje</option>
+                <option>Cuidado personal</option>
+                <option>Bienestar</option>
+              </select>
               <button type="button" class="secundario" onclick="agregarLineaCompraNueva()">Agregar producto nuevo</button>
             </div>
             <div id="cLineas" class="lineasVenta"></div>
@@ -1344,7 +1353,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-16c · cajas simples</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18 · productos nuevos en compras</p>
         </div>
       </div>
       <div class="panel">
@@ -5075,6 +5084,8 @@ function valorCompraCRC(c) {
   const base = itemsDeCompra(c).reduce((s, it) => s + (Number(it.cantidad) || 0) * (Number(it.precio) || 0), 0);
   return Math.round(base * tc);
 }
+// Precio al detalle de un producto nuevo que llega en una compra: costo + 30 %, redondeado a ₡100
+function precioNuevoDeCompra(costo) { return Math.ceil((Number(costo) || 0) * 1.30 / 100) * 100; }
 function valorEnCamino() { return comprasEnCamino().reduce((s, c) => s + valorCompraCRC(c), 0); }
 
 function nuevaCompra() {
@@ -5087,7 +5098,10 @@ function nuevaCompra() {
   document.getElementById('cTipoCambio').value = valorConfig('tipoCambio', 520);
   document.getElementById('cCasillero').value = '';
   document.getElementById('cPago').value = 'caja';
-  document.getElementById('cNuevoNombre').value = '';
+  ['cNuevoNombre', 'cNuevoMarca', 'cNuevoTono'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('cMarcas').innerHTML = [...new Set((estado.productos || [])
+    .map(p => String(p.marca || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
+    .map(m => `<option value="${escaparHtml(m)}"></option>`).join('');
   llenarSelectorSocios('cSocio');
   renderCompraForm();
   abrirFormulario('formCompra');
@@ -5103,11 +5117,13 @@ function agregarLineaCompra(id) {
 }
 
 function agregarLineaCompraNueva() {
-  const caja = document.getElementById('cNuevoNombre');
-  const nombre = caja.value.trim();
-  if (!nombre) { mostrarToast('Escribe el nombre del producto nuevo.'); return; }
-  lineasCompra.push({ id: null, nombre, cantidad: 1, precio: '' });
-  caja.value = '';
+  const valor = id => document.getElementById(id).value.trim();
+  const nuevo = { nombre: valor('cNuevoNombre'), marca: valor('cNuevoMarca'), tono: valor('cNuevoTono'),
+    categoria: document.getElementById('cNuevoCategoria').value || 'Maquillaje' };
+  if (!nuevo.nombre) { mostrarToast('Escribe el nombre del producto nuevo.'); return; }
+  if (!nuevo.marca) { mostrarToast('Escribe la marca del producto nuevo.'); return; }
+  lineasCompra.push({ id: null, ...nuevo, cantidad: 1, precio: '' });
+  ['cNuevoNombre', 'cNuevoTono'].forEach(id => { document.getElementById(id).value = ''; });
   renderCompraForm();
 }
 
@@ -5123,6 +5139,7 @@ function datosCompraForm() {
   const tc = usd ? parseMonto(document.getElementById('cTipoCambio').value) : 1;
   const lineas = lineasCompra.map(l => ({
     id: l.id, nombre: l.nombre,
+    ...(l.id == null ? { marca: l.marca || '', tono: l.tono || '', categoria: l.categoria || 'Maquillaje' } : {}),
     cantidad: Math.max(1, Math.floor(Number(l.cantidad) || 0)),
     precio: parseMonto(l.precio) || 0
   }));
@@ -5136,7 +5153,7 @@ function renderCompraForm() {
   const simbolo = usd ? '$' : '₡';
   document.getElementById('cLineas').innerHTML = lineasCompra.length
     ? lineasCompra.map((l, i) => `<div class="lineaVenta" style="gap:8px;flex-wrap:wrap">
-        <span class="lvNombre">${escaparHtml(l.nombre)}${l.id == null ? ' <span class="badge peach">nuevo</span>' : ''}</span>
+        <span class="lvNombre">${escaparHtml(l.id == null ? etiquetaProducto(l) : l.nombre)}${l.id == null ? ' <span class="badge peach">nuevo</span>' : ''}</span>
         <input type="number" min="1" value="${Number(l.cantidad) || 1}" style="width:70px" aria-label="Cantidad"
                oninput="cambiarLineaCompra(${i}, 'cantidad', this.value)" />
         <input type="text" inputmode="decimal" value="${escaparHtml(l.precio)}" placeholder="Precio c/u ${simbolo}" style="width:120px"
@@ -5246,9 +5263,13 @@ function calculoLlegada() {
   const casCRC = Math.round((parseMonto(document.getElementById('lCasillero').value) || 0) * (tcCas || 0));
   const grupos = [];
   itemsDeCompra(c).forEach(it => {
-    const clave = it.id != null ? 'p' + it.id : 'n' + it.nombre;
+    const clave = it.id != null ? 'p' + it.id : 'n' + [it.nombre, it.marca, it.tono].join('|').toLowerCase();
     let g = grupos.find(x => x.clave === clave);
-    if (!g) { g = { clave, id: it.id, nombre: it.nombre, cantidad: 0, valorCRC: 0 }; grupos.push(g); }
+    if (!g) {
+      g = { clave, id: it.id, nombre: it.id != null ? it.nombre : etiquetaProducto(it), cantidad: 0, valorCRC: 0,
+            nuevo: it.id != null ? null : { nombre: it.nombre, marca: it.marca || '', tono: it.tono || '', categoria: it.categoria || 'Maquillaje' } };
+      grupos.push(g);
+    }
     g.cantidad += Number(it.cantidad) || 0;
     g.valorCRC += (Number(it.cantidad) || 0) * (Number(it.precio) || 0) * tcCompra;
   });
@@ -5277,10 +5298,10 @@ function renderLlegada() {
   const caja = document.getElementById('lResumen');
   const r = calculoLlegada();
   if (!r) { caja.innerHTML = ''; return; }
-  const filas = r.grupos.map(g => `<tr><td>${escaparHtml(g.nombre)}${g.p ? '' : ' <span class="badge peach">nuevo: créalo en Nuevo producto</span>'}</td>
+  const filas = r.grupos.map(g => `<tr><td>${escaparHtml(g.nombre)}${g.p ? '' : ` <span class="badge peach">nuevo · se vende a ${formatoColones(precioNuevoDeCompra(g.costoUnit))}</span>`}</td>
       <td style="text-align:right">${g.cantidad}</td>
       <td style="text-align:right"><b>${formatoColones(g.costoUnit)}</b></td>
-      <td style="text-align:right">${g.p ? g.stockDespues : '—'}</td></tr>`).join('');
+      <td style="text-align:right">${g.p ? g.stockDespues : g.cantidad}</td></tr>`).join('');
   const nuevos = r.grupos.filter(g => !g.p).length;
   const avisos = r.grupos.filter(g => g.p).map(g => {
     const venta = precioConDescuento(g.p.precioVenta, g.p.descuento);
@@ -5290,7 +5311,7 @@ function renderLlegada() {
       <div class="tablaScroll"><table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left">Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Costo c/u</th><th style="text-align:right">Quedan</th></tr></thead><tbody>${filas}</tbody></table></div>
       <div style="color:var(--brown-soft);margin-top:6px">Casillero ${formatoColones(r.casCRC)} repartido según lo que vale cada producto.
         ${r.casCRC > 0 ? 'En Finanzas se anota ese pago como compra (casillero / flete).' : ''}
-        ${nuevos ? '<br><b>' + nuevos + ' producto(s) nuevo(s)</b>: no entran solos al inventario; créalos con «Nuevo producto» usando el costo de arriba.' : ''}</div>
+        ${nuevos ? '<br><b>' + nuevos + ' producto(s) nuevo(s)</b>: se crean solos en el inventario con ese costo y precio (costo + 30 %), <b>ocultos en la tienda</b> hasta que les pongas foto y los publiques.' : ''}</div>
       ${avisos.map(a => `<div style="color:var(--coral-dark);font-weight:600;margin-top:4px">${escaparHtml(a)}</div>`).join('')}
     </div></div>`;
 }
@@ -5316,7 +5337,21 @@ async function confirmarLlegada() {
   const ops = [];
   const filasGuardadas = [];
   r.grupos.forEach(g => {
-    if (!g.p) return;
+    if (!g.p) {
+      // Producto nuevo: nace en el inventario con su costo final, oculto en la
+      // tienda hasta que le pongan foto y lo publiquen desde Productos.
+      const precioVenta = precioNuevoDeCompra(g.costoUnit);
+      const precioMayorista = Math.ceil(g.costoUnit * 1.10 / 100) * 100;
+      ops.push({ accion: 'agregar_fila', hoja: 'Productos', fila: {
+        id: '', nombre: g.nuevo.nombre, categoria: g.nuevo.categoria, marca: g.nuevo.marca, tono: g.nuevo.tono,
+        origen: c.tienda || 'Amazon', costoCompra: g.costoUnit, moneda: 'CRC', tipoCambio: '', costoTotalCRC: g.costoUnit,
+        precioVenta, descuento: 0, precioMayorista: precioMayorista < precioVenta ? precioMayorista : '', descuentoMayorista: 0,
+        stock: g.cantidad, estado: 'Disponible', modalidad: 'stock', publicado: 'No',
+        foto: '', descripcion: '', medida: '', portada: ''
+      } });
+      filasGuardadas.push(null);
+      return;
+    }
     const fila = {
       ...filaProductoConStock(g.p, g.stockDespues),
       costoCompra: g.promedio, moneda: 'CRC', tipoCambio: '', costoTotalCRC: g.promedio, modalidad: 'stock'
