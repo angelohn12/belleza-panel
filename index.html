@@ -1353,7 +1353,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18 · productos nuevos en compras</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18b · editar compra en camino</p>
         </div>
       </div>
       <div class="panel">
@@ -5069,6 +5069,7 @@ async function guardarVenta() {
 // casillero en Finanzas. Nada se escribe a mano en Movimientos.
 let lineasCompra = [];       // [{ id | null, nombre, cantidad, precio }]
 let llegadaCompraId = null;
+let compraEditandoId = null; // id de la compra en camino que se está editando (null = nueva)
 
 function codigoCompra() { return 'C' + Date.now().toString(36).slice(-5).toUpperCase(); }
 
@@ -5089,6 +5090,7 @@ function precioNuevoDeCompra(costo) { return Math.ceil((Number(costo) || 0) * 1.
 function valorEnCamino() { return comprasEnCamino().reduce((s, c) => s + valorCompraCRC(c), 0); }
 
 function nuevaCompra() {
+  compraEditandoId = null;
   lineasCompra = [];
   document.getElementById('busq-compra').value = '';
   cerrarBuscador('compra');
@@ -5104,7 +5106,26 @@ function nuevaCompra() {
     .map(m => `<option value="${escaparHtml(m)}"></option>`).join('');
   llenarSelectorSocios('cSocio');
   renderCompraForm();
+  document.getElementById('btnGuardarCompra').textContent = 'Guardar compra';
   abrirFormulario('formCompra');
+}
+
+// Editar una compra que sigue en camino: se abre el mismo formulario con sus datos
+function editarCompra(id) {
+  const c = compraPorId(id);
+  if (!c || String(c.estado) !== 'En camino') return;
+  nuevaCompra();
+  compraEditandoId = c.id;
+  document.getElementById('cTienda').value = c.tienda || '';
+  document.getElementById('cFecha').value = String(c.fecha || '').slice(0, 10) || hoyISO();
+  document.getElementById('cMoneda').value = String(c.moneda) === 'USD' ? 'USD' : 'CRC';
+  if (String(c.moneda) === 'USD') document.getElementById('cTipoCambio').value = c.tipoCambio;
+  document.getElementById('cCasillero').value = c.casilleroEstimado || '';
+  document.getElementById('cPago').value = String(c.pago) === 'socio' ? 'socio' : 'caja';
+  if (String(c.pago) === 'socio') document.getElementById('cSocio').value = c.socio || '';
+  lineasCompra = itemsDeCompra(c).map(it => ({ ...it, precio: String(it.precio ?? '') }));
+  renderCompraForm();
+  document.getElementById('btnGuardarCompra').textContent = 'Guardar cambios';
 }
 
 function agregarLineaCompra(id) {
@@ -5187,22 +5208,37 @@ async function guardarCompra() {
   const tienda = document.getElementById('cTienda').value.trim() || 'Compra';
   const pago = document.getElementById('cPago').value;
   const socio = document.getElementById('cSocio').value;
-  const codigo = codigoCompra();
-  const ops = [{ accion: 'agregar_fila', hoja: 'Compras', fila: {
-    id: '', codigo, fecha: document.getElementById('cFecha').value || hoyISO(), tienda,
+  const editando = compraEditandoId ? compraPorId(compraEditandoId) : null;
+  const codigo = editando ? editando.codigo : codigoCompra();
+  const ops = [{ accion: editando ? 'editar_fila' : 'agregar_fila', hoja: 'Compras', id: editando ? editando.id : undefined, fila: {
+    ...(editando || {}), id: editando ? editando.id : '', codigo, fecha: document.getElementById('cFecha').value || hoyISO(), tienda,
     moneda: d.usd ? 'USD' : 'CRC', tipoCambio: d.tc, estado: 'En camino',
     items: JSON.stringify(d.lineas), total: d.total,
     casilleroEstimado: parseMonto(document.getElementById('cCasillero').value) || '',
-    casilleroRealCRC: '', pago, socio: pago === 'socio' ? socio : '', fechaLlegada: '', notas: ''
-  } }].concat(movimientosDeCompra(d.totalCRC, pago, socio, `Compra en camino ${codigo} · ${tienda}`));
+    casilleroRealCRC: '', pago, socio: pago === 'socio' ? socio : '', fechaLlegada: '', notas: editando ? (editando.notas || '') : ''
+  } }];
+  // Al editar, lo de Finanzas se rehace: se borra lo anotado por esta compra
+  // (por su código) y se vuelve a anotar con el monto nuevo.
+  const fechaMov = document.getElementById('cFecha').value || hoyISO();   // en Finanzas va con la fecha real de la compra
+  if (editando) {
+    (estado.movimientos || []).filter(m => String(m.descripcion || '').includes(codigo)).forEach(m => {
+      ops.push({ accion: 'eliminar_fila', hoja: 'Movimientos', id: m.id });
+    });
+  }
+  movimientosDeCompra(d.totalCRC, pago, socio, `Compra en camino ${codigo} · ${tienda}`).forEach(o => {
+    o.fila.fecha = fechaMov;
+    ops.push(o);
+  });
 
   const lote = await apiLote(ops);
   const res = lote.resultados || [];
-  if (!res[0] || !res[0].ok) { mostrarToast('No se pudo guardar la compra: ' + ((res[0] && res[0].error) || lote.error || 'error')); return; }
+  if (!res[0] || !res[0].ok) { mostrarToast('No se pudo guardar la compra (no se cambió nada en Finanzas): ' + ((res[0] && res[0].error) || lote.error || 'error')); return; }
   if (!lote.ok) mostrarToast('La compra se guardó, pero algo de Finanzas falló. Revisa Movimientos.');
   document.getElementById('formCompra').classList.add('oculto');
   lineasCompra = [];
-  await refrescarTrasGuardar('Compra anotada: queda en camino.', ['Compras', 'Movimientos']);
+  const mensaje = editando ? 'Cambios guardados: la compra sigue en camino.' : 'Compra anotada: queda en camino.';
+  compraEditandoId = null;
+  await refrescarTrasGuardar(mensaje, ['Compras', 'Movimientos']);
 }
 
 function renderCompras() {
@@ -5225,6 +5261,7 @@ function renderCompras() {
       <div style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(items.map(it => (it.cantidad || 1) + '× ' + it.nombre).join(' · '))}</div>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
         <button type="button" onclick="abrirLlegada('${escaparHtml(c.id)}')">Ya llegó</button>
+        <button type="button" class="secundario" onclick="editarCompra('${escaparHtml(c.id)}')">Editar</button>
         <button type="button" class="secundario" onclick="cancelarCompra('${escaparHtml(c.id)}')">Cancelar compra</button>
       </div>
     </div>`;
