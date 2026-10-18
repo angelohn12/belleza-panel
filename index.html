@@ -1354,7 +1354,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18f · casillero por igual y paquetes juntos</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18g · marcar varias llegadas</p>
         </div>
       </div>
       <div class="panel">
@@ -5284,6 +5284,28 @@ async function guardarCompra() {
 // La lista de compras en camino va plegada (una línea por compra) para no
 // empujar el inventario hacia abajo; se recuerda si la dejaste abierta.
 let comprasEnCaminoAbierto = false;
+let comprasMarcadas = [];   // compras en camino marcadas para darles «Ya llegó» juntas
+function marcarCompraLlegada(id, si) {
+  comprasMarcadas = comprasMarcadas.filter(x => String(x) !== String(id));
+  if (si) comprasMarcadas.push(String(id));
+  const b = document.getElementById('btnLlegaronMarcadas');
+  if (b) { b.disabled = !comprasMarcadas.length; b.textContent = `Llegaron las marcadas (${comprasMarcadas.length})`; }
+}
+function marcarTodasLlegadas(si) {
+  comprasMarcadas = si ? comprasEnCamino().map(c => String(c.id)) : [];
+  renderCompras();
+}
+function abrirLlegadaMarcadas() {
+  const ids = comprasMarcadas.filter(id => compraPorId(id));
+  if (!ids.length) { mostrarToast('Marca las compras que ya llegaron.'); return; }
+  abrirLlegada(ids[0]);
+  ids.slice(1).forEach(id => {
+    llegadaIds.push(id);
+    const caja = document.querySelector(`#lJuntasWrap input[data-compra="${CSS.escape(id)}"]`);
+    if (caja) caja.checked = true;
+  });
+  renderLlegada();
+}
 function renderCompras() {
   const caja = document.getElementById('listaCompras');
   if (!caja) return;
@@ -5297,6 +5319,8 @@ function renderCompras() {
     const lista = items.map(it => (it.cantidad || 1) + '× ' + (it.id == null ? etiquetaProducto(it) : it.nombre)).join(' · ');
     const id = escaparHtml(c.id);
     return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line, #eee)">
+      <input type="checkbox" style="width:20px;height:20px;flex:none" aria-label="Marcar como llegada"
+             ${comprasMarcadas.includes(String(c.id)) ? 'checked' : ''} onchange="marcarCompraLlegada('${id}', this.checked)" />
       <div style="flex:1;min-width:200px;line-height:1.4">
         <b>${escaparHtml(c.tienda)}</b> · ${escaparHtml(String(c.fecha || '').slice(0, 10))} ·
         ${unidades} u. · <b>${usd ? '$' + (Number(c.total) || 0).toFixed(2) + ' = ' : ''}${formatoColones(valorCompraCRC(c))}</b>
@@ -5309,6 +5333,7 @@ function renderCompras() {
       </div>
     </div>`;
   };
+  comprasMarcadas = comprasMarcadas.filter(id => abiertas.some(c => String(c.id) === id));
   const total = abiertas.reduce((s, c) => s + valorCompraCRC(c), 0);
   const unidadesTot = abiertas.reduce((s, c) => s + itemsDeCompra(c).reduce((t, it) => t + (Number(it.cantidad) || 0), 0), 0);
   caja.innerHTML = (abiertas.length
@@ -5316,6 +5341,12 @@ function renderCompras() {
            ontoggle="comprasEnCaminoAbierto = this.open; this.querySelector('.verOcultar').textContent = this.open ? 'ocultar' : 'ver'">
            <summary style="cursor:pointer;font-weight:600;padding:2px 0">En camino: ${unidadesTot} producto${unidadesTot === 1 ? '' : 's'} en ${abiertas.length} compra${abiertas.length === 1 ? '' : 's'} · ${formatoColones(total)}
              <span style="font-weight:400;color:var(--brown-soft);font-size:13px">· toca para <span class="verOcultar">${comprasEnCaminoAbierto ? 'ocultar' : 'ver'}</span></span></summary>
+           ${abiertas.length > 1 ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+             <button type="button" id="btnLlegaronMarcadas" style="padding:6px 12px" ${comprasMarcadas.length ? '' : 'disabled'}
+                     onclick="abrirLlegadaMarcadas()">Llegaron las marcadas (${comprasMarcadas.length})</button>
+             <button type="button" class="secundario" style="padding:6px 12px" onclick="marcarTodasLlegadas(${comprasMarcadas.length === abiertas.length ? 'false' : 'true'})">${comprasMarcadas.length === abiertas.length ? 'Desmarcar todas' : 'Marcar todas'}</button>
+             <span style="color:var(--brown-soft);font-size:12.5px">Marca las que llegaron en el mismo paquete: el casillero se reparte entre todas.</span>
+           </div>` : ''}
            <div style="margin-top:6px">${abiertas.map(fila).join('')}</div>
          </details>`
       : '') +
@@ -5335,7 +5366,7 @@ function abrirLlegada(id) {
        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${otras.map(o => {
          const u = itemsDeCompra(o).reduce((t, it) => t + (Number(it.cantidad) || 0), 0);
          return `<label style="display:flex;gap:8px;align-items:center;font-weight:400;cursor:pointer">
-           <input type="checkbox" style="width:auto" onchange="alternarLlegadaJunta('${escaparHtml(o.id)}', this.checked)" />
+           <input type="checkbox" style="width:auto" data-compra="${escaparHtml(o.id)}" onchange="alternarLlegadaJunta('${escaparHtml(o.id)}', this.checked)" />
            ${escaparHtml(o.tienda)} · ${escaparHtml(String(o.fecha || '').slice(0, 10))} · ${u} u. · ${formatoColones(valorCompraCRC(o))}
            <span style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(itemsDeCompra(o).map(it => it.id == null ? etiquetaProducto(it) : it.nombre).join(' · ').slice(0, 80))}</span></label>`;
        }).join('')}</div>`
