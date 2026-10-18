@@ -1353,7 +1353,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18b · editar compra en camino</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18c · tono en compras</p>
         </div>
       </div>
       <div class="panel">
@@ -5258,7 +5258,7 @@ function renderCompras() {
       <div style="color:var(--brown-soft)">${items.length} producto${items.length === 1 ? '' : 's'} · ${unidades} unidad${unidades === 1 ? '' : 'es'} ·
         ${usd ? '$' + (Number(c.total) || 0).toFixed(2) + ' = ' : ''}${formatoColones(valorCompraCRC(c))}
         ${est > 0 ? ' · casillero estimado ' + (usd ? '$' + est : formatoColones(est)) : ''}</div>
-      <div style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(items.map(it => (it.cantidad || 1) + '× ' + it.nombre).join(' · '))}</div>
+      <div style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(items.map(it => (it.cantidad || 1) + '× ' + (it.id == null ? etiquetaProducto(it) : it.nombre)).join(' · '))}</div>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
         <button type="button" onclick="abrirLlegada('${escaparHtml(c.id)}')">Ya llegó</button>
         <button type="button" class="secundario" onclick="editarCompra('${escaparHtml(c.id)}')">Editar</button>
