@@ -1354,7 +1354,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18g · marcar varias llegadas</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18h · foto de productos en camino</p>
         </div>
       </div>
       <div class="panel">
@@ -5200,7 +5200,7 @@ function datosCompraForm() {
   const tc = usd ? parseMonto(document.getElementById('cTipoCambio').value) : 1;
   const lineas = lineasCompra.map(l => ({
     id: l.id, nombre: l.nombre,
-    ...(l.id == null ? { marca: l.marca || '', tono: l.tono || '', categoria: l.categoria || 'Maquillaje' } : {}),
+    ...(l.id == null ? { marca: l.marca || '', tono: l.tono || '', categoria: l.categoria || 'Maquillaje', ...(l.foto ? { foto: l.foto } : {}) } : {}),
     cantidad: Math.max(1, Math.floor(Number(l.cantidad) || 0)),
     precio: parseMonto(l.precio) || 0
   }));
@@ -5402,7 +5402,7 @@ function calculoLlegada() {
     let g = grupos.find(x => x.clave === clave);
     if (!g) {
       g = { clave, id: it.id, nombre: it.id != null ? it.nombre : etiquetaProducto(it), cantidad: 0, valorCRC: 0,
-            nuevo: it.id != null ? null : { nombre: it.nombre, marca: it.marca || '', tono: it.tono || '', categoria: it.categoria || 'Maquillaje' } };
+            nuevo: it.id != null ? null : { nombre: it.nombre, marca: it.marca || '', tono: it.tono || '', categoria: it.categoria || 'Maquillaje', foto: it.foto || '' } };
       grupos.push(g);
     }
     g.cantidad += Number(it.cantidad) || 0;
@@ -5491,7 +5491,7 @@ async function confirmarLlegada() {
         origen: c.tienda || 'Amazon', costoCompra: g.costoUnit, moneda: 'CRC', tipoCambio: '', costoTotalCRC: g.costoUnit,
         precioVenta, descuento: 0, precioMayorista: precioMayorista < precioVenta ? precioMayorista : '', descuentoMayorista: 0,
         stock: g.cantidad, estado: 'Disponible', modalidad: 'stock', publicado: 'No',
-        foto: '', descripcion: '', medida: '', portada: ''
+        foto: g.nuevo.foto || '',   // foto que ya se le buscó mientras venía en camino descripcion: '', medida: '', portada: ''
       } });
       filasGuardadas.push(null);
       return;
