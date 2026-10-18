@@ -735,6 +735,7 @@
         </div>
         <div class="formulario oculto" id="formLlegada">
           <div class="campoAncho"><div id="lTitulo" style="font-weight:600"></div></div>
+          <div class="campoAncho" id="lJuntasWrap"></div>
           <div><label>Lo que cobró el casillero y el flete</label><input id="lCasillero" type="text" inputmode="decimal" placeholder="Ej. 20" oninput="renderLlegada()" /></div>
           <div><label>Moneda</label>
             <select id="lMoneda" onchange="renderLlegada()">
@@ -1353,7 +1354,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18e · productos en camino reutilizables</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18f · casillero por igual y paquetes juntos</p>
         </div>
       </div>
       <div class="panel">
@@ -5081,7 +5082,7 @@ async function guardarVenta() {
 // precio), los mete al inventario con el costo final y anota el pago del
 // casillero en Finanzas. Nada se escribe a mano en Movimientos.
 let lineasCompra = [];       // [{ id | null, nombre, cantidad, precio }]
-let llegadaCompraId = null;
+let llegadaIds = [];          // compras que llegaron en el mismo paquete (la primera es la que se tocó)
 let compraEditandoId = null; // id de la compra en camino que se está editando (null = nueva)
 
 function codigoCompra() { return 'C' + Date.now().toString(36).slice(-5).toUpperCase(); }
@@ -5326,7 +5327,19 @@ function renderCompras() {
 function abrirLlegada(id) {
   const c = compraPorId(id);
   if (!c) return;
-  llegadaCompraId = c.id;
+  llegadaIds = [c.id];
+  // Otras compras en camino: se pueden marcar si vinieron en el mismo paquete
+  const otras = comprasEnCamino().filter(o => String(o.id) !== String(c.id));
+  document.getElementById('lJuntasWrap').innerHTML = otras.length
+    ? `<label>¿Llegaron otras compras en el mismo paquete? Márcalas y el casillero se reparte entre todo:</label>
+       <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${otras.map(o => {
+         const u = itemsDeCompra(o).reduce((t, it) => t + (Number(it.cantidad) || 0), 0);
+         return `<label style="display:flex;gap:8px;align-items:center;font-weight:400;cursor:pointer">
+           <input type="checkbox" style="width:auto" onchange="alternarLlegadaJunta('${escaparHtml(o.id)}', this.checked)" />
+           ${escaparHtml(o.tienda)} · ${escaparHtml(String(o.fecha || '').slice(0, 10))} · ${u} u. · ${formatoColones(valorCompraCRC(o))}
+           <span style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(itemsDeCompra(o).map(it => it.id == null ? etiquetaProducto(it) : it.nombre).join(' · ').slice(0, 80))}</span></label>`;
+       }).join('')}</div>`
+    : '';
   const usd = String(c.moneda) === 'USD';
   document.getElementById('lTitulo').textContent = `Llegó la compra de ${c.tienda} (${c.codigo})`;
   document.getElementById('lCasillero').value = '';
@@ -5338,17 +5351,22 @@ function abrirLlegada(id) {
   abrirFormulario('formLlegada');
 }
 
-// Reparte el casillero entre los productos según lo que vale cada uno y calcula
+// Reparte el casillero entre los productos (por igual, por unidad) y calcula
 // el costo final (promedio ponderado con lo que ya hubiera en stock)
+function alternarLlegadaJunta(id, marcada) {
+  llegadaIds = llegadaIds.filter(x => String(x) !== String(id));
+  if (marcada) llegadaIds.push(id);
+  renderLlegada();
+}
 function calculoLlegada() {
-  const c = compraPorId(llegadaCompraId);
+  const compras = llegadaIds.map(compraPorId).filter(Boolean);
+  const c = compras[0];
   if (!c) return null;
-  const tcCompra = Number(c.tipoCambio) || 1;
   const usdCas = document.getElementById('lMoneda').value === 'USD';
   const tcCas = usdCas ? parseMonto(document.getElementById('lTipoCambio').value) : 1;
   const casCRC = Math.round((parseMonto(document.getElementById('lCasillero').value) || 0) * (tcCas || 0));
   const grupos = [];
-  itemsDeCompra(c).forEach(it => {
+  compras.forEach(cc => { const tcCompra = Number(cc.tipoCambio) || 1; itemsDeCompra(cc).forEach(it => {
     const clave = it.id != null ? 'p' + it.id : 'n' + [it.nombre, it.marca, it.tono].join('|').toLowerCase();
     let g = grupos.find(x => x.clave === clave);
     if (!g) {
@@ -5358,10 +5376,14 @@ function calculoLlegada() {
     }
     g.cantidad += Number(it.cantidad) || 0;
     g.valorCRC += (Number(it.cantidad) || 0) * (Number(it.precio) || 0) * tcCompra;
-  });
-  const totalValor = grupos.reduce((s, g) => s + g.valorCRC, 0) || 1;
+  }); });
+  // El casillero se reparte POR IGUAL entre todas las unidades (decisión de
+  // Anyelo, 18/10/2026): el casillero cobra el paquete entero y no se sabe
+  // cuánto pesa cada producto.
+  const totalUnidades = grupos.reduce((s, g) => s + g.cantidad, 0) || 1;
+  const porUnidad = casCRC / totalUnidades;
   grupos.forEach(g => {
-    g.casillero = casCRC * g.valorCRC / totalValor;
+    g.casillero = porUnidad * g.cantidad;
     g.costoUnit = g.cantidad > 0 ? Math.round((g.valorCRC + g.casillero) / g.cantidad) : 0;
     g.p = g.id != null ? productoPorId(g.id) : (g.nuevo ? productoIgualA(g.nuevo) || null : null);
     if (g.p) {
@@ -5374,7 +5396,7 @@ function calculoLlegada() {
         : g.costoUnit;
     }
   });
-  return { c, casCRC, tcCas, usdCas, grupos };
+  return { c, compras, casCRC, tcCas, usdCas, grupos, porUnidad, totalUnidades };
 }
 
 function renderLlegada() {
@@ -5395,7 +5417,7 @@ function renderLlegada() {
   }).filter(Boolean);
   caja.innerHTML = `<div class="lineasVenta"><div class="lineaVenta" style="display:block;line-height:1.6">
       <div class="tablaScroll"><table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left">Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Costo c/u</th><th style="text-align:right">Quedan</th></tr></thead><tbody>${filas}</tbody></table></div>
-      <div style="color:var(--brown-soft);margin-top:6px">Casillero ${formatoColones(r.casCRC)} repartido según lo que vale cada producto.
+      <div style="color:var(--brown-soft);margin-top:6px">Casillero ${formatoColones(r.casCRC)} repartido por igual: <b>${formatoColones(Math.round(r.porUnidad))} por unidad</b> (${r.totalUnidades} unidades${r.compras.length > 1 ? ' de ' + r.compras.length + ' compras' : ''}).
         ${r.casCRC > 0 ? 'En Finanzas se anota ese pago como compra (casillero / flete).' : ''}
         ${nuevos ? '<br><b>' + nuevos + ' producto(s) nuevo(s)</b>: se crean solos en el inventario con ese costo y precio (costo + 30 %), <b>ocultos en la tienda</b> hasta que les pongas foto y los publiques.' : ''}</div>
       ${avisos.map(a => `<div style="color:var(--coral-dark);font-weight:600;margin-top:4px">${escaparHtml(a)}</div>`).join('')}
@@ -5412,12 +5434,17 @@ async function confirmarLlegada() {
   const hoy = hoyISO();
   const usuario = estado.usuario ? estado.usuario.usuario : '';
 
-  // 1) Se marca como recibida PRIMERO y sola: si algo más fallara, no se puede
-  //    volver a dar «Ya llegó» y sumar el stock dos veces.
-  const marca = await apiLote([{ accion: 'editar_fila', hoja: 'Compras', id: c.id,
-    fila: { ...c, estado: 'Recibida', casilleroRealCRC: r.casCRC, fechaLlegada: hoy } }]);
-  const m0 = (marca.resultados || [])[0];
-  if (!m0 || !m0.ok) { mostrarToast('No se pudo marcar la compra como recibida (no se cambió nada): ' + ((m0 && m0.error) || marca.error || '')); return; }
+  // 1) Se marcan como recibidas PRIMERO: si algo más fallara, no se puede
+  //    volver a dar «Ya llegó» y sumar el stock dos veces. A cada compra se le
+  //    anota su parte del casillero (por unidad).
+  const marca = await apiLote(r.compras.map(cc => {
+    const u = itemsDeCompra(cc).reduce((t, it) => t + (Number(it.cantidad) || 0), 0);
+    return { accion: 'editar_fila', hoja: 'Compras', id: cc.id,
+      fila: { ...cc, estado: 'Recibida', casilleroRealCRC: Math.round(r.porUnidad * u), fechaLlegada: hoy } };
+  }));
+  const fallos = (marca.resultados || []).filter(x => !x || !x.ok);
+  if (!marca.resultados || fallos.length === r.compras.length) { mostrarToast('No se pudo marcar la compra como recibida (no se cambió nada): ' + ((fallos[0] && fallos[0].error) || marca.error || '')); return; }
+  if (fallos.length) { mostrarToast('Alguna de las compras no se pudo marcar como recibida. Revisa antes de seguir.'); return; }
 
   // 2) Inventario con el costo final + el pago del casillero en Finanzas
   const ops = [];
@@ -5448,7 +5475,7 @@ async function confirmarLlegada() {
   if (r.casCRC > 0) {
     const pago = document.getElementById('lPago').value;
     const socio = document.getElementById('lSocio').value;
-    const descripcion = `Casillero ${c.codigo} · ${c.tienda}`;
+    const descripcion = `Casillero ${r.compras.map(cc => cc.codigo).join(' + ')} · ${c.tienda}`;
     if (pago === 'socio') ops.push({ accion: 'agregar_fila', hoja: 'Movimientos', fila: {
       id: '', fecha: hoy, tipo: 'aporte', monto: r.casCRC, socio, categoria: 'Pagó con su plata', descripcion, usuario } });
     ops.push({ accion: 'agregar_fila', hoja: 'Movimientos', fila: {
@@ -5463,10 +5490,10 @@ async function confirmarLlegada() {
       if (res && res.ok && filasGuardadas[i]) Object.assign(filasGuardadas[i].p, filasGuardadas[i].fila);
     });
   }
-  llegadaCompraId = null;
+  llegadaIds = [];
   document.getElementById('formLlegada').classList.add('oculto');
   await refrescarTrasGuardar(todoBien
-    ? 'Listo: la compra llegó, el inventario y el casillero quedaron anotados.'
+    ? (r.compras.length > 1 ? `Listo: llegaron ${r.compras.length} compras; el inventario y el casillero quedaron anotados.` : 'Listo: la compra llegó, el inventario y el casillero quedaron anotados.')
     : 'La compra quedó como recibida, pero algo no se guardó. Revisa Inventario y Movimientos.', ['Compras', 'Movimientos']);
 }
 
