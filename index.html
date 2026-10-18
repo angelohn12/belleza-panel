@@ -1353,7 +1353,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18c · tono en compras</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18d · compras en camino plegadas</p>
         </div>
       </div>
       <div class="panel">
@@ -5241,33 +5241,42 @@ async function guardarCompra() {
   await refrescarTrasGuardar(mensaje, ['Compras', 'Movimientos']);
 }
 
+// La lista de compras en camino va plegada (una línea por compra) para no
+// empujar el inventario hacia abajo; se recuerda si la dejaste abierta.
+let comprasEnCaminoAbierto = false;
 function renderCompras() {
   const caja = document.getElementById('listaCompras');
   if (!caja) return;
   const abiertas = comprasEnCamino();
   const recibidas = (estado.compras || []).filter(c => String(c.estado) === 'Recibida').slice(-3).reverse();
   if (!abiertas.length && !recibidas.length) { caja.innerHTML = ''; return; }
-  const tarjeta = c => {
+  const fila = c => {
     const items = itemsDeCompra(c);
     const unidades = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
     const usd = String(c.moneda) === 'USD';
-    const est = Number(c.casilleroEstimado) || 0;
-    return `<div class="lineaVenta" style="display:block;line-height:1.6;margin-bottom:8px">
-      <b>${escaparHtml(c.tienda)}</b> · ${escaparHtml(String(c.fecha || '').slice(0, 10))}
-      <span class="badge peach">${escaparHtml(c.codigo)}</span>
-      <div style="color:var(--brown-soft)">${items.length} producto${items.length === 1 ? '' : 's'} · ${unidades} unidad${unidades === 1 ? '' : 'es'} ·
-        ${usd ? '$' + (Number(c.total) || 0).toFixed(2) + ' = ' : ''}${formatoColones(valorCompraCRC(c))}
-        ${est > 0 ? ' · casillero estimado ' + (usd ? '$' + est : formatoColones(est)) : ''}</div>
-      <div style="color:var(--brown-soft);font-size:12.5px">${escaparHtml(items.map(it => (it.cantidad || 1) + '× ' + (it.id == null ? etiquetaProducto(it) : it.nombre)).join(' · '))}</div>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <button type="button" onclick="abrirLlegada('${escaparHtml(c.id)}')">Ya llegó</button>
-        <button type="button" class="secundario" onclick="editarCompra('${escaparHtml(c.id)}')">Editar</button>
-        <button type="button" class="secundario" onclick="cancelarCompra('${escaparHtml(c.id)}')">Cancelar compra</button>
+    const lista = items.map(it => (it.cantidad || 1) + '× ' + (it.id == null ? etiquetaProducto(it) : it.nombre)).join(' · ');
+    const id = escaparHtml(c.id);
+    return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line, #eee)">
+      <div style="flex:1;min-width:200px;line-height:1.4">
+        <b>${escaparHtml(c.tienda)}</b> · ${escaparHtml(String(c.fecha || '').slice(0, 10))} ·
+        ${unidades} u. · <b>${usd ? '$' + (Number(c.total) || 0).toFixed(2) + ' = ' : ''}${formatoColones(valorCompraCRC(c))}</b>
+        <div title="${escaparHtml(lista)}" style="color:var(--brown-soft);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${escaparHtml(lista)}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" style="padding:6px 12px" onclick="abrirLlegada('${id}')">Ya llegó</button>
+        <button type="button" class="secundario" style="padding:6px 12px" onclick="editarCompra('${id}')">Editar</button>
+        <button type="button" class="secundario" style="padding:6px 12px" onclick="cancelarCompra('${id}')">Cancelar</button>
       </div>
     </div>`;
   };
+  const total = abiertas.reduce((s, c) => s + valorCompraCRC(c), 0);
   caja.innerHTML = (abiertas.length
-      ? `<h3 style="margin:14px 0 8px">En camino (${abiertas.length})</h3>` + abiertas.map(tarjeta).join('')
+      ? `<details class="lineaVenta" style="display:block;margin:14px 0 8px" ${comprasEnCaminoAbierto ? 'open' : ''}
+           ontoggle="comprasEnCaminoAbierto = this.open; this.querySelector('.verOcultar').textContent = this.open ? 'ocultar' : 'ver'">
+           <summary style="cursor:pointer;font-weight:600;padding:2px 0">En camino: ${abiertas.length} compra${abiertas.length === 1 ? '' : 's'} · ${formatoColones(total)}
+             <span style="font-weight:400;color:var(--brown-soft);font-size:13px">· toca para <span class="verOcultar">${comprasEnCaminoAbierto ? 'ocultar' : 'ver'}</span></span></summary>
+           <div style="margin-top:6px">${abiertas.map(fila).join('')}</div>
+         </details>`
       : '') +
     (recibidas.length
       ? `<p class="ayudaTienda" style="margin:10px 0 0">Últimas recibidas: ${recibidas.map(c => escaparHtml(c.tienda) + ' ' + escaparHtml(c.codigo) + ' (' + escaparHtml(String(c.fechaLlegada || '').slice(0, 10)) + ')').join(' · ')}</p>`
