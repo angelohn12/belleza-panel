@@ -6571,9 +6571,9 @@ function cajaArmarNivel(candidatos, nivel, piezas, azar) {
 // Precios PUBLICADOS (Facebook/Marketplace): la caja cuesta siempre lo mismo.
 // El sistema elige los productos para que quepan en ese precio con la ganancia del tamaño.
 const CAJA_PRECIOS_FIJOS = {
-  economica: { 25: 108000, 50: 206500, 100: 408000 },
-  media:     { 25: 206500, 50: 396500, 100: 782000 },
-  alta:      { 25: 427000, 50: 789000, 100: 1567000 }
+  economica: { 25: 110000, 50: 210000, 100: 410000 },
+  media:     { 25: 210000, 50: 400000, 100: 780000 },
+  alta:      { 25: 430000, 50: 790000, 100: 1570000 }
 };
 function cajaPrecioFijo(nivel, piezas) { return (CAJA_PRECIOS_FIJOS[nivel] || {})[piezas] || 0; }
 // Prueba muchas combinaciones y se queda con la de más valor que todavía deja la
