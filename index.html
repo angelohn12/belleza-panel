@@ -690,6 +690,12 @@
             <datalist id="cTiendas"><option>Amazon</option><option>Sephora</option><option>Target</option><option>Marshalls</option></datalist>
           </div>
           <div><label>Fecha de la compra</label><input id="cFecha" type="date" /></div>
+          <div><label>¿Qué tipo de compra es?</label>
+            <select id="cLinea">
+              <option value="Nuevo">Maquillaje nuevo</option>
+              <option value="Liquidación">Liquidación (Avellana Outlet)</option>
+            </select>
+          </div>
           <div><label>Moneda de los precios</label>
             <select id="cMoneda" onchange="renderCompraForm()">
               <option value="USD">Dólares</option>
@@ -794,6 +800,12 @@
           <div>
             <label>Nombre</label>
             <input id="pNombre" placeholder="En español. Ej: Easy Bake — Polvo suelto" />
+          </div>
+          <div><label>Línea</label>
+            <select id="pLinea">
+              <option value="Nuevo">Maquillaje nuevo</option>
+              <option value="Liquidación">Liquidación (Avellana Outlet)</option>
+            </select>
           </div>
           <div><label>Categoría</label>
             <select id="pCategoria">
@@ -1354,7 +1366,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-18h · foto de productos en camino</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-21a · línea Nuevo / Liquidación</p>
         </div>
       </div>
       <div class="panel">
@@ -3834,6 +3846,7 @@ function nuevoProducto() {
   elegirModoMayorista('manual');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
+  document.getElementById('pLinea').value = 'Nuevo';
   document.getElementById('pMedida').value = '';
   document.getElementById('pDescripcion').value = '';
   document.getElementById('pMarca').value = '__nueva__';
@@ -3867,6 +3880,7 @@ function editarProducto(id) {
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
+  document.getElementById('pLinea').value = lineaDe(p);
   document.getElementById('pMedida').value = p.medida || '';
   document.getElementById('pDescripcion').value = p.descripcion || '';
   document.getElementById('pMarca').value = p.marca || '__nueva__';
@@ -4165,6 +4179,7 @@ async function guardarProducto() {
     };
   }
 
+  fila.linea = document.getElementById('pLinea').value;
   const accion = productoEditando ? 'editar_fila' : 'agregar_fila';
   const resultado = await apiPost({ accion, hoja: 'Productos', id: productoEditando, fila });
   if (resultado.ok) {
@@ -4219,7 +4234,7 @@ async function aplicarCostoPrecioATonosHermanos(filaGuardada, idGuardado) {
   const nuevoMayorista = Number(filaGuardada.precioMayorista) || 0;
   const nuevoDescMayorista = Number(filaGuardada.descuentoMayorista) || 0;
   const hermanos = estado.productos.filter(p =>
-    String(p.id) !== String(idGuardado) &&
+    String(p.id) !== String(idGuardado) && lineaDe(p) === lineaDe(filaGuardada) &&
     (p.marca || '').trim().toLowerCase() + '|' + (p.nombre || '').trim().toLowerCase() === clave &&
     (Number(p.precioVenta) !== nuevoPrecio || Number(p.costoCompra) !== nuevoCosto || (Number(p.descuento) || 0) !== nuevoDescuento ||
      (copiarMayorista && ((Number(p.precioMayorista) || 0) !== nuevoMayorista || (Number(p.descuentoMayorista) || 0) !== nuevoDescMayorista)))
@@ -5087,6 +5102,9 @@ let compraEditandoId = null; // id de la compra en camino que se está editando 
 
 function codigoCompra() { return 'C' + Date.now().toString(36).slice(-5).toUpperCase(); }
 
+// Línea del producto (21/10/2026): 'Nuevo' = maquillaje original de tienda;
+// 'Liquidación' = lotes de liquidación (Avellana Outlet). Vacío = Nuevo.
+function lineaDe(x) { return String((x && x.linea) || '').trim() === 'Liquidación' ? 'Liquidación' : 'Nuevo'; }
 function itemsDeCompra(c) {
   try { const v = JSON.parse(c.items || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
 }
@@ -5114,6 +5132,7 @@ function nuevaCompra() {
   document.getElementById('cTipoCambio').value = valorConfig('tipoCambio', 520);
   document.getElementById('cCasillero').value = '';
   document.getElementById('cPago').value = 'caja';
+  document.getElementById('cLinea').value = 'Nuevo';
   ['cNuevoNombre', 'cNuevoMarca', 'cNuevoTono'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('cMarcas').innerHTML = [...new Set((estado.productos || [])
     .map(p => String(p.marca || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
@@ -5135,6 +5154,7 @@ function editarCompra(id) {
   document.getElementById('cMoneda').value = String(c.moneda) === 'USD' ? 'USD' : 'CRC';
   if (String(c.moneda) === 'USD') document.getElementById('cTipoCambio').value = c.tipoCambio;
   document.getElementById('cCasillero').value = c.casilleroEstimado || '';
+  document.getElementById('cLinea').value = lineaDe(c);
   document.getElementById('cPago').value = String(c.pago) === 'socio' ? 'socio' : 'caja';
   if (String(c.pago) === 'socio') document.getElementById('cSocio').value = c.socio || '';
   lineasCompra = itemsDeCompra(c).map(it => ({ ...it, precio: String(it.precio ?? '') }));
@@ -5154,7 +5174,7 @@ function agregarLineaCompra(id) {
 // Clave para reconocer el mismo producto nuevo en varias compras
 function claveNuevo(it) { return [it.nombre, it.marca, it.tono].map(x => String(x || '').trim().toLowerCase()).join('|'); }
 // Producto del inventario con el mismo nombre, marca y tono (por si ya se creó al llegar otra compra)
-function productoIgualA(it) { return (estado.productos || []).find(p => claveNuevo(p) === claveNuevo(it)); }
+function productoIgualA(it) { return (estado.productos || []).find(p => claveNuevo(p) === claveNuevo(it) && lineaDe(p) === lineaDe(it)); }
 // Productos nuevos (sin crear aún) que vienen en las compras en camino, sin repetir
 function nuevosEnCamino() {
   const vistos = {};
@@ -5255,7 +5275,7 @@ async function guardarCompra() {
     moneda: d.usd ? 'USD' : 'CRC', tipoCambio: d.tc, estado: 'En camino',
     items: JSON.stringify(d.lineas), total: d.total,
     casilleroEstimado: parseMonto(document.getElementById('cCasillero').value) || '',
-    casilleroRealCRC: '', pago, socio: pago === 'socio' ? socio : '', fechaLlegada: '', notas: editando ? (editando.notas || '') : ''
+    linea: document.getElementById('cLinea').value, casilleroRealCRC: '', pago, socio: pago === 'socio' ? socio : '', fechaLlegada: '', notas: editando ? (editando.notas || '') : ''
   } }];
   // Al editar, lo de Finanzas se rehace: se borra lo anotado por esta compra
   // (por su código) y se vuelve a anotar con el monto nuevo.
@@ -5322,7 +5342,7 @@ function renderCompras() {
       <input type="checkbox" style="width:20px;height:20px;flex:none" aria-label="Marcar como llegada"
              ${comprasMarcadas.includes(String(c.id)) ? 'checked' : ''} onchange="marcarCompraLlegada('${id}', this.checked)" />
       <div style="flex:1;min-width:200px;line-height:1.4">
-        <b>${escaparHtml(c.tienda)}</b> · ${escaparHtml(String(c.fecha || '').slice(0, 10))} ·
+        <b>${escaparHtml(c.tienda)}</b>${lineaDe(c) === 'Liquidación' ? ' <span class="badge peach">Outlet</span>' : ''} · ${escaparHtml(String(c.fecha || '').slice(0, 10))} ·
         ${unidades} u. · <b>${usd ? '$' + (Number(c.total) || 0).toFixed(2) + ' = ' : ''}${formatoColones(valorCompraCRC(c))}</b>
         <div title="${escaparHtml(lista)}" style="color:var(--brown-soft);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${escaparHtml(lista)}</div>
       </div>
@@ -5398,11 +5418,11 @@ function calculoLlegada() {
   const casCRC = Math.round((parseMonto(document.getElementById('lCasillero').value) || 0) * (tcCas || 0));
   const grupos = [];
   compras.forEach(cc => { const tcCompra = Number(cc.tipoCambio) || 1; itemsDeCompra(cc).forEach(it => {
-    const clave = it.id != null ? 'p' + it.id : 'n' + [it.nombre, it.marca, it.tono].join('|').toLowerCase();
+    const clave = it.id != null ? 'p' + it.id : 'n' + [it.nombre, it.marca, it.tono, lineaDe(cc)].join('|').toLowerCase();
     let g = grupos.find(x => x.clave === clave);
     if (!g) {
       g = { clave, id: it.id, nombre: it.id != null ? it.nombre : etiquetaProducto(it), cantidad: 0, valorCRC: 0,
-            nuevo: it.id != null ? null : { nombre: it.nombre, marca: it.marca || '', tono: it.tono || '', categoria: it.categoria || 'Maquillaje', foto: it.foto || '' } };
+            nuevo: it.id != null ? null : { nombre: it.nombre, marca: it.marca || '', tono: it.tono || '', categoria: it.categoria || 'Maquillaje', foto: it.foto || '', linea: lineaDe(cc) } };
       grupos.push(g);
     }
     g.cantidad += Number(it.cantidad) || 0;
@@ -5490,7 +5510,7 @@ async function confirmarLlegada() {
         id: '', nombre: g.nuevo.nombre, categoria: g.nuevo.categoria, marca: g.nuevo.marca, tono: g.nuevo.tono,
         origen: c.tienda || 'Amazon', costoCompra: g.costoUnit, moneda: 'CRC', tipoCambio: '', costoTotalCRC: g.costoUnit,
         precioVenta, descuento: 0, precioMayorista: precioMayorista < precioVenta ? precioMayorista : '', descuentoMayorista: 0,
-        stock: g.cantidad, estado: 'Disponible', modalidad: 'stock', publicado: 'No',
+        stock: g.cantidad, estado: 'Disponible', modalidad: 'stock', publicado: 'No', linea: g.nuevo.linea,
         foto: g.nuevo.foto || '',   // foto que ya se le buscó mientras venía en camino descripcion: '', medida: '', portada: ''
       } });
       filasGuardadas.push(null);
