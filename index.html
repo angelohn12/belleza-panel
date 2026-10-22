@@ -1366,7 +1366,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-21a · línea Nuevo / Liquidación</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-21b · márgenes del Outlet</p>
         </div>
       </div>
       <div class="panel">
@@ -1377,6 +1377,17 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
           <button type="button" class="secundario" onclick="mistAgregarTamano()">Agregar un tamaño</button>
           <button id="btnGuardarMist" onclick="ejecutarConBoton('btnGuardarMist', guardarMisteriosa)">Guardar caja misteriosa</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Avellana Outlet: márgenes de los lotes</h2>
+        <p class="ayudaTienda">Margen <b>bruto sobre la venta</b> (no markup). El precio de cada lote sale solo del costo real promedio de las piezas de liquidación de ese tipo: costo × piezas ÷ (1 − margen), redondeado hacia arriba a ₡500. Cada pieza cae en un tipo: <b>Skincare</b> si su categoría es «Cuidado personal», <b>Premium</b> si su marca está en la lista de abajo, y <b>Emprendedora</b> todo lo demás. Márgenes provisionales hasta conocer el costo de la primera caja.</p>
+        <div id="outletMargenes"></div>
+        <div style="margin-top:12px"><label>Marcas que cuentan como Premium (separadas por coma)</label>
+          <textarea id="outletPremium" rows="2"></textarea></div>
+        <div id="outletEjemplo" style="margin-top:12px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <button id="btnGuardarOutlet" onclick="ejecutarConBoton('btnGuardarOutlet', guardarOutlet)">Guardar márgenes del Outlet</button>
         </div>
       </div>
       <div class="panel">
@@ -1776,6 +1787,7 @@ function renderTodo() {
   document.getElementById('cfgTipoCambio').value = valorConfig('tipoCambio', 520);
   document.getElementById('cfgMinimoMayorista').value = valorConfig('minimoMayorista', 3);
   renderMistConfig();
+  renderOutletConfig();
 }
 
 // ---------- Resumen ----------
@@ -6018,6 +6030,67 @@ async function guardarMisteriosa() {
   filas.push(['misteriosa', JSON.stringify({ activa: mistConfig.activa, tamanos: ordenados })]);
   const res = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
   if (res.ok) { mostrarToast('Caja misteriosa guardada.'); await cargarDatos(true, ['Config']); }
+  else mostrarToast('Error: ' + res.error);
+}
+
+// ---------- Avellana Outlet: márgenes de los lotes ----------
+// Vive en Config, fila 'outlet' (texto JSON). Mismos valores de respaldo que el
+// servidor (Code.gs, OUTLET_DEFECTO) si todavía no se guardó nada.
+const OUTLET_DEFECTO_PANEL = {
+  tamanos: [50, 100, 500],
+  margenes: { emprendedora: [45, 40, 30], premium: [45, 40, 30], skincare: [45, 40, 30] },
+  marcasPremium: 'Rare Beauty, Fenty Beauty, Huda Beauty, Charlotte Tilbury, NARS, Benefit Cosmetics, Too Faced, Urban Decay, Tarte, Dior, Rhode, Anastasia Beverly Hills'
+};
+const OUTLET_TIPOS_PANEL = [['emprendedora', 'Emprendedora'], ['premium', 'Premium'], ['skincare', 'Skincare']];
+let outletConfig = null;
+function outletLeerConfig() {
+  const c = JSON.parse(JSON.stringify(OUTLET_DEFECTO_PANEL));
+  try {
+    const g = JSON.parse(valorConfig('outlet', '') || '{}');
+    if (Array.isArray(g.tamanos) && g.tamanos.length) c.tamanos = g.tamanos.map(Number);
+    if (g.margenes) OUTLET_TIPOS_PANEL.forEach(([k]) => { if (Array.isArray(g.margenes[k])) c.margenes[k] = g.margenes[k].map(Number); });
+    if (typeof g.marcasPremium === 'string') c.marcasPremium = g.marcasPremium;
+  } catch (e) { /* fila dañada: quedan los de respaldo */ }
+  return c;
+}
+function renderOutletConfig() {
+  outletConfig = outletLeerConfig();
+  const t = outletConfig.tamanos;
+  document.getElementById('outletMargenes').innerHTML = `<div class="tablaScroll"><table style="width:100%;font-size:13.5px">
+      <thead><tr><th style="text-align:left">Tipo de caja</th>${t.map(n => `<th style="text-align:right">${n} piezas</th>`).join('')}</tr></thead>
+      <tbody>${OUTLET_TIPOS_PANEL.map(([k, nombre]) => `<tr><td>${nombre}</td>${t.map((n, i) => `<td style="text-align:right;white-space:nowrap">
+        <input type="number" min="1" max="89" step="1" value="${Number(outletConfig.margenes[k][i]) || ''}" style="width:72px;text-align:right"
+               aria-label="Margen ${nombre} ${n} piezas" oninput="outletCambiaMargen('${k}', ${i}, this.value)" /> %</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
+  document.getElementById('outletPremium').value = outletConfig.marcasPremium;
+  renderOutletEjemplo();
+}
+function outletCambiaMargen(tipo, i, v) { outletConfig.margenes[tipo][i] = Number(v); renderOutletEjemplo(); }
+// Ejemplo en vivo con un costo de ₡1.000 por pieza: precio del lote y lo que queda de margen bruto
+function renderOutletEjemplo() {
+  if (!outletConfig) return;
+  const costo = 1000, t = outletConfig.tamanos;
+  const fila = ([k, nombre]) => `<tr><td>${nombre}</td>${t.map((n, i) => {
+    const m = Number(outletConfig.margenes[k][i]);
+    if (!(m > 0 && m < 90)) return '<td style="text-align:right;color:var(--coral-dark)">margen inválido</td>';
+    const precio = Math.ceil(costo * n / (1 - m / 100) / 500) * 500, gan = precio - costo * n;
+    return `<td style="text-align:right">${formatoColones(precio)}<br><span style="color:var(--brown-soft);font-size:12px">ganás ${formatoColones(gan)} · ${(gan / precio * 100).toFixed(1)} %</span></td>`;
+  }).join('')}</tr>`;
+  document.getElementById('outletEjemplo').innerHTML = `<p class="ayudaTienda" style="margin:0 0 6px">Ejemplo si cada pieza te costara ₡1.000 (con casillero): precio del lote, ganancia bruta y margen real.</p>
+    <div class="tablaScroll"><table style="width:100%;font-size:13px"><tbody>${OUTLET_TIPOS_PANEL.map(fila).join('')}</tbody></table></div>`;
+}
+async function guardarOutlet() {
+  for (const [k, nombre] of OUTLET_TIPOS_PANEL) {
+    for (let i = 0; i < outletConfig.tamanos.length; i++) {
+      const m = Number(outletConfig.margenes[k][i]);
+      if (!(m >= 1 && m <= 89)) { mostrarToast(`El margen de ${nombre} (${outletConfig.tamanos[i]} piezas) tiene que ir de 1 a 89 %.`); return; }
+    }
+  }
+  outletConfig.marcasPremium = document.getElementById('outletPremium').value.split(',').map(x => x.trim()).filter(Boolean).join(', ');
+  const filas = estado.config.filter(c => c.clave !== 'outlet').map(c => [c.clave, c.valor]);
+  filas.push(['outlet', JSON.stringify(outletConfig)]);
+  const res = await apiPost({ accion: 'reemplazar_todo', hoja: 'Config', filas });
+  if (res.ok) { mostrarToast('Márgenes del Outlet guardados.'); await cargarDatos(true, ['Config']); }
   else mostrarToast('Error: ' + res.error);
 }
 
