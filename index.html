@@ -870,7 +870,8 @@
           <div id="pCampoMayorista" class="campoAncho">
             <label>Precio mayorista por unidad (₡)</label>
             <div class="filtrosTienda" style="margin:4px 0 0">
-              <button type="button" class="chipT activo" id="modoMayorManual" onclick="elegirModoMayorista('manual')">Precio manual</button>
+              <button type="button" class="chipT activo" id="modoMayorAuto" onclick="elegirModoMayorista('auto')">Automático (tienda −8 %)</button>
+              <button type="button" class="chipT" id="modoMayorManual" onclick="elegirModoMayorista('manual')">Precio manual</button>
               <button type="button" class="chipT" id="modoMayorMargen" onclick="elegirModoMayorista('margen')">Elegir % de ganancia</button>
             </div>
             <select id="pMargenMayorPct" class="oculto" style="margin-top:8px" onchange="actualizarVistaMayorista()"></select>
@@ -1377,7 +1378,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-23 · respuesta para clientas</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-23b · mayorista automático</p>
         </div>
       </div>
       <div class="panel">
@@ -3752,10 +3753,23 @@ function problemaPrecioMayorista(mayorista, precioNormal, costo) {
   return '';
 }
 
-// Igual que el precio de venta: se escribe a mano, o se elige un % de
-// ganancia sobre el costo y el precio se calcula solo. Lo que se guarda
-// siempre es el precio que quedó (un número fijo), no el %.
-let modoMayorista = 'manual';
+// Tres formas: automático (la regla del 23/10/2026), a mano, o un % de
+// ganancia sobre el costo. Lo que se guarda siempre es el precio que quedó
+// (un número fijo), no la regla.
+// Automático = el mayor entre "precio de tienda −8 %" y "costo con 15 % de
+// margen sobre la venta", redondeado hacia arriba a ₡100. Así elegir producto
+// por producto cuesta más que la caja sorpresa (que ahorra ~20 %). Si ni así
+// queda por debajo del precio de tienda, el producto va sin precio mayorista.
+const MAYORISTA_DESC_TIENDA = 8;
+const MAYORISTA_MARGEN_MIN = 15;
+function precioMayoristaAutomatico(precioNormal, costo) {
+  if (!(precioNormal > 0)) return 0;
+  const porTienda = Math.ceil(precioNormal * (1 - MAYORISTA_DESC_TIENDA / 100) / 100) * 100;
+  const porCosto = costo > 0 ? Math.ceil(costo / (1 - MAYORISTA_MARGEN_MIN / 100) / 100) * 100 : 0;
+  const precio = Math.max(porTienda, porCosto);
+  return precio < precioNormal ? precio : 0;
+}
+let modoMayorista = 'auto';
 function elegirModoMayorista(m) {
   const sel = document.getElementById('pMargenMayorPct');
   if (!sel.options.length) {
@@ -3764,11 +3778,12 @@ function elegirModoMayorista(m) {
     sel.innerHTML = html;
     sel.value = '20';
   }
-  modoMayorista = m === 'margen' ? 'margen' : 'manual';
+  modoMayorista = m === 'margen' || m === 'auto' ? m : 'manual';
+  document.getElementById('modoMayorAuto').classList.toggle('activo', modoMayorista === 'auto');
   document.getElementById('modoMayorManual').classList.toggle('activo', modoMayorista === 'manual');
   document.getElementById('modoMayorMargen').classList.toggle('activo', modoMayorista === 'margen');
-  sel.classList.toggle('oculto', modoMayorista === 'manual');
-  document.getElementById('pPrecioMayorista').readOnly = modoMayorista === 'margen';
+  sel.classList.toggle('oculto', modoMayorista !== 'margen');
+  document.getElementById('pPrecioMayorista').readOnly = modoMayorista !== 'manual';
   actualizarVistaMayorista();
 }
 
@@ -3779,6 +3794,18 @@ function actualizarVistaMayorista() {
   const ayuda = document.getElementById('pAyudaMayorista');
   if (!ayuda) return;
   const costo = costoFormularioCRC();
+  if (modoMayorista === 'auto') {
+    const normal = precioConDescuento(parseMonto(document.getElementById('pPrecioVenta').value),
+      Number(document.getElementById('pDescuento').value) || 0);
+    const auto = precioMayoristaAutomatico(normal, costo);
+    document.getElementById('pPrecioMayorista').value = auto || '';
+    if (!auto) {
+      ayuda.style.color = '#A5323F';
+      ayuda.textContent = !(normal > 0) ? 'Se calcula solo al poner el precio de venta.'
+        : `Sin precio mayorista: el precio de tienda deja menos de ${MAYORISTA_MARGEN_MIN} % de ganancia.`;
+      return;
+    }
+  }
   if (modoMayorista === 'margen') {
     const pct = Number(document.getElementById('pMargenMayorPct').value) || 0;
     document.getElementById('pPrecioMayorista').value = costo > 0 ? Math.round(costo * (1 + pct / 100)) : '';
@@ -3866,7 +3893,7 @@ function actualizarCamposPorModalidad() {
 function nuevoProducto() {
   productoEditando = null;
   elegirModoPrecio('manual');
-  elegirModoMayorista('manual');
+  elegirModoMayorista('auto');
   document.getElementById('pNombre').value = '';
   document.getElementById('pTono').value = '';
   document.getElementById('pLinea').value = 'Nuevo';
@@ -3899,7 +3926,7 @@ function editarProducto(id) {
   if (!p) return;
   productoEditando = id;
   elegirModoPrecio('manual');
-  elegirModoMayorista('manual');
+  elegirModoMayorista('auto');
   document.getElementById('pNombre').value = p.nombre || '';
   document.getElementById('pCategoria').value = p.categoria || 'Maquillaje';
   document.getElementById('pTono').value = p.tono || '';
