@@ -1378,7 +1378,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-23b · mayorista automático</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-23c · condiciones de cajas</p>
         </div>
       </div>
       <div class="panel">
@@ -7242,6 +7242,7 @@ function respuestaLotesTexto(corta) {
     o50 ? `   50 piezas · ${c(o50)}\n   100 piezas · ${o100 ? c(o100) : 'consultanos'}\n   500 piezas · consultanos`
         : '   50, 100 y 500 piezas · precio a consultar', '',
     raya, '📌 Condiciones',
+    '• Caja de maquillaje nuevo por encargo: se encarga con el 50 % de adelanto.',
     '• Lote de liquidación: pago 100 % por adelantado.', '• Pago por SINPE Móvil.', '• Envíos a todo Costa Rica.', '',
     '📲 Para encargar o resolver dudas, escribinos al WhatsApp 7166 3526.', '🛍️ Tienda: avellana-studio.pages.dev'
   ].join('\n');
