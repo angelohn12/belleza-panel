@@ -1120,6 +1120,17 @@
     <!-- ---------- CAJAS ---------- -->
     <section id="tab-cajas" class="oculto">
       <div class="panel">
+        <h2>Respuesta para clientas</h2>
+        <p class="ayudaTienda" style="margin:0 0 8px">Para cuando preguntan por cajas o lotes en TikTok, Instagram o WhatsApp. Los precios salen de las cajas y del Outlet.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="respuestaLotesCopiar(false)">Copiar respuesta</button>
+          <button class="secundario" onclick="respuestaLotesCopiar(true)">Copiar versión corta</button>
+        </div>
+        <details style="margin-top:10px"><summary class="ayudaTienda" style="cursor:pointer">Ver el texto</summary>
+          <textarea id="respuestaLotesTexto" rows="14" readonly style="width:100%;margin-top:8px;font-size:13px"></textarea>
+        </details>
+      </div>
+      <div class="panel">
         <h2>Armar caja</h2>
         <p class="ayudaTienda" style="margin:0 0 8px">¿Cómo la querés armar?</p>
         <div class="filtrosTienda" id="cajaModos" style="margin-bottom:12px">
@@ -1366,7 +1377,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-21b · márgenes del Outlet</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-23 · respuesta para clientas</p>
         </div>
       </div>
       <div class="panel">
@@ -1698,7 +1709,7 @@ function mostrarTab(nombre) {
   redibujarGraficosVisibles();
   // La lista de celulares conectados se pide recién al abrir Configuración
   if (nombre === 'config' && !avisosCargados) verAvisosCelular(false).catch(() => {});
-  if (nombre === 'cajas') renderCajasGuardadas();
+  if (nombre === 'cajas') { renderCajasGuardadas(); respuestaLotesRender(); }
 }
 
 function alternar(idFormulario) {
@@ -7163,6 +7174,60 @@ function cajaCopiarTexto() {
   (navigator.clipboard ? navigator.clipboard.writeText(texto) : Promise.reject())
     .then(() => mostrarToast('Texto copiado.'))
     .catch(() => { const t = document.getElementById('cjTexto'); t.removeAttribute('readonly'); t.select(); mostrarToast('Seleccioné el texto: copialo con Ctrl+C.'); });
+}
+
+// ----- Respuesta lista para clientas (TikTok / Instagram / WhatsApp) -----
+// Caja nueva: precios de CAJA_PRECIOS_FIJOS. Lote de liquidación: costo promedio de
+// lo que hay en stock de la línea Liquidación × piezas ÷ (1 − margen Emprendedora del
+// Outlet), redondeado hacia arriba a ₡500 como en el servidor. Sin stock = a consultar.
+function respuestaLotesPrecioOutlet(piezas) {
+  const lote = estado.productos.filter(p => lineaDe(p) === 'Liquidación' && (Number(p.stock) || 0) > 0 && (Number(p.costoTotalCRC) || 0) > 0);
+  const unidades = lote.reduce((s, p) => s + Number(p.stock), 0);
+  if (!unidades) return 0;
+  const costo = lote.reduce((s, p) => s + Number(p.stock) * Number(p.costoTotalCRC), 0) / unidades;
+  const cfg = outletLeerConfig(), i = cfg.tamanos.indexOf(piezas), m = Number((cfg.margenes.emprendedora || [])[i]);
+  if (!(m > 0 && m < 90)) return 0;
+  return Math.ceil(costo * piezas / (1 - m / 100) / 500) * 500;
+}
+function respuestaLotesTexto(corta) {
+  const c = n => formatoColones(n), P = CAJA_PRECIOS_FIJOS;
+  const o50 = respuestaLotesPrecioOutlet(50), o100 = respuestaLotesPrecioOutlet(100);
+  if (corta) return [
+    '✨ ¡Hola! Tenemos dos opciones al por mayor:',
+    `🎀 Caja de maquillaje nuevo y sellado, desde ${c(P.economica[25])} (25 piezas).`,
+    o50 ? `📦 Lote mixto de liquidación, desde ${c(o50)} (50 piezas), a menor precio por pieza.`
+        : '📦 Lote mixto de liquidación, a menor precio por pieza (precio a consultar).',
+    '¿Te paso el detalle de precios? 📲 WhatsApp 7166 3526'
+  ].join('\n');
+  const nivel = (nombre, k, consultar50y100) => [`| ${nombre}`,
+    `   25 piezas · ${c(P[k][25])}`,
+    consultar50y100 ? '   50 y 100 piezas · consultanos' : `   50 piezas · ${c(P[k][50])}\n   100 piezas · ${c(P[k][100])}`].join('\n');
+  const raya = '━━━━━━━━━━━━━━━━━━━━';
+  return [
+    '✨ ¡Hola! Gracias por escribirnos. Te compartimos nuestras opciones al por mayor:', '',
+    '💄 Trabajamos con dos tipos de cajas. No vendemos una lista exacta de productos: cada caja se arma según el inventario disponible.', '',
+    raya, '🎀 OPCIÓN 1 · CAJA MIXTA DE MAQUILLAJE NUEVO', 'Original de EE. UU., nuevo y sellado.',
+    "Posibles marcas: e.l.f., Wet n Wild, Maybelline, L'Oréal, NYX, Milani, Catrice y más.", '',
+    nivel('Económica', 'economica'), '', nivel('Media', 'media'), '', nivel('Premium', 'alta', true), '',
+    raya, '📦 OPCIÓN 2 · LOTE MIXTO DE LIQUIDACIÓN (Avellana Outlet)', 'Saldos y sobrantes de tiendas de EE. UU. Precio más bajo por pieza.',
+    "Posibles marcas: L'Oréal, Covergirl, Maybelline, Revlon, Milani, NYX, e.l.f., Wet n Wild y más.",
+    'Cada lote es distinto y el contenido varía.', '',
+    o50 ? `   50 piezas · ${c(o50)}\n   100 piezas · ${o100 ? c(o100) : 'consultanos'}\n   500 piezas · consultanos`
+        : '   50, 100 y 500 piezas · precio a consultar', '',
+    raya, '📌 Condiciones',
+    '• Lote de liquidación: pago 100 % por adelantado.', '• Pago por SINPE Móvil.', '• Envíos a todo Costa Rica.', '',
+    '📲 Para encargar o resolver dudas, escribinos al WhatsApp 7166 3526.', '🛍️ Tienda: avellana-studio.pages.dev'
+  ].join('\n');
+}
+function respuestaLotesRender() {
+  const t = document.getElementById('respuestaLotesTexto');
+  if (t) t.value = respuestaLotesTexto(false);
+}
+function respuestaLotesCopiar(corta) {
+  const texto = respuestaLotesTexto(corta);
+  (navigator.clipboard ? navigator.clipboard.writeText(texto) : Promise.reject())
+    .then(() => mostrarToast(corta ? 'Versión corta copiada.' : 'Respuesta copiada.'))
+    .catch(() => { const t = document.getElementById('respuestaLotesTexto'); t.value = texto; t.closest('details').open = true; t.removeAttribute('readonly'); t.select(); mostrarToast('Seleccioné el texto: copialo con Ctrl+C.'); });
 }
 
 // ----- Cajas guardadas (en Configuración, no hace falta tocar Code.gs) -----
