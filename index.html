@@ -1378,7 +1378,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-23c · condiciones de cajas</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-28 · app del equipo</p>
         </div>
       </div>
       <div class="panel">
@@ -1411,6 +1411,11 @@
           <button id="btnProbarAvisos" onclick="ejecutarConBoton('btnProbarAvisos', () => verAvisosCelular(true))">Mandar aviso de prueba</button>
         </div>
         <div id="avisosConectar" style="margin-top:14px"></div>
+      </div>
+      <div class="panel">
+        <h2>App del equipo en el celular</h2>
+        <p class="ayudaTienda">Para consultar precios y stock al instante, anotar ventas y encargos, y copiar textos para Marketplace. Se abre en <a href="https://avellana-studio.pages.dev/equipo/" target="_blank" rel="noopener"><b>avellana-studio.pages.dev/equipo</b></a> y se entra una sola vez con el usuario y la contraseña de este panel. Si se pierde un celular, desconectalo acá.</p>
+        <div id="equipoCelulares"><p class="ayudaTienda" style="margin:0">Cargando…</p></div>
       </div>
     </section>
 
@@ -1710,6 +1715,7 @@ function mostrarTab(nombre) {
   redibujarGraficosVisibles();
   // La lista de celulares conectados se pide recién al abrir Configuración
   if (nombre === 'config' && !avisosCargados) verAvisosCelular(false).catch(() => {});
+  if (nombre === 'config') verCelularesEquipo().catch(() => {});
   if (nombre === 'cajas') { renderCajasGuardadas(); respuestaLotesRender(); }
 }
 
@@ -5968,6 +5974,23 @@ async function quitarCelular(id) {
   const res = await apiPost({ accion: 'avisos_quitar', id });
   if (res && res.ok) { pintarCelulares(res.celulares); mostrarToast('Celular quitado.'); }
   else mostrarToast('No se pudo quitar: ' + ((res && res.error) || 'probá de nuevo'));
+}
+
+// App del equipo (avellana-studio.pages.dev/equipo/): celulares conectados
+async function verCelularesEquipo(quitar) {
+  const res = await apiPost(quitar ? { accion: 'equipo_celulares', quitar } : { accion: 'equipo_celulares' });
+  const caja = document.getElementById('equipoCelulares');
+  if (!res || !res.ok || !Array.isArray(res.sesiones)) {
+    caja.innerHTML = '<p class="ayudaTienda" style="margin:0">No se pudo leer la lista. Probá de nuevo.</p>';
+    return;
+  }
+  if (quitar) mostrarToast('Celular desconectado.');
+  if (!res.sesiones.length) { caja.innerHTML = '<p class="ayudaTienda" style="margin:0">Todavía no hay ningún celular conectado.</p>'; return; }
+  caja.innerHTML = res.sesiones.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span><b>${escaparHtml(c.usuario)}</b> · ${escaparHtml(c.dispositivo)} <span style="color:var(--brown-soft)">· conectado ${escaparHtml(fechaCorta(new Date(c.creada).toISOString()))} · usado ${escaparHtml(fechaCorta(new Date(c.usada).toISOString()))}</span></span>
+      <button type="button" class="secundario" style="padding:5px 12px;font-size:13px" onclick="if (confirm('¿Desconectar este celular? Tendrá que volver a entrar con la contraseña.')) ejecutarConBotonElemento(this, () => verCelularesEquipo('${escaparHtml(c.id)}'))">Desconectar</button>
+    </div>`).join('');
 }
 
 async function guardarConfig() {
