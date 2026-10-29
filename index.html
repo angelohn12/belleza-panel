@@ -409,6 +409,92 @@
   .paraHoy .itemHoy .ir.suave{background:#fff;color:var(--coral);border:1px solid var(--coral);}
   .paraHoy .todoAlDia{color:#1E6B49;font-size:14px;padding:6px 0;}
   .oculto{display:none !important;}
+  /* ---------- Rápido y Textos (28/10/2026) ---------- */
+  .r-buscador{position:relative;margin-bottom:10px}
+  .r-buscador input{width:100%;border:1px solid var(--border);border-radius:12px;padding:13px 42px 13px 14px;font-size:17px;background:var(--surface);outline:none}
+  .r-buscador input:focus{border-color:var(--coral)}
+  .r-limpiar{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none!important;color:var(--brown-soft)!important;font-size:22px;width:38px;height:38px;padding:0!important}
+  .r-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+  .r-chips::-webkit-scrollbar{display:none}
+  .r-chip{flex:0 0 auto;border:1px solid var(--border)!important;background:var(--surface)!important;color:var(--brown-soft)!important;border-radius:999px!important;padding:8px 13px!important;font-size:14px;font-weight:500}
+  .r-chip.on{background:var(--coral)!important;border-color:var(--coral)!important;color:#fff!important}
+  .r-ayuda{font-size:13px;color:var(--brown-soft);margin:4px 2px}
+  .r-et{font-size:13px;color:var(--brown-soft);margin:14px 2px 6px}
+  .r-lista{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .r-prod{display:flex;gap:12px;align-items:center;padding:10px 12px;border:0!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;width:100%;text-align:left;background:var(--surface)!important;color:var(--brown)!important;font-weight:400}
+  .r-prod:last-child{border-bottom:0!important}
+  .r-prod:active{background:var(--bg)!important}
+  .r-foto{width:46px;height:46px;border-radius:9px;background:var(--bg) center/cover no-repeat;flex:0 0 46px;border:1px solid var(--border)}
+  .r-info{flex:1;min-width:0}
+  .r-mar{font-size:12px;color:var(--brown-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r-nom{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r-ton{font-size:13px;color:var(--brown-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r-der{text-align:right;flex:0 0 auto}
+  .r-precio{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums}
+  .r-mayor{font-size:12px;color:var(--brown-soft);font-variant-numeric:tabular-nums}
+  .r-pill{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;margin-top:3px}
+  .r-pill.ok{background:#E7F2EC;color:var(--entra)}
+  .r-pill.no{background:#EEECE9;color:var(--brown-soft)}
+  .r-pill.enc{background:#FBEDEE;color:var(--coral)}
+  .r-pill.amb{background:#F8EEDF;color:var(--debe)}
+  .r-check{width:24px;height:24px;border-radius:7px;border:2px solid var(--border);flex:0 0 24px;display:grid;place-items:center;color:#fff;font-size:15px}
+  .r-check.on{background:var(--coral);border-color:var(--coral)}
+  .r-mas{display:block;width:100%;background:none!important;color:var(--coral)!important;padding:14px!important;font-weight:500}
+  .r-velo{position:fixed;inset:0;background:rgba(20,10,14,.42);z-index:80;opacity:0;pointer-events:none;transition:opacity .2s}
+  .r-velo.on{opacity:1;pointer-events:auto}
+  .r-hoja{position:fixed;left:0;right:0;bottom:0;z-index:81;background:var(--surface);border-radius:18px 18px 0 0;max-height:88vh;overflow:auto;transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.7,.3,1);padding:8px 16px calc(18px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto}
+  .r-hoja.on{transform:none}
+  .r-asa{width:40px;height:5px;border-radius:3px;background:var(--border);margin:4px auto 12px}
+  .r-hoja h3{margin:0 0 2px;font-size:19px;font-weight:500}
+  .r-fila{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .r-fila:last-child{border-bottom:0}
+  label.r-fila{margin:0;font-weight:400;color:var(--brown);cursor:pointer}
+  label.r-fila span{flex:1}
+  label.r-fila input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;margin:0;padding:0;accent-color:var(--coral)}
+  .r-fila .k{color:var(--brown-soft)}
+  .r-fila .v{font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+  .r-grande{font-size:30px;font-weight:500;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+  .r-tonos{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .r-tono{border:1px solid var(--border)!important;border-radius:999px!important;padding:6px 10px!important;font-size:13px;background:var(--surface)!important;color:var(--brown)!important;font-weight:400}
+  .r-tono.sel{border-color:var(--coral)!important;color:var(--coral)!important;font-weight:500}
+  .r-tono.cero{color:var(--brown-soft)!important}
+  .r-tono .c{color:var(--brown-soft);margin-left:4px}
+  .r-btn{display:flex;align-items:center;justify-content:center;width:100%;border-radius:12px!important;padding:13px!important;font-size:16px;font-weight:500;min-height:48px}
+  .r-btn.sec{background:var(--surface)!important;color:var(--brown)!important;border:1px solid var(--border)!important}
+  .r-btn:disabled{opacity:.5}
+  .r-dos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .r-campo{width:100%;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:16px;background:var(--surface);outline:none;margin-top:8px;font-family:inherit}
+  .r-campo:focus{border-color:var(--coral)}
+  .r-seg{display:flex;background:#EEECE9;border-radius:11px;padding:3px;gap:3px;margin-top:10px}
+  .r-seg button{flex:1;background:none!important;border-radius:9px!important;padding:9px 6px!important;font-weight:500;font-size:14px;color:var(--brown-soft)!important}
+  .r-seg button.on{background:var(--surface)!important;color:var(--brown)!important;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .r-venta{margin-top:16px}
+  .r-linea{padding:10px 0;border-bottom:1px solid var(--border)}
+  .r-linea:last-child{border-bottom:0}
+  .r-controles{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .r-cant{display:flex;align-items:center;gap:2px}
+  .r-cant button{width:34px;height:34px;border-radius:9px!important;border:1px solid var(--border)!important;background:var(--surface)!important;color:var(--brown)!important;font-size:18px;padding:0!important}
+  .r-cant span{min-width:24px;text-align:center;font-weight:500}
+  .r-precioLinea{width:104px;border:1px solid var(--border);border-radius:9px;padding:7px;text-align:right;font-size:15px;font-variant-numeric:tabular-nums}
+  .r-quitar{background:none!important;color:var(--brown-soft)!important;font-size:20px;width:30px;padding:0!important}
+  .r-total{display:flex;justify-content:space-between;align-items:baseline;margin:16px 2px 0;color:var(--brown-soft)}
+  .r-total b{font-size:26px;font-weight:500;color:var(--brown);font-variant-numeric:tabular-nums}
+  .r-sug{border:1px solid var(--border);border-radius:10px;margin-top:6px;overflow:hidden;background:var(--surface)}
+  .r-sug button{display:block;width:100%;text-align:left;border-radius:0!important;border-bottom:1px solid var(--border)!important;background:var(--surface)!important;color:var(--brown)!important;padding:10px 12px!important;font-weight:400}
+  .r-sug button:last-child{border-bottom:0!important}
+  .r-verde{color:var(--entra)}
+  .r-barra{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:70;display:flex;justify-content:space-between;align-items:center;gap:10px;border-radius:14px!important;padding:14px 16px!important;font-size:15px;box-shadow:0 6px 20px rgba(59,15,31,.25);max-width:600px;margin:0 auto}
+  .r-barra b{font-weight:600}
+  #tab-rapido{padding-bottom:70px}
+  body.r-con-barra .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))!important}
+  .r-vacio{color:var(--brown-soft);text-align:center;padding:26px 10px;font-size:14px}
+  @media(max-width:899px){
+    /* En el celular, Rápido y Textos primero y bien a mano */
+    nav.tabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding:8px 12px}
+    nav.tabs::-webkit-scrollbar{display:none}
+    nav.tabs button.tab{flex:0 0 auto}
+    main{padding:14px 14px 28px}
+  }
 
   .tarjetas{
     display:grid;
@@ -561,6 +647,8 @@
 
   <nav class="tabs">
     <div class="navLogo" aria-hidden="true"><svg viewBox="0 0 100 120" aria-hidden="true"><path d="M16 60A34 34 0 0 1 84 60Z" fill="#F2B8C0"/><path d="M22 66H78C78 94 66 112 50 112S22 94 22 66Z" fill="#FFFFFF"/><path d="M33 78C34 90 38 99 44 104" stroke="#6E1D3B" stroke-width="5" stroke-linecap="round" fill="none"/><rect x="47" y="14" width="6" height="14" rx="3" fill="#F2B8C0"/></svg><span>avellana<small>Studio</small></span></div>
+    <button class="tab" data-tab="rapido" onclick="mostrarTab('rapido')">Rápido</button>
+    <button class="tab" data-tab="textos" onclick="mostrarTab('textos')">Textos</button>
     <button class="tab" data-tab="resumen" onclick="mostrarTab('resumen')">Resumen</button>
     <button class="tab" data-tab="tendencias" onclick="mostrarTab('tendencias')">Tendencias</button>
     <button class="tab" data-tab="pedidos" onclick="mostrarTab('pedidos')">Pedidos<span class="chivo oculto" id="chivoTab">0</span></button>
@@ -575,6 +663,95 @@
   </nav>
 
   <main>
+
+    <!-- ---------- RÁPIDO (28/10/2026): precios, stock y vender desde el celular ---------- -->
+    <section id="tab-rapido" class="oculto">
+      <div class="r-buscador">
+        <input id="rQ" type="search" placeholder="Buscar producto, marca o tono" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" oninput="R.alBuscar()">
+        <button type="button" class="r-limpiar" onclick="R.limpiar()" aria-label="Borrar">×</button>
+      </div>
+      <div class="r-chips" id="rFiltros">
+        <button type="button" class="r-chip on" data-f="stock">Con stock</button>
+        <button type="button" class="r-chip" data-f="todos">Todos</button>
+        <button type="button" class="r-chip" data-f="encargo">Por encargo</button>
+        <button type="button" class="r-chip" data-f="liq">Outlet</button>
+      </div>
+      <div class="r-ayuda" id="rResumen"></div>
+      <div id="rResultados"></div>
+
+      <div class="panel r-venta oculto" id="rVenta">
+        <h2>Venta rápida</h2>
+        <div id="rCarrito"></div>
+        <div class="r-seg" id="rSegTipo"><button type="button" class="on" data-t="Detalle">Al detalle</button><button type="button" data-t="Mayor">Al por mayor</button></div>
+        <div class="r-et">Clienta</div>
+        <div class="r-seg" id="rSegCli"><button type="button" class="on" data-c="buscar">Ya es clienta</button><button type="button" data-c="nueva">Nueva</button><button type="button" data-c="ninguna">Sin nombre</button></div>
+        <div id="rCliBuscar">
+          <input id="rCliQ" class="r-campo" placeholder="Nombre o teléfono" autocomplete="off" oninput="R.sugerirClientas()">
+          <div id="rCliSug"></div>
+          <div id="rCliElegida" class="r-ayuda"></div>
+        </div>
+        <div id="rCliNueva" class="oculto">
+          <input id="rCliNombre" class="r-campo" placeholder="Nombre" autocomplete="off">
+          <input id="rCliTel" class="r-campo" placeholder="Teléfono (opcional)" inputmode="tel" autocomplete="off">
+        </div>
+        <div class="r-et">Pago</div>
+        <div class="r-chips" id="rPago">
+          <button type="button" class="r-chip on" data-p="SINPE Móvil">SINPE Móvil</button>
+          <button type="button" class="r-chip" data-p="Efectivo">Efectivo</button>
+          <button type="button" class="r-chip" data-p="A pagos">A pagos</button>
+          <button type="button" class="r-chip" data-p="Regalía">Regalía</button>
+        </div>
+        <div class="r-dos">
+          <div><div class="r-et">Canal</div><select id="rCanal" class="r-campo"><option>Entrega personal</option><option>WhatsApp</option><option>Instagram</option><option>Facebook Marketplace</option><option>Envío</option></select></div>
+          <div><div class="r-et">Entrega</div><select id="rEntrega" class="r-campo"><option value="Entregado">Ya se lo llevó</option><option value="Pendiente">Pendiente</option></select></div>
+        </div>
+        <div class="r-total"><span>Total</span><b id="rTotal">₡0</b></div>
+        <div class="r-ayuda" id="rGanancia" style="text-align:right"></div>
+        <button type="button" class="r-btn" id="rBtnVenta" onclick="R.guardarVenta()">Guardar venta</button>
+      </div>
+
+      <div class="panel r-venta oculto" id="rEncargo">
+        <h2>Anotar encargo</h2>
+        <p class="r-ayuda">Para cuando una clienta pide algo que no hay en stock. Queda en Pedidos → encargos, igual que los de la tienda (sin correo).</p>
+        <input id="rEncNombre" class="r-campo" placeholder="Nombre de la clienta" autocomplete="off">
+        <input id="rEncTel" class="r-campo" placeholder="Teléfono (8 dígitos)" inputmode="tel" autocomplete="off">
+        <textarea id="rEncProd" class="r-campo" rows="3" placeholder="Qué quiere (un producto por línea)"></textarea>
+        <div class="r-dos"><button type="button" class="r-btn sec" onclick="R.cerrarEncargo()">Cancelar</button><button type="button" class="r-btn" id="rBtnEnc" onclick="R.guardarEncargo()">Anotar encargo</button></div>
+      </div>
+      <button type="button" class="r-btn sec" id="rAbrirEnc" style="margin-top:14px" onclick="R.abrirEncargo()">+ Anotar un encargo</button>
+    </section>
+
+    <!-- ---------- TEXTOS (28/10/2026): descripciones para Marketplace / WhatsApp ---------- -->
+    <section id="tab-textos" class="oculto">
+      <div class="panel">
+        <h2>Textos para Marketplace y WhatsApp</h2>
+        <p class="r-ayuda">Busca y toca la casilla de cada producto, o usa un atajo. El texto se arma solo con los precios y tonos de hoy.</p>
+        <div class="r-buscador" style="margin-top:10px">
+          <input id="tQ" type="search" placeholder="Buscar para agregar" autocomplete="off" autocorrect="off" spellcheck="false" oninput="R.pintarTextos()">
+          <button type="button" class="r-limpiar" onclick="document.getElementById('tQ').value='';R.pintarTextos()" aria-label="Borrar">×</button>
+        </div>
+        <div class="r-chips">
+          <button type="button" class="r-chip" onclick="R.elegirConStock()">Todos con stock</button>
+          <button type="button" class="r-chip" onclick="R.elegirBusqueda()">Los de la búsqueda</button>
+          <button type="button" class="r-chip" onclick="R.quitarTodos()">Quitar todos</button>
+        </div>
+        <div class="r-ayuda" id="tResumen"></div>
+        <div id="tResultados"></div>
+      </div>
+      <div class="panel">
+        <h2>Qué incluir</h2>
+        <label class="r-fila"><span>Precio al detalle</span><input type="checkbox" id="tDetalle" checked onchange="R.generar()"></label>
+        <label class="r-fila"><span>Precio al por mayor</span><input type="checkbox" id="tMayor" checked onchange="R.generar()"></label>
+        <label class="r-fila"><span>Tonos disponibles</span><input type="checkbox" id="tTonos" checked onchange="R.generar()"></label>
+        <label class="r-fila"><span>Cuántas quedan</span><input type="checkbox" id="tCant" onchange="R.generar()"></label>
+        <label class="r-fila"><span>Encabezado y datos de compra</span><input type="checkbox" id="tPie" checked onchange="R.generar()"></label>
+        <div class="r-et">Formato</div>
+        <div class="r-seg" id="tFormato"><button type="button" class="on" data-x="market">Marketplace</button><button type="button" data-x="wa">WhatsApp</button><button type="button" data-x="corto">Corto</button></div>
+        <textarea id="tTexto" class="r-campo" rows="14" style="margin-top:12px"></textarea>
+        <div class="r-dos"><button type="button" class="r-btn" onclick="R.copiarTexto()">Copiar</button><button type="button" class="r-btn sec" onclick="R.compartirTexto()">Compartir</button></div>
+      </div>
+      <div class="panel" id="tCajaElegidos"><h2>Elegidos</h2><div id="tElegidos"></div></div>
+    </section>
 
     <!-- ---------- RESUMEN ---------- -->
     <section id="tab-resumen">
@@ -1378,7 +1555,7 @@
             <p class="ayudaTienda" style="margin:6px 0 0">Unidades del mismo producto, sumando tonos. Ej: 3 = desde 3 unidades.</p>
           </div>
           <div class="campoAncho"><button id="btnGuardarConfig" onclick="ejecutarConBoton('btnGuardarConfig', guardarConfig)">Guardar configuración</button></div>
-          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-28 · app del equipo</p>
+          <p class="ayudaTienda" style="margin:0">Versión del panel: 2026-10-28 · pestañas Rápido y Textos</p>
         </div>
       </div>
       <div class="panel">
@@ -1412,17 +1589,15 @@
         </div>
         <div id="avisosConectar" style="margin-top:14px"></div>
       </div>
-      <div class="panel">
-        <h2>App del equipo en el celular</h2>
-        <p class="ayudaTienda">Para consultar precios y stock al instante, anotar ventas y encargos, y copiar textos para Marketplace. Se abre en <a href="https://avellana-studio.pages.dev/equipo/" target="_blank" rel="noopener"><b>avellana-studio.pages.dev/equipo</b></a> y se entra una sola vez con el usuario y la contraseña de este panel. Si se pierde un celular, desconectalo acá.</p>
-        <div id="equipoCelulares"><p class="ayudaTienda" style="margin:0">Cargando…</p></div>
-      </div>
     </section>
 
   </main>
 </div>
 
 <div class="toast" id="toast"></div>
+<button type="button" class="r-barra oculto" id="rBarra" onclick="R.irAVenta()"><span id="rBarraTxt"></span><b>Cobrar →</b></button>
+<div class="r-velo" id="rVelo" onclick="R.cerrar()"></div>
+<div class="r-hoja" id="rHoja" role="dialog" aria-modal="true"><div class="r-asa"></div><div id="rHojaCont"></div></div>
 
 <script>
 // ============================================================
@@ -1495,7 +1670,33 @@ const ACCIONES_SEGURAS_PARA_REINTENTAR = new Set(['editar_fila', 'eliminar_fila'
 // que repetir la operación es inofensivo. Apps Script es lento de por sí
 // (6-20 s) y a veces se pasa de eso; para una edición, reintentar en vez de
 // obligar a Anyelo a volver a apretar "Guardar" no tiene ningún riesgo.
+// Copia de los datos en este navegador (28/10/2026): el panel abre al instante
+// con lo último que vio y se pone al día por detrás. Mientras no termine esa
+// primera lectura completa NO se deja guardar nada: varias escrituras mandan la
+// fila entera del producto, y con datos viejos pisarían cambios hechos en otro
+// lado (por ejemplo, Belén vendiendo desde su celular).
+let datosAlDia = false;
+const COPIA_LOCAL = 'avellana_copia_datos';
+const ACCIONES_QUE_ESCRIBEN = ['agregar_fila', 'editar_fila', 'eliminar_fila', 'reemplazar_todo', 'lote', 'subir_foto', 'venta_rapida', 'encargo_rapido'];
+function guardarCopiaLocal() {
+  if (!datosAlDia || !estado.usuario) return;
+  const datos = {};
+  Object.values(CAMPO_POR_HOJA).forEach(c => { datos[c] = estado[c]; });
+  try { localStorage.setItem(COPIA_LOCAL, JSON.stringify({ t: Date.now(), usuario: estado.usuario.usuario, datos })); } catch (e) { /* sin espacio: se abre sin copia */ }
+}
+function cargarCopiaLocal() {
+  try {
+    const c = JSON.parse(localStorage.getItem(COPIA_LOCAL) || 'null');
+    if (!c || !c.datos || !estado.usuario || c.usuario !== estado.usuario.usuario) return false;
+    Object.keys(c.datos).forEach(k => { if (Array.isArray(c.datos[k])) estado[k] = c.datos[k]; });
+    return true;
+  } catch (e) { return false; }
+}
+
 async function apiPost(cuerpo, reintentar) {
+  if (!datosAlDia && cuerpo && ACCIONES_QUE_ESCRIBEN.includes(cuerpo.accion)) {
+    return { ok: false, error: 'Un momento: se están actualizando los datos. Probá de nuevo en unos segundos.' };
+  }
   try {
     const res = await fetch(CONFIG.API_URL, {
       method: 'POST',
@@ -1574,6 +1775,7 @@ async function iniciarSesion() {
 
 function cerrarSesion() {
   localStorage.removeItem('avellana_usuario');
+  try { localStorage.removeItem(COPIA_LOCAL); } catch (e) { /* nada */ }
   estado.usuario = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('pantallaLogin').style.display = 'flex';
@@ -1583,10 +1785,14 @@ async function entrarApp() {
   document.getElementById('pantallaLogin').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('nombreUsuarioActual').textContent = estado.usuario.usuario;
+  // En el celular se abre en «Rápido»; en la compu, en Pedidos si hay sin atender
+  const tabInicial = () => window.innerWidth < 900 ? 'rapido' : (pedidosPendientes().length ? 'pedidos' : 'resumen');
+  // Con copia guardada se ve todo al instante; la lectura de abajo la pone al día
+  const conCopia = cargarCopiaLocal();
+  if (conCopia) { renderTodo(); mostrarTab(tabInicial()); }
   await cargarDatos();
   arrancarVigilancia();
-  // Si hay pedidos sin atender, se abre directo ahí en vez del resumen
-  mostrarTab(pedidosPendientes().length ? 'pedidos' : 'resumen');
+  if (!conCopia) mostrarTab(tabInicial());
 }
 
 // ---------- Carga de datos ----------
@@ -1640,7 +1846,9 @@ async function cargarDatos(silencioso, hojas) {
     if (campo && datos[campo] !== undefined) estado[campo] = datos[campo] || [];
   });
 
+  if (!hojas || !hojas.length) datosAlDia = true;
   renderTodo();
+  guardarCopiaLocal();
   return true;
 }
 
@@ -1715,8 +1923,9 @@ function mostrarTab(nombre) {
   redibujarGraficosVisibles();
   // La lista de celulares conectados se pide recién al abrir Configuración
   if (nombre === 'config' && !avisosCargados) verAvisosCelular(false).catch(() => {});
-  if (nombre === 'config') verCelularesEquipo().catch(() => {});
   if (nombre === 'cajas') { renderCajasGuardadas(); respuestaLotesRender(); }
+  if (nombre === 'rapido') R.pintar(); else R.ocultarBarra();
+  if (nombre === 'textos') R.pintarTextos();
 }
 
 function alternar(idFormulario) {
@@ -1806,6 +2015,8 @@ function renderTodo() {
   document.getElementById('cfgMinimoMayorista').value = valorConfig('minimoMayorista', 3);
   renderMistConfig();
   renderOutletConfig();
+  R.pintar();
+  R.pintarTextos();
 }
 
 // ---------- Resumen ----------
@@ -5976,23 +6187,6 @@ async function quitarCelular(id) {
   else mostrarToast('No se pudo quitar: ' + ((res && res.error) || 'probá de nuevo'));
 }
 
-// App del equipo (avellana-studio.pages.dev/equipo/): celulares conectados
-async function verCelularesEquipo(quitar) {
-  const res = await apiPost(quitar ? { accion: 'equipo_celulares', quitar } : { accion: 'equipo_celulares' });
-  const caja = document.getElementById('equipoCelulares');
-  if (!res || !res.ok || !Array.isArray(res.sesiones)) {
-    caja.innerHTML = '<p class="ayudaTienda" style="margin:0">No se pudo leer la lista. Probá de nuevo.</p>';
-    return;
-  }
-  if (quitar) mostrarToast('Celular desconectado.');
-  if (!res.sesiones.length) { caja.innerHTML = '<p class="ayudaTienda" style="margin:0">Todavía no hay ningún celular conectado.</p>'; return; }
-  caja.innerHTML = res.sesiones.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span><b>${escaparHtml(c.usuario)}</b> · ${escaparHtml(c.dispositivo)} <span style="color:var(--brown-soft)">· conectado ${escaparHtml(fechaCorta(new Date(c.creada).toISOString()))} · usado ${escaparHtml(fechaCorta(new Date(c.usada).toISOString()))}</span></span>
-      <button type="button" class="secundario" style="padding:5px 12px;font-size:13px" onclick="if (confirm('¿Desconectar este celular? Tendrá que volver a entrar con la contraseña.')) ejecutarConBotonElemento(this, () => verCelularesEquipo('${escaparHtml(c.id)}'))">Desconectar</button>
-    </div>`).join('');
-}
-
 async function guardarConfig() {
   const minimo = Math.floor(Number(document.getElementById('cfgMinimoMayorista').value) || 0);
   if (minimo < 2) { mostrarToast('El mínimo para precio mayorista tiene que ser 2 o más.'); return; }
@@ -7609,6 +7803,403 @@ function cajaDatoBuscador(p) {
   return (hay ? stock + ' en stock' : 'por encargo') + ' · costo ' + formatoColones(c.costo) + ' · detalle ' + formatoColones(c.detalle) +
     (may ? ' · mayorista ' + formatoColones(may) : '') + (yaEn ? ' · en la caja ×' + yaEn : '');
 }
+
+// ---------- Rápido y Textos (28/10/2026) ----------
+// Pestañas para el celular: consultar precio/stock al instante, vender en un
+// toque y armar textos para Marketplace. Leen lo mismo que el resto del panel
+// (estado.productos, estado.clientes, estado.pedidos) y guardan en UN viaje
+// con las acciones venta_rapida / encargo_rapido de Code.gs, que tocan solo
+// stock/estado del producto (no la fila entera).
+const R = (() => {
+  const PAG = 60;
+  const SINONIMOS = {
+    skincare: ['cuidado personal'], skin: ['cuidado personal'], cara: ['rostro', 'face'], face: ['rostro'],
+    boca: ['labio', 'lip'], lip: ['labio'], labio: ['lip'], labial: ['lip'],
+    pintalabio: ['labial', 'lip'], lipstick: ['labial'], brillo: ['gloss'],
+    rimel: ['mascara', 'pestana'], ojo: ['eye', 'pestana', 'delineador', 'sombra'],
+    blush: ['rubor'], rubor: ['blush'], polvo: ['powder'], iluminador: ['highlight'],
+    bronceador: ['bronzer'], fijador: ['setting', 'spray'], primer: ['prebase'],
+    perfume: ['fragancia', 'mist'], crema: ['cream'], protector: ['spf', 'solar']
+  };
+  let filtro = 'stock', mostrar = PAG, tipoPrecio = 'Detalle', modoCli = 'buscar', clienta = null, formaPago = 'SINPE Móvil', formato = 'market';
+  let carrito = [];               // [{ id, q, precio, manual }]
+  let refVenta = null, refEnc = null;
+  let seleccion = new Set(leerLocal('avl_textos_sel', []).map(String));
+  let cache = { fuente: null, lista: [] };
+
+  function leerLocal(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+  function guardarLocal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* lleno o bloqueado */ } }
+  const $ = id => document.getElementById(id);
+  const esc = escaparHtml, colones = formatoColones;
+  const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/['’´`.\-]/g, '').replace(/\s+/g, ' ').trim();
+  const singular = p => (p.length > 4 && /[lrndzj]es$/.test(p)) ? p.slice(0, -2) : (p.length > 3 && p.endsWith('s')) ? p.slice(0, -1) : p;
+  const mini = url => String(url || '').replace(/=w\d+(-rw)?$/, '=w120-rw');
+  const minimoMay = () => Math.max(2, Math.floor(Number(valorConfig('minimoMayorista', 3)) || 3));
+
+  // Unidades apartadas por pedidos de la tienda sin pagar (mismo corte de 12 h que el servidor)
+  function apartadas() {
+    const lim = Date.now() - 12 * 3600 * 1000, out = {};
+    (estado.pedidos || []).forEach(p => {
+      const e = String(p.estado || '').trim().toLowerCase();
+      if ((e !== 'nuevo' && e !== 'contactado') || !(new Date(p.fecha).getTime() >= lim)) return;
+      let it = []; try { it = JSON.parse(p.items || '[]'); } catch (err) { it = []; }
+      (Array.isArray(it) ? it : []).forEach(i => { out[String(i.id)] = (out[String(i.id)] || 0) + (Number(i.cantidad) || 0); });
+    });
+    return out;
+  }
+  // Versión liviana de cada producto, rehecha solo cuando cambia estado.productos
+  function productos() {
+    if (cache.fuente === estado.productos && cache.ped === estado.pedidos) return cache.lista;
+    const ap = apartadas();
+    cache = {
+      fuente: estado.productos, ped: estado.pedidos,
+      lista: (estado.productos || []).filter(p => p.id !== '' && p.id != null && String(p.nombre || '').trim()).map(p => {
+        const s = Math.max(0, Math.floor(Number(p.stock) || 0));
+        const o = {
+          id: p.id, n: String(p.nombre || '').trim(), m: String(p.marca || '').trim(), t: String(p.tono || '').trim(), c: String(p.categoria || ''),
+          pr: precioConDescuento(p.precioVenta, p.descuento), pb: Number(p.precioVenta) || 0, d: Number(p.descuento) || 0,
+          pm: precioMayoristaDe(p), co: Math.round(Number(p.costoTotalCRC) || 0), s, ap: Math.min(ap[String(p.id)] || 0, s),
+          mo: String(p.modalidad || ''), f: String(p.foto || ''), l: lineaDe(p) === 'Liquidación',
+          pu: !['no', 'false', '0', 'oculto'].includes(String(p.publicado || '').trim().toLowerCase())
+        };
+        o.h = norm([o.m, o.n, o.t, o.c, o.l ? 'outlet liquidacion' : ''].join(' '));
+        return o;
+      })
+    };
+    return cache.lista;
+  }
+  const prod = id => productos().find(p => String(p.id) === String(id));
+  const encargo = p => p.mo === 'encargo' && !(p.s > 0);
+  const hermanos = p => productos().filter(x => norm(x.m + '|' + x.n) === norm(p.m + '|' + p.n));
+  function coincide(p, ws) {
+    return ws.every(w => p.h.includes(w) || p.h.includes(singular(w)) || (SINONIMOS[singular(w)] || SINONIMOS[w] || []).some(x => p.h.includes(x)));
+  }
+  function buscar(q, f) {
+    const ws = norm(q).split(' ').filter(Boolean);
+    return productos().filter(p => {
+      if (f === 'stock' && !(p.s > 0)) return false;
+      if (f === 'encargo' && !encargo(p)) return false;
+      if (f === 'liq' && !p.l) return false;
+      if (f !== 'liq' && f !== 'todos' && !ws.length && p.l) return false;
+      return !ws.length || coincide(p, ws);
+    }).sort((a, b) => (b.s > 0) - (a.s > 0) || a.m.localeCompare(b.m, 'es') || a.n.localeCompare(b.n, 'es') || a.t.localeCompare(b.t, 'es'));
+  }
+  function pill(p) {
+    if (p.s > 0) {
+      const lib = p.s - p.ap;
+      return lib < p.s ? `<span class="r-pill amb">${lib} libre${lib === 1 ? '' : 's'} · ${p.ap} apart.</span>` : `<span class="r-pill ok">${p.s} en stock</span>`;
+    }
+    return encargo(p) ? '<span class="r-pill enc">Por encargo</span>' : '<span class="r-pill no">Agotado</span>';
+  }
+  function fila(p, modoSel) {
+    const sel = seleccion.has(String(p.id));
+    const izq = modoSel ? `<span class="r-check${sel ? ' on' : ''}">${sel ? '✓' : ''}</span>`
+      : `<span class="r-foto" style="${p.f ? `background-image:url('${esc(mini(p.f))}')` : ''}"></span>`;
+    return `<button type="button" class="r-prod" onclick="${modoSel ? `R.alternar('${esc(p.id)}')` : `R.abrir('${esc(p.id)}')`}">${izq}
+      <span class="r-info"><div class="r-mar">${esc(p.m)}${p.l ? ' · Outlet' : ''}</div><div class="r-nom">${esc(p.n)}</div>${p.t ? `<div class="r-ton">${esc(p.t)}</div>` : ''}</span>
+      <span class="r-der"><div class="r-precio">${p.pr ? colones(p.pr) : '—'}</div>${p.pm ? `<div class="r-mayor">Mayor ${colones(p.pm)}</div>` : ''}${pill(p)}</span></button>`;
+  }
+
+  // ---- Rápido ----
+  function pintar() {
+    if (!$('tab-rapido')) return;
+    const q = $('rQ').value, lista = buscar(q, filtro);
+    $('rResumen').textContent = (estado.productos || []).length
+      ? `${lista.length} producto${lista.length === 1 ? '' : 's'}${q.trim() ? ' para «' + q.trim() + '»' : ''}${datosAlDia ? '' : ' · actualizando…'}` : 'Cargando el inventario…';
+    $('rResultados').innerHTML = !lista.length
+      ? `<div class="r-vacio">No hay nada con ese nombre${filtro === 'stock' ? ' en stock.<br><br><button type="button" class="secundario" onclick="R.filtro(\'todos\')">Buscar en todos</button>' : '.'}</div>`
+      : '<div class="r-lista">' + lista.slice(0, mostrar).map(p => fila(p)).join('') + '</div>' +
+        (lista.length > mostrar ? `<button type="button" class="r-mas" onclick="R.verMas()">Ver más (${lista.length - mostrar})</button>` : '');
+    pintarVenta();
+  }
+  function ponerFiltro(f) {
+    filtro = f; mostrar = PAG;
+    document.querySelectorAll('#rFiltros .r-chip').forEach(c => c.classList.toggle('on', c.dataset.f === f));
+    pintar();
+  }
+
+  function abrir(id) {
+    const p = prod(id); if (!p) return;
+    const herm = hermanos(p), total = herm.reduce((s, x) => s + x.s, 0);
+    const gan = p.co > 0 && p.pr > 0 ? p.pr - p.co : null, gMay = p.co > 0 && p.pm > 0 ? p.pm - p.co : null;
+    $('rHojaCont').innerHTML = `
+      <div style="display:flex;gap:12px;align-items:center">
+        ${p.f ? `<img src="${esc(String(p.f).replace(/=w\d+(-rw)?$/, '=w300-rw'))}" alt="" style="width:76px;height:76px;object-fit:cover;border-radius:12px;border:1px solid var(--border)">` : ''}
+        <div style="min-width:0"><div class="r-ayuda" style="margin:0">${esc(p.m)}${p.l ? ' · Outlet' : ''}</div><h3>${esc(p.n)}</h3>${p.t ? `<div style="color:var(--brown-soft)">${esc(p.t)}</div>` : ''}</div>
+      </div>
+      <div style="margin:14px 0 4px;display:flex;align-items:baseline;gap:10px">
+        <span class="r-grande">${p.pr ? colones(p.pr) : 'Sin precio'}</span>
+        ${p.d ? `<span class="r-ayuda" style="text-decoration:line-through">${colones(p.pb)}</span><span class="r-pill enc">-${p.d}%</span>` : ''}
+      </div>
+      <div>
+        <div class="r-fila"><span class="k">Al por mayor (desde ${minimoMay()})</span><span class="v">${p.pm ? colones(p.pm) + ' c/u' : 'No aplica'}</span></div>
+        <div class="r-fila"><span class="k">Stock de este tono</span><span class="v">${p.s > 0 ? p.s + (p.ap ? ` (${p.ap} apartada${p.ap === 1 ? '' : 's'} por pedidos)` : '') : encargo(p) ? 'Por encargo' : 'Agotado'}</span></div>
+        ${herm.length > 1 ? `<div class="r-fila"><span class="k">Todos los tonos</span><span class="v">${total} en stock</span></div>` : ''}
+        <div class="r-fila"><span class="k">Costo</span><span class="v">${p.co ? colones(p.co) : '—'}</span></div>
+        ${gan != null ? `<div class="r-fila"><span class="k">Ganancia al detalle</span><span class="v r-verde">${colones(gan)} · ${Math.round(gan / p.pr * 100)}%</span></div>` : ''}
+        ${gMay != null ? `<div class="r-fila"><span class="k">Ganancia al por mayor</span><span class="v">${colones(gMay)}</span></div>` : ''}
+        ${!p.pu ? '<div class="r-fila"><span class="k">En la tienda</span><span class="v">No se muestra</span></div>' : ''}
+      </div>
+      ${herm.length > 1 ? `<div class="r-et">Tonos</div><div class="r-tonos">${herm.sort((a, b) => (b.s > 0) - (a.s > 0) || a.t.localeCompare(b.t, 'es')).map(x =>
+        `<button type="button" class="r-tono${String(x.id) === String(p.id) ? ' sel' : ''}${x.s > 0 ? '' : ' cero'}" onclick="R.abrir('${esc(x.id)}')">${esc(x.t || 'Único')}<span class="c">${x.s > 0 ? x.s : encargo(x) ? 'enc.' : '0'}</span></button>`).join('')}</div>` : ''}
+      <div class="r-dos">
+        <button type="button" class="r-btn" ${p.s > 0 && p.pr ? '' : 'disabled'} onclick="R.vender('${esc(p.id)}')">Vender</button>
+        <button type="button" class="r-btn sec" onclick="R.copiarPrecio('${esc(p.id)}')">Copiar precio</button>
+      </div>
+      <div class="r-dos" style="margin-top:8px">
+        <button type="button" class="r-btn sec" onclick="R.alternar('${esc(p.id)}', true)">${seleccion.has(String(p.id)) ? 'Quitar del texto' : 'Agregar al texto'}</button>
+        ${p.pu && p.pr ? `<button type="button" class="r-btn sec" onclick="R.enlace('${esc(p.id)}')">Enlace tienda</button>` : `<button type="button" class="r-btn sec" onclick="R.encargoDe('${esc(p.id)}')">Anotar encargo</button>`}
+      </div>`;
+    $('rVelo').classList.add('on'); $('rHoja').classList.add('on'); $('rHoja').scrollTop = 0;
+    if (!(history.state && history.state.rHoja)) history.pushState({ rHoja: 1 }, '');
+  }
+  function cerrar(desdeAtras) {
+    if (!$('rHoja').classList.contains('on')) return;
+    $('rVelo').classList.remove('on'); $('rHoja').classList.remove('on');
+    if (!desdeAtras && history.state && history.state.rHoja) history.back();
+  }
+  window.addEventListener('popstate', () => cerrar(true));
+
+  async function copiar(texto, msg) {
+    try { await navigator.clipboard.writeText(texto); mostrarToast(msg || 'Copiado.'); }
+    catch (e) {
+      const t = document.createElement('textarea'); t.value = texto; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); mostrarToast(msg || 'Copiado.'); } catch (e2) { mostrarToast('No se pudo copiar.'); }
+      t.remove();
+    }
+  }
+  function textoPrecio(p) {
+    const conStock = hermanos(p).filter(x => x.s > 0 && x.t);
+    let t = `${p.m} — ${p.n}${p.t ? ' (tono ' + p.t + ')' : ''}\nPrecio: ${colones(p.pr)}`;
+    if (p.pm) t += `\nAl por mayor: ${colones(p.pm)} c/u (desde ${minimoMay()} unidades)`;
+    t += p.s > 0 ? '\nDisponible para entrega inmediata.' : encargo(p) ? '\nPor encargo: llega en 15 a 20 días hábiles.' : '\nPor ahora está agotado.';
+    if (conStock.length > 1) t += '\nTonos disponibles: ' + conStock.map(x => x.t).join(', ');
+    return t;
+  }
+
+  // ---- Venta ----
+  const precioAuto = p => tipoPrecio === 'Mayor' && p.pm ? p.pm : p.pr;
+  const totalLinea = l => { const p = prod(l.id); if (!p || formaPago === 'Regalía') return 0; return l.manual ? Number(l.precio) || 0 : precioAuto(p) * l.q; };
+  const cambioCarrito = () => { refVenta = null; pintarVenta(); };
+  function vender(id) {
+    const p = prod(id); if (!p) return;
+    const ya = carrito.find(l => String(l.id) === String(id));
+    if ((ya ? ya.q : 0) + 1 > p.s) { mostrarToast('Solo hay ' + p.s + ' en stock.'); return; }
+    if (ya) ya.q++; else carrito.push({ id: p.id, q: 1, precio: 0, manual: false });
+    cerrar(); cambioCarrito();
+    mostrarToast('Agregado. Toca «Cobrar» cuando termines.');
+  }
+  function pintarVenta() {
+    const caja = $('rVenta'); if (!caja) return;
+    carrito = carrito.filter(l => prod(l.id));
+    caja.classList.toggle('oculto', !carrito.length);
+    // Barra fija para llegar a la venta sin bajar por toda la lista (solo en la pestaña Rápido)
+    const enRapido = !$('tab-rapido').classList.contains('oculto');
+    $('rBarra').classList.toggle('oculto', !carrito.length || !enRapido);
+    document.body.classList.toggle('r-con-barra', !!carrito.length && enRapido);
+    if (!carrito.length) return;
+    const u = carrito.reduce((s2, l) => s2 + l.q, 0);
+    $('rBarraTxt').textContent = `Venta · ${u} producto${u === 1 ? '' : 's'} · ${colones(carrito.reduce((s2, l) => s2 + totalLinea(l), 0))}`;
+    $('rCarrito').innerHTML = carrito.map((l, i) => {
+      const p = prod(l.id);
+      return `<div class="r-linea"><div style="font-weight:500">${esc(p.n)}</div>
+        <div class="r-ayuda" style="margin:0">${esc(p.m)}${p.t ? ' · ' + esc(p.t) : ''} · quedan ${p.s}${tipoPrecio === 'Mayor' && !p.pm ? ' · sin precio mayorista' : ''}</div>
+        <div class="r-controles"><div class="r-cant"><button type="button" onclick="R.q(${i},-1)" aria-label="Menos">−</button><span>${l.q}</span><button type="button" onclick="R.q(${i},1)" aria-label="Más">+</button></div>
+          <span style="flex:1"></span>
+          <label style="display:flex;align-items:center;gap:4px;color:var(--brown-soft)">₡<input class="r-precioLinea" inputmode="numeric" value="${totalLinea(l)}" ${formaPago === 'Regalía' ? 'disabled' : ''} onchange="R.precio(${i},this.value)" aria-label="Total de la línea"></label>
+          <button type="button" class="r-quitar" onclick="R.quitar(${i})" aria-label="Quitar">×</button></div></div>`;
+    }).join('');
+    const total = carrito.reduce((s, l) => s + totalLinea(l), 0);
+    const costo = carrito.reduce((s, l) => s + (prod(l.id).co || 0) * l.q, 0);
+    $('rTotal').textContent = colones(total);
+    $('rGanancia').textContent = total && costo ? 'Ganancia ' + colones(total - costo) : '';
+    $('rCliBuscar').classList.toggle('oculto', modoCli !== 'buscar');
+    $('rCliNueva').classList.toggle('oculto', modoCli !== 'nueva');
+    $('rCliElegida').innerHTML = clienta ? `Clienta: <b style="font-weight:500;color:var(--brown)">${esc(clienta.nombre)}</b>${clienta.telefono ? ' · ' + esc(clienta.telefono) : ''}` : '';
+  }
+  function cambiarQ(i, d) {
+    const l = carrito[i], p = prod(l.id), n = l.q + d;
+    if (n < 1) { carrito.splice(i, 1); cambioCarrito(); return; }
+    if (n > p.s) { mostrarToast('Solo hay ' + p.s + ' en stock.'); return; }
+    if (l.manual) l.precio = Math.round((Number(l.precio) || 0) / l.q * n);
+    l.q = n; cambioCarrito();
+  }
+  function sugerirClientas() {
+    const q = norm($('rCliQ').value), dig = $('rCliQ').value.replace(/\D/g, '');
+    if (!q) { $('rCliSug').innerHTML = ''; return; }
+    const ws = q.split(' ');
+    const l = (estado.clientes || []).filter(c => (dig.length >= 3 && String(c.telefono || '').replace(/\D/g, '').includes(dig)) || ws.every(w => norm(c.nombre).includes(w))).slice(0, 6);
+    $('rCliSug').innerHTML = l.length
+      ? '<div class="r-sug">' + l.map(c => `<button type="button" onclick="R.elegirClienta('${esc(c.id)}')">${esc(c.nombre)} <span class="r-ayuda">${esc(c.telefono || '')}</span></button>`).join('') + '</div>'
+      : '<div class="r-ayuda">No está. <button type="button" class="secundario" style="padding:5px 10px;font-size:13px" onclick="R.nuevaDesdeBusqueda()">Crearla como nueva</button></div>';
+  }
+  function modoClienta(m) {
+    modoCli = m; if (m !== 'buscar') clienta = null;
+    document.querySelectorAll('#rSegCli button').forEach(b => b.classList.toggle('on', b.dataset.c === m));
+    pintarVenta();
+  }
+  async function guardarVenta() {
+    if (!carrito.length) return;
+    if (!datosAlDia) { mostrarToast('Un momento: se están actualizando los datos.'); return; }
+    let cliente = null;
+    if (modoCli === 'buscar') {
+      if (!clienta) { mostrarToast('Elige la clienta, o toca «Nueva» o «Sin nombre».'); return; }
+      cliente = { id: clienta.id };
+    } else if (modoCli === 'nueva') {
+      const n = $('rCliNombre').value.trim();
+      if (n.length < 2) { mostrarToast('Escribe el nombre de la clienta.'); return; }
+      cliente = { nombre: n, telefono: $('rCliTel').value };
+    }
+    const lineas = carrito.map(l => ({ id: l.id, cantidad: l.q, precio: totalLinea(l) }));
+    if (formaPago !== 'Regalía' && lineas.some(l => !(l.precio > 0))) { mostrarToast('Falta el precio de algún producto.'); return; }
+    // La referencia sigue igual mientras el carrito no cambie: si se corta la señal y se vuelve a tocar, no se duplica.
+    refVenta = refVenta || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    const venta = { ref: refVenta, lineas, cliente, formaPago, tipoPrecio, canal: $('rCanal').value, estadoEntrega: $('rEntrega').value };
+    const b = $('rBtnVenta'); b.disabled = true; b.textContent = 'Guardando…';
+    const r = await apiPost({ accion: 'venta_rapida', usuario: estado.usuario ? estado.usuario.usuario : '', venta });
+    b.disabled = false; b.textContent = 'Guardar venta';
+    if (!r || !r.ok) {
+      mostrarToast('Error: ' + ((r && r.error) || 'no se pudo guardar la venta'));
+      if (r && r.sinStock) cargarDatos(true, ['Productos']);
+      return;
+    }
+    Object.keys(r.stocks || {}).forEach(id => ajustarStockLocal(id, r.stocks[id]));
+    const total = lineas.reduce((s, l) => s + l.precio, 0);
+    carrito = []; refVenta = null; clienta = null; $('rCliNombre').value = ''; $('rCliTel').value = ''; $('rCliQ').value = ''; $('rCliSug').innerHTML = '';
+    cache.fuente = null; pintar();
+    await refrescarTrasGuardar((r.repetida ? 'Esa venta ya estaba guardada: ' : 'Venta guardada: ') + colones(total), ['Ventas', 'Clientes']);
+  }
+
+  // ---- Encargo ----
+  function abrirEncargo() { $('rEncargo').classList.remove('oculto'); $('rAbrirEnc').classList.add('oculto'); $('rEncargo').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function cerrarEncargo() { $('rEncargo').classList.add('oculto'); $('rAbrirEnc').classList.remove('oculto'); }
+  function encargoDe(id) {
+    const p = prod(id); cerrar(); abrirEncargo();
+    if (p) $('rEncProd').value = ($('rEncProd').value.trim() ? $('rEncProd').value.trim() + '\n' : '') + `${p.m} ${p.n}${p.t ? ', tono ' + p.t : ''}`;
+  }
+  async function guardarEncargo() {
+    const nombre = $('rEncNombre').value.trim(), telefono = $('rEncTel').value.replace(/\D/g, '');
+    const productosTxt = $('rEncProd').value.split('\n').map(s => s.trim()).filter(s => s.length >= 2);
+    if (nombre.length < 2) { mostrarToast('Escribe el nombre de la clienta.'); return; }
+    if (telefono.length !== 8) { mostrarToast('El teléfono debe tener 8 dígitos.'); return; }
+    if (!productosTxt.length) { mostrarToast('Escribe qué producto quiere.'); return; }
+    refEnc = refEnc || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    const b = $('rBtnEnc'); b.disabled = true; b.textContent = 'Guardando…';
+    const r = await apiPost({ accion: 'encargo_rapido', encargo: { ref: refEnc, nombre, telefono, productos: productosTxt } });
+    b.disabled = false; b.textContent = 'Anotar encargo';
+    if (!r || !r.ok) { mostrarToast('Error: ' + ((r && r.error) || 'no se pudo guardar')); return; }
+    refEnc = null; $('rEncNombre').value = ''; $('rEncTel').value = ''; $('rEncProd').value = ''; cerrarEncargo();
+    await refrescarTrasGuardar('Encargo anotado' + (r.numeros && r.numeros.length ? ': ' + r.numeros.join(', ') : '') + '.', ['Solicitudes']);
+  }
+
+  // ---- Textos ----
+  function guardarSel() { guardarLocal('avl_textos_sel', [...seleccion]); }
+  function alternar(id, desdeFicha) {
+    id = String(id);
+    if (seleccion.has(id)) seleccion.delete(id); else seleccion.add(id);
+    guardarSel();
+    if (desdeFicha) { abrir(id); mostrarToast(seleccion.has(id) ? 'Agregado al texto (pestaña Textos).' : 'Quitado del texto.'); return; }
+    pintarTextos();
+  }
+  function pintarTextos() {
+    if (!$('tab-textos')) return;
+    seleccion = new Set([...seleccion].filter(id => prod(id) || !(estado.productos || []).length));
+    const q = $('tQ').value.trim();
+    const lista = q ? buscar(q, 'todos').slice(0, 80) : productos().filter(p => seleccion.has(String(p.id)));
+    $('tResumen').textContent = `${seleccion.size} elegido${seleccion.size === 1 ? '' : 's'}` + (q ? ' · toca para elegir' : '');
+    const html = lista.length ? '<div class="r-lista">' + lista.map(p => fila(p, true)).join('') + '</div>' : '';
+    $('tResultados').innerHTML = q ? (html || '<div class="r-vacio">No hay nada con ese nombre.</div>') : '';
+    $('tElegidos').innerHTML = q ? '' : html;
+    $('tCajaElegidos').classList.toggle('oculto', !!q || !lista.length);
+    generar();
+  }
+  function rango(vals) { const v = vals.filter(x => x > 0); if (!v.length) return ''; const a = Math.min(...v), b = Math.max(...v); return a === b ? colones(a) : colones(a) + ' a ' + colones(b); }
+  function generar() {
+    if (!$('tTexto')) return;
+    const o = { det: $('tDetalle').checked, may: $('tMayor').checked, ton: $('tTonos').checked, cant: $('tCant').checked, pie: $('tPie').checked };
+    const grupos = new Map();
+    productos().filter(p => seleccion.has(String(p.id))).forEach(p => {
+      const k = norm(p.m + '|' + p.n); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(p);
+    });
+    const g = [...grupos.values()].sort((a, b) => a[0].m.localeCompare(b[0].m, 'es') || a[0].n.localeCompare(b[0].n, 'es'));
+    if (!g.length) { $('tTexto').value = ''; return; }
+    const neg = s => formato === 'wa' ? '*' + s + '*' : s;
+    const lineas = [];
+    if (o.pie && formato !== 'corto') {
+      lineas.push(neg('Avellana Studio · Maquillaje original'));
+      lineas.push('Productos originales y sellados, importados de Estados Unidos.', '');
+    }
+    const renglones = ps => {
+      const p = ps[0], out = [], conStock = ps.filter(x => x.s > 0), precios = [];
+      if (o.det) precios.push(rango(ps.map(x => x.pr)));
+      if (o.may && ps.some(x => x.pm)) precios.push('al por mayor ' + rango(ps.map(x => x.pm)) + ' c/u');
+      const titulo = `${p.m} — ${p.n}`;
+      if (formato === 'corto') { out.push(`• ${titulo}${precios.length ? ': ' + precios.join(' / ') : ''}`); return out; }
+      out.push((formato === 'wa' ? '• ' : '▪️ ') + neg(titulo));
+      if (precios.length) out.push('   ' + precios.map((x, i) => i === 0 && o.det ? 'Precio: ' + x : x.charAt(0).toUpperCase() + x.slice(1)).join(' · '));
+      const base = conStock.length ? conStock : ps;
+      if (o.ton && base.some(x => x.t)) {
+        const porTono = new Map();
+        base.filter(x => x.t).forEach(x => porTono.set(x.t, (porTono.get(x.t) || 0) + x.s));
+        out.push('   Tonos: ' + [...porTono].map(([t, n]) => t + (o.cant && n > 0 ? ` (${n})` : '')).join(', '));
+      } else if (o.cant) {
+        const n = ps.reduce((s, x) => s + x.s, 0);
+        if (n > 0) out.push(`   Quedan ${n}`);
+      }
+      out.push('');
+      return out;
+    };
+    const ya = g.filter(ps => ps.some(x => x.s > 0)), enc = g.filter(ps => !ps.some(x => x.s > 0));
+    const seccion = (titulo, grupo) => {
+      if (!grupo.length) return;
+      if (ya.length && enc.length) { lineas.push(neg(titulo)); if (formato !== 'corto') lineas.push(''); }
+      grupo.forEach(ps => lineas.push(...renglones(ps)));
+      if (formato === 'corto') lineas.push('');
+    };
+    seccion('ENTREGA INMEDIATA', ya);
+    seccion('POR ENCARGO (llega en 15 a 20 días hábiles)', enc);
+    if (!ya.length && enc.length && o.pie) lineas.push('Todos por encargo: llegan en 15 a 20 días hábiles.');
+    if (o.pie) {
+      if (o.may && g.some(ps => ps.some(p => p.pm))) lineas.push(`Precio al por mayor desde ${minimoMay()} unidades (se pueden combinar tonos).`);
+      lineas.push('Pago por SINPE Móvil o efectivo. Envíos a todo el país por Correos de Costa Rica.');
+      lineas.push('Catálogo completo: avellana-studio.pages.dev');
+    }
+    $('tTexto').value = lineas.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  // Eventos de botones de opciones
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.closest('#rFiltros') && b.dataset.f) ponerFiltro(b.dataset.f);
+    else if (b.closest('#rSegTipo') && b.dataset.t) { tipoPrecio = b.dataset.t; document.querySelectorAll('#rSegTipo button').forEach(x => x.classList.toggle('on', x === b)); carrito.forEach(l => { l.manual = false; }); cambioCarrito(); }
+    else if (b.closest('#rSegCli') && b.dataset.c) modoClienta(b.dataset.c);
+    else if (b.closest('#rPago') && b.dataset.p) { formaPago = b.dataset.p; document.querySelectorAll('#rPago .r-chip').forEach(x => x.classList.toggle('on', x === b)); cambioCarrito(); }
+    else if (b.closest('#tFormato') && b.dataset.x) { formato = b.dataset.x; document.querySelectorAll('#tFormato button').forEach(x => x.classList.toggle('on', x === b)); generar(); }
+  });
+
+  return {
+    pintar, pintarTextos, generar, abrir, cerrar, vender, alternar, sugerirClientas, guardarVenta, guardarEncargo,
+    abrirEncargo, cerrarEncargo, encargoDe,
+    irAVenta() { $('rVenta').scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+    ocultarBarra() { $('rBarra').classList.add('oculto'); document.body.classList.remove('r-con-barra'); },
+    alBuscar() { mostrar = PAG; pintar(); },
+    limpiar() { $('rQ').value = ''; mostrar = PAG; pintar(); $('rQ').focus(); },
+    filtro: ponerFiltro,
+    verMas() { mostrar += PAG; pintar(); },
+    q: cambiarQ,
+    precio(i, v) { carrito[i].precio = Math.round(Number(String(v).replace(/[^\d]/g, '')) || 0); carrito[i].manual = true; cambioCarrito(); },
+    quitar(i) { carrito.splice(i, 1); cambioCarrito(); },
+    elegirClienta(id) { const c = (estado.clientes || []).find(x => String(x.id) === String(id)); clienta = c || null; $('rCliQ').value = ''; $('rCliSug').innerHTML = ''; pintarVenta(); },
+    nuevaDesdeBusqueda() { const v = $('rCliQ').value.trim(); modoClienta('nueva'); if (/^\d[\d\s-]*$/.test(v)) $('rCliTel').value = v; else $('rCliNombre').value = v; },
+    copiarPrecio(id) { const p = prod(id); if (p) copiar(textoPrecio(p), 'Precio copiado.'); },
+    enlace(id) { const url = 'https://avellana-studio.pages.dev/?p=' + encodeURIComponent(id); if (navigator.share) navigator.share({ url }).catch(() => {}); else copiar(url, 'Enlace copiado.'); },
+    elegirConStock() { productos().filter(p => p.s > 0 && p.pr && !p.l).forEach(p => seleccion.add(String(p.id))); guardarSel(); pintarTextos(); },
+    elegirBusqueda() { const q = $('tQ').value.trim(); if (!q) { mostrarToast('Escribe algo en la búsqueda primero.'); return; } buscar(q, 'todos').filter(p => p.pr).forEach(p => seleccion.add(String(p.id))); guardarSel(); $('tQ').value = ''; pintarTextos(); },
+    quitarTodos() { seleccion.clear(); guardarSel(); pintarTextos(); },
+    copiarTexto() { const t = $('tTexto').value; if (!t) { mostrarToast('Elige al menos un producto.'); return; } copiar(t, 'Texto copiado.'); },
+    compartirTexto() { const t = $('tTexto').value; if (!t) { mostrarToast('Elige al menos un producto.'); return; } if (navigator.share) navigator.share({ text: t }).catch(() => {}); else copiar(t, 'Texto copiado.'); }
+  };
+})();
 
 // ---------- Arranque ----------
 
